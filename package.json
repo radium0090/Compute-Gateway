@@ -1,0 +1,35 @@
+{
+  "name": "genchi",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Open-source AI compute gateway",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22 <23",
+    "pnpm": ">=9 <10"
+  },
+  "scripts": {
+    "build": "tsc -b --pretty false",
+    "clean": "tsc -b --clean",
+    "dev": "pnpm --filter @genchi/gateway dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "migrate": "pnpm --filter @genchi/gateway migrate",
+    "start": "pnpm --filter @genchi/gateway start",
+    "test": "vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "@types/pg": "8.20.3",
+    "eslint": "9.39.5",
+    "prettier": "3.9.6",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10"
+  }
+}

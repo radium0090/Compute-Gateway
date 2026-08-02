@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "files": ["vitest.config.ts"],
+  "references": [
+    { "path": "packages/api-contract" },
+    { "path": "packages/domain" },
+    { "path": "packages/config" },
+    { "path": "packages/auth" },
+    { "path": "packages/persistence-postgres" },
+    { "path": "packages/observability" },
+    { "path": "apps/gateway" }
+  ]
+}

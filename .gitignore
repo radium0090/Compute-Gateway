@@ -13,13 +13,14 @@ node_modules/
 dist/
 build/
 coverage/
+*.tsbuildinfo
 
 # Logs and local runtime files
 *.log
 *.pid
+.pnpm-store/
 
 # Editor settings
 .idea/
 .vscode/
 *.swp
-

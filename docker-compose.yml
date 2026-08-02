@@ -1,0 +1,99 @@
+name: genchi
+
+services:
+  postgres:
+    image: postgres:16.10-bookworm
+    environment:
+      POSTGRES_DB: genchi
+      POSTGRES_USER: genchi
+      POSTGRES_PASSWORD: genchi_dev_only
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U genchi -d genchi']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7.4.5-alpine
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - '127.0.0.1:6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.132.0
+    command: ['--config=/etc/otelcol-contrib/config.yaml']
+    volumes:
+      - ./deploy/compose/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    build:
+      context: .
+      target: runtime
+    command: ['migrate', 'up']
+    env_file: .env
+    volumes:
+      - ./deploy/compose/genchi.yaml:/etc/genchi/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: ['ALL']
+    security_opt:
+      - no-new-privileges:true
+
+  gateway:
+    build:
+      context: .
+      target: runtime
+    env_file: .env
+    volumes:
+      - ./deploy/compose/genchi.yaml:/etc/genchi/config.yaml:ro
+    ports:
+      - '8080:8080'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: ['ALL']
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres-data:

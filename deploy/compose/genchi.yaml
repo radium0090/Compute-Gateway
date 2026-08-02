@@ -1,0 +1,6 @@
+version: 1
+providers: {}
+aliases: {}
+routing:
+  max_attempts: 2
+  total_timeout_ms: 60000
