@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build and test output
+dist/
+build/
+coverage/
+
+# Logs and local runtime files
+*.log
+*.pid
+
+# Editor settings
+.idea/
+.vscode/
+*.swp
+
