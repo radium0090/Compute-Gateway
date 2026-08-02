@@ -3,12 +3,15 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "files": ["vitest.config.ts"],
+  "files": ["vitest.config.ts", "scripts/generate-openapi.ts"],
   "references": [
     { "path": "packages/api-contract" },
     { "path": "packages/domain" },
     { "path": "packages/config" },
     { "path": "packages/auth" },
+    { "path": "packages/application" },
+    { "path": "packages/router" },
+    { "path": "packages/provider-openai" },
     { "path": "packages/persistence-postgres" },
     { "path": "packages/observability" },
     { "path": "apps/gateway" }

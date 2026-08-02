@@ -4,18 +4,15 @@ import {
   PolicyConfigValidationError,
   loadConfig,
   loadPolicyConfig,
+  loadProviderCredentials,
 } from '@genchi/config';
-import { TelemetryLifecycle } from '@genchi/observability';
+import { createLogger, TelemetryLifecycle } from '@genchi/observability';
+
+import { stopTelemetrySafely } from './telemetry-shutdown.js';
 
 async function main(): Promise<void> {
   const config = loadConfig(process.env);
-  await loadPolicyConfig(config.configFile, config.environment);
   const command = process.argv.slice(2);
-
-  if (command.length === 1 && command[0] === '--check-config') {
-    process.stdout.write('configuration valid\n');
-    return;
-  }
 
   const telemetry = new TelemetryLifecycle({
     environment: config.environment,
@@ -24,6 +21,10 @@ async function main(): Promise<void> {
     ...(config.otlpEndpoint === undefined
       ? {}
       : { otlpEndpoint: config.otlpEndpoint }),
+  });
+  const bootstrapLogger = createLogger({
+    environment: config.environment,
+    level: config.logLevel,
   });
   telemetry.start();
 
@@ -37,12 +38,21 @@ async function main(): Promise<void> {
       await runtime.runMigrationCommand(config);
       return;
     }
+    const policy = await loadPolicyConfig(
+      config.configFile,
+      config.environment,
+    );
+    const credentials = loadProviderCredentials(policy, process.env);
+    if (command.length === 1 && command[0] === '--check-config') {
+      process.stdout.write('configuration valid\n');
+      return;
+    }
     if (command.length !== 0) {
       throw new Error('Unsupported command');
     }
-    await runtime.runGateway(config);
+    await runtime.runGateway(config, policy, credentials);
   } finally {
-    await telemetry.stop();
+    await stopTelemetrySafely(telemetry, bootstrapLogger);
   }
 }
 

@@ -18,11 +18,14 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "migrate": "pnpm --filter @genchi/gateway migrate",
+    "openapi:check": "tsx scripts/generate-openapi.ts --check",
+    "openapi:generate": "tsx scripts/generate-openapi.ts",
     "start": "pnpm --filter @genchi/gateway start",
     "test": "vitest run",
     "typecheck": "tsc -b --pretty false"
   },
   "devDependencies": {
+    "@genchi/api-contract": "workspace:*",
     "@types/node": "22.20.1",
     "@types/pg": "8.20.3",
     "eslint": "9.39.5",
@@ -30,6 +33,7 @@
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "typescript-eslint": "8.65.0",
-    "vitest": "4.1.10"
+    "vitest": "4.1.10",
+    "yaml": "2.9.0"
   }
 }

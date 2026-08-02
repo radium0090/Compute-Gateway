@@ -6,6 +6,7 @@ import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import {
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
   ATTR_SERVICE_NAME,
@@ -61,7 +62,12 @@ export class TelemetryLifecycle {
         new HttpInstrumentation(),
         new FastifyOtelInstrumentation({ registerOnInitialization: true }),
       ],
-      ...(traceExporter === undefined ? {} : { traceExporter }),
+      // An explicit empty list prevents NodeSDK from silently creating an
+      // environment-derived exporter when Genchi telemetry is not configured.
+      spanProcessors:
+        traceExporter === undefined
+          ? []
+          : [new BatchSpanProcessor(traceExporter)],
       ...(metricReader === undefined ? {} : { metricReader }),
     });
   }

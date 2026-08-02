@@ -17,9 +17,14 @@
   },
   "dependencies": {
     "@genchi/api-contract": "workspace:*",
+    "@genchi/application": "workspace:*",
+    "@genchi/auth": "workspace:*",
     "@genchi/config": "workspace:*",
+    "@genchi/domain": "workspace:*",
     "@genchi/observability": "workspace:*",
     "@genchi/persistence-postgres": "workspace:*",
+    "@genchi/provider-openai": "workspace:*",
+    "@genchi/router": "workspace:*",
     "fastify": "5.11.0",
     "pg": "8.22.0"
   },

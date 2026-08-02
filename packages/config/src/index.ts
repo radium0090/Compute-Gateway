@@ -10,6 +10,7 @@ export {
   PolicyConfigSchema,
   PolicyConfigValidationError,
   loadPolicyConfig,
+  loadProviderCredentials,
   parsePolicyConfig,
   type PolicyConfig,
 } from './policy-config.js';

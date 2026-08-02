@@ -1,6 +1,18 @@
 version: 1
-providers: {}
-aliases: {}
+providers:
+  openai-primary:
+    adapter: openai
+    credential_env: OPENAI_API_KEY
+    base_url: https://api.openai.com/v1
+    models:
+      gpt-5-mini:
+        capabilities: [chat]
+aliases:
+  genchi/fast:
+    candidates:
+      - provider: openai-primary
+        model: gpt-5-mini
+        weight: 100
 routing:
   max_attempts: 2
   total_timeout_ms: 60000

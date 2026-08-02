@@ -87,4 +87,19 @@ describe('health routes', () => {
     expect(replaced.headers['x-request-id']).toMatch(/^req_/);
     await app.close();
   });
+
+  it('accepts a one-character safe request ID', async () => {
+    const app = await buildGateway({
+      config,
+      logger,
+      readinessProbe: { check: () => Promise.resolve({ ready: true }) },
+    });
+    const response = await app.inject({
+      method: 'GET',
+      url: '/health/live',
+      headers: { 'x-request-id': 'a' },
+    });
+    expect(response.headers['x-request-id']).toBe('a');
+    await app.close();
+  });
 });

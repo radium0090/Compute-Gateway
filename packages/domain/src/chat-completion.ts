@@ -1,0 +1,120 @@
+import type { ApiKey } from './api-key.js';
+
+export type CanonicalMessageRole = 'system' | 'user' | 'assistant';
+
+export interface CanonicalChatMessage {
+  readonly role: CanonicalMessageRole;
+  readonly content: string;
+}
+
+export interface CanonicalChatRequest {
+  readonly model: string;
+  readonly messages: readonly CanonicalChatMessage[];
+  readonly temperature?: number;
+  readonly topP?: number;
+  readonly maxTokens?: number;
+  readonly stop?: string | readonly string[];
+  readonly user?: string;
+}
+
+export type CanonicalFinishReason =
+  'stop' | 'length' | 'tool_calls' | 'content_filter' | null;
+
+export interface CanonicalUsage {
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly totalTokens: number;
+}
+
+export interface CanonicalChatResponse {
+  readonly content: string;
+  readonly finishReason: CanonicalFinishReason;
+  readonly usage: CanonicalUsage;
+}
+
+export interface CanonicalChatChunk {
+  readonly content: string;
+  readonly finishReason: CanonicalFinishReason;
+}
+
+export interface ProviderCapabilities {
+  readonly chat: true;
+  readonly streaming: boolean;
+  readonly tools: boolean;
+  readonly jsonObject: boolean;
+  readonly jsonSchema: boolean;
+  readonly systemMessages: boolean;
+  readonly maxInputTokens?: number;
+  readonly maxOutputTokens?: number;
+}
+
+export type ProviderErrorClass =
+  | 'authentication'
+  | 'rate_limit'
+  | 'timeout'
+  | 'unavailable'
+  | 'request'
+  | 'policy'
+  | 'protocol';
+
+export interface ProviderError {
+  readonly class: ProviderErrorClass;
+  readonly code: string;
+  readonly retryable: boolean;
+  readonly retryAfterSeconds?: number;
+}
+
+export type ProviderCallResult =
+  | { readonly ok: true; readonly response: CanonicalChatResponse }
+  | { readonly ok: false; readonly error: ProviderError };
+
+export interface ProviderCallContext {
+  readonly requestId: string;
+  readonly providerModel: string;
+  readonly signal: AbortSignal;
+}
+
+/** Provider-neutral port implemented independently by each provider package. */
+export interface ProviderAdapter {
+  readonly id: string;
+  capabilities(model: string): ProviderCapabilities | null;
+  createChatCompletion(
+    request: CanonicalChatRequest,
+    context: ProviderCallContext,
+  ): Promise<ProviderCallResult>;
+  streamChatCompletion(
+    request: CanonicalChatRequest,
+    context: ProviderCallContext,
+  ): AsyncIterable<CanonicalChatChunk>;
+}
+
+export interface ResolvedRoute {
+  readonly providerRef: string;
+  readonly provider: string;
+  readonly providerModel: string;
+}
+
+export type RouteResolutionResult =
+  | { readonly ok: true; readonly route: ResolvedRoute }
+  | {
+      readonly ok: false;
+      readonly reason:
+        'model_not_allowed' | 'model_not_found' | 'no_healthy_route';
+    };
+
+export interface RouteResolver {
+  resolve(input: {
+    readonly requestedModel: string;
+    readonly requestId: string;
+    readonly apiKey: ApiKey;
+  }): RouteResolutionResult;
+}
+
+export interface ClientAuthenticator {
+  authenticate(
+    credential: string,
+  ): Promise<
+    | { readonly authenticated: true; readonly apiKey: ApiKey }
+    | { readonly authenticated: false }
+  >;
+}

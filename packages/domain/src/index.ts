@@ -15,3 +15,22 @@ export {
   type TenantId,
 } from './api-key.js';
 export type { ApiKeyRepository } from './api-key-repository.js';
+export type {
+  CanonicalChatMessage,
+  CanonicalChatChunk,
+  CanonicalChatRequest,
+  CanonicalChatResponse,
+  CanonicalFinishReason,
+  CanonicalMessageRole,
+  CanonicalUsage,
+  ClientAuthenticator,
+  ProviderAdapter,
+  ProviderCallContext,
+  ProviderCallResult,
+  ProviderCapabilities,
+  ProviderError,
+  ProviderErrorClass,
+  ResolvedRoute,
+  RouteResolutionResult,
+  RouteResolver,
+} from './chat-completion.js';

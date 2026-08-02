@@ -1,0 +1,112 @@
+import { describe, expect, it } from 'vitest';
+
+import { parsePolicyConfig } from '@genchi/config';
+import {
+  apiKeyHash,
+  apiKeyId,
+  apiKeyPublicId,
+  tenantId,
+  type ApiKey,
+} from '@genchi/domain';
+
+import { StaticPolicyRouter } from './policy-router.js';
+
+const policy = parsePolicyConfig(
+  `
+version: 1
+providers:
+  openai-a:
+    adapter: openai
+    credential_env: OPENAI_API_KEY
+    base_url: https://api.openai.com/v1
+    models:
+      model-a: { capabilities: [chat] }
+  openai-b:
+    adapter: openai
+    credential_env: OPENAI_API_KEY_B
+    base_url: https://api.openai.com/v1
+    models:
+      model-b: { capabilities: [chat] }
+aliases:
+  genchi/fast:
+    candidates:
+      - { provider: openai-a, model: model-a, weight: 50 }
+      - { provider: openai-b, model: model-b, weight: 50 }
+routing:
+  max_attempts: 2
+  total_timeout_ms: 60000
+`,
+  'test',
+);
+
+function key(patterns: readonly string[]): ApiKey {
+  return {
+    id: apiKeyId('01989c9b-a400-7000-8000-000000000001'),
+    publicId: apiKeyPublicId('public-id-123'),
+    keyHash: apiKeyHash('a'.repeat(64)),
+    tenantId: tenantId('01989c9b-a400-7000-8000-000000000002'),
+    name: 'router test',
+    environment: 'test',
+    status: 'active',
+    policy: {
+      allowedModelPatterns: patterns,
+      allowStreaming: false,
+      allowTools: false,
+      requestsPerMinute: 60,
+      maxConcurrentRequests: 4,
+    },
+    createdAt: new Date('2026-08-03T00:00:00Z'),
+    expiresAt: null,
+  };
+}
+
+describe('StaticPolicyRouter', () => {
+  it('returns the same weighted primary for the same request and alias', () => {
+    const router = new StaticPolicyRouter(policy);
+    const input = {
+      requestedModel: 'genchi/fast',
+      requestId: 'req_stable_123',
+      apiKey: key(['genchi/*']),
+    };
+
+    expect(router.resolve(input)).toEqual(router.resolve(input));
+  });
+
+  it('distributes stable hashes across configured positive-weight routes', () => {
+    const router = new StaticPolicyRouter(policy);
+    const selected = new Set<string>();
+    for (let index = 0; index < 100; index += 1) {
+      const result = router.resolve({
+        requestedModel: 'genchi/fast',
+        requestId: `req_${String(index).padStart(3, '0')}`,
+        apiKey: key(['genchi/*']),
+      });
+      if (result.ok) {
+        selected.add(result.route.providerRef);
+      }
+    }
+    expect(selected).toEqual(new Set(['openai-a', 'openai-b']));
+  });
+
+  it('denies by default and resolves an unambiguous qualified model', () => {
+    const router = new StaticPolicyRouter(policy);
+
+    expect(
+      router.resolve({
+        requestedModel: 'genchi/fast',
+        requestId: 'req_denied',
+        apiKey: key([]),
+      }),
+    ).toEqual({ ok: false, reason: 'model_not_allowed' });
+    expect(
+      router.resolve({
+        requestedModel: 'openai/model-a',
+        requestId: 'req_qualified',
+        apiKey: key(['openai/*']),
+      }),
+    ).toMatchObject({
+      ok: true,
+      route: { provider: 'openai', providerModel: 'model-a' },
+    });
+  });
+});

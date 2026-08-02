@@ -5,3 +5,4 @@ pnpm-lock.yaml
 LICENSE
 README.md
 docs
+openapi/genchi.openapi.yaml

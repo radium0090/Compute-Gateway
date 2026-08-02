@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PolicyConfigValidationError,
+  loadProviderCredentials,
   parsePolicyConfig,
 } from './policy-config.js';
 
@@ -66,5 +67,18 @@ describe('parsePolicyConfig', () => {
       expect(error).toBeInstanceOf(PolicyConfigValidationError);
       expect((error as Error).message).not.toContain(sensitiveText);
     }
+  });
+
+  it('loads referenced credentials without including their values in errors', () => {
+    const policy = parsePolicyConfig(validPolicy, 'test');
+    expect(
+      loadProviderCredentials(policy, { OPENAI_API_KEY: 'fake-key' }).get(
+        'primary',
+      ),
+    ).toBe('fake-key');
+
+    expect(() => loadProviderCredentials(policy, {})).toThrow(
+      /provider primary credential is not set/,
+    );
   });
 });

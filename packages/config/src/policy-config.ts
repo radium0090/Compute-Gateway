@@ -39,7 +39,7 @@ const CandidateSchema = Type.Object(
   {
     provider: Type.String({ minLength: 1 }),
     model: Type.String({ minLength: 1 }),
-    weight: Type.Integer({ minimum: 1 }),
+    weight: Type.Integer({ minimum: 0, maximum: 1_000_000 }),
   },
   { additionalProperties: false },
 );
@@ -53,7 +53,13 @@ export const PolicyConfigSchema = Type.Object(
       Type.String({ minLength: 1 }),
       Type.Object(
         {
-          candidates: Type.Array(CandidateSchema, { minItems: 1 }),
+          candidates: Type.Array(CandidateSchema, {
+            minItems: 1,
+            maxItems: 64,
+          }),
+          required_capabilities: Type.Optional(
+            Type.Array(CapabilitySchema, { uniqueItems: true }),
+          ),
         },
         { additionalProperties: false },
       ),
@@ -62,6 +68,9 @@ export const PolicyConfigSchema = Type.Object(
       {
         max_attempts: Type.Integer({ minimum: 1, maximum: 10 }),
         total_timeout_ms: Type.Integer({ minimum: 1_000, maximum: 300_000 }),
+        connect_timeout_ms: Type.Optional(Type.Integer({ minimum: 1 })),
+        same_route_retries: Type.Optional(Type.Integer({ minimum: 0 })),
+        minimum_attempt_budget_ms: Type.Optional(Type.Integer({ minimum: 1 })),
       },
       { additionalProperties: false },
     ),
@@ -120,10 +129,41 @@ export function parsePolicyConfig(
     }
 
     for (const [aliasName, alias] of Object.entries(candidate.aliases)) {
+      const seenRoutes = new Set<string>();
       for (const route of alias.candidates) {
         if (candidate.providers[route.provider] === undefined) {
           issues.push(`alias ${aliasName} references an unknown provider`);
+          continue;
         }
+        if (
+          candidate.providers[route.provider]?.models[route.model] === undefined
+        ) {
+          issues.push(
+            `alias ${aliasName} references an unknown provider model`,
+          );
+        }
+        const routeKey = `${route.provider}\u0000${route.model}`;
+        if (seenRoutes.has(routeKey)) {
+          issues.push(`alias ${aliasName} contains a duplicate route`);
+        }
+        seenRoutes.add(routeKey);
+      }
+      if (!alias.candidates.some((route) => route.weight > 0)) {
+        issues.push(`alias ${aliasName} has no primary candidate`);
+      }
+      const requiredCapabilities = alias.required_capabilities ?? [];
+      const hasCapableCandidate = alias.candidates.some((route) => {
+        const capabilities =
+          candidate.providers[route.provider]?.models[route.model]
+            ?.capabilities;
+        return requiredCapabilities.every(
+          (capability) => capabilities?.includes(capability) === true,
+        );
+      });
+      if (!hasCapableCandidate) {
+        issues.push(
+          `alias ${aliasName} has no candidate for all required capabilities`,
+        );
       }
     }
   }
@@ -133,6 +173,27 @@ export function parsePolicyConfig(
   }
 
   return candidate;
+}
+
+/** Resolves logical credential references without exposing values in errors. */
+export function loadProviderCredentials(
+  policy: PolicyConfig,
+  source: Readonly<Record<string, string | undefined>>,
+): ReadonlyMap<string, string> {
+  const credentials = new Map<string, string>();
+  const issues: string[] = [];
+  for (const [providerName, provider] of Object.entries(policy.providers)) {
+    const value = source[provider.credential_env];
+    if (value === undefined || value.length === 0) {
+      issues.push(`provider ${providerName} credential is not set`);
+    } else {
+      credentials.set(providerName, value);
+    }
+  }
+  if (issues.length > 0) {
+    throw new PolicyConfigValidationError(issues);
+  }
+  return credentials;
 }
 
 /** Loads and validates the versioned policy before the listener is opened. */

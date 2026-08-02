@@ -7,9 +7,14 @@
   },
   "references": [
     { "path": "../../packages/api-contract" },
+    { "path": "../../packages/application" },
+    { "path": "../../packages/auth" },
     { "path": "../../packages/config" },
+    { "path": "../../packages/domain" },
     { "path": "../../packages/observability" },
-    { "path": "../../packages/persistence-postgres" }
+    { "path": "../../packages/persistence-postgres" },
+    { "path": "../../packages/provider-openai" },
+    { "path": "../../packages/router" }
   ],
   "include": ["src/**/*.ts"]
 }

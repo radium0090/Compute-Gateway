@@ -1,0 +1,361 @@
+openapi: 3.1.0
+info:
+  title: Genchi API
+  description: OpenAI-compatible API for the Genchi compute gateway.
+  version: 0.1.0
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: "{scheme}://{host}"
+    variables:
+      scheme:
+        default: http
+        enum:
+          - http
+          - https
+      host:
+        default: localhost:8080
+paths:
+  /v1/chat/completions:
+    post:
+      operationId: createChatCompletion
+      summary: Create a non-streaming chat completion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatCompletionRequest"
+      responses:
+        "200":
+          description: Normalized chat completion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatCompletionResponse"
+        "400":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "504":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /health/live:
+    get:
+      operationId: getLiveness
+      summary: Get process liveness
+      security: []
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LivenessResponse"
+  /health/ready:
+    get:
+      operationId: getReadiness
+      summary: Get dependency readiness
+      security: []
+      responses:
+        "200":
+          description: Gateway is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: Gateway is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Genchi API key
+  schemas:
+    ChatCompletionRequest:
+      additionalProperties: false
+      type: object
+      required:
+        - model
+        - messages
+      properties:
+        model:
+          minLength: 1
+          maxLength: 256
+          type: string
+        messages:
+          minItems: 1
+          maxItems: 1024
+          type: array
+          items:
+            additionalProperties: false
+            type: object
+            required:
+              - role
+              - content
+            properties:
+              role:
+                anyOf:
+                  - const: system
+                    type: string
+                  - const: user
+                    type: string
+                  - const: assistant
+                    type: string
+              content:
+                maxLength: 1000000
+                type: string
+        temperature:
+          minimum: 0
+          maximum: 2
+          type: number
+        top_p:
+          minimum: 0
+          maximum: 1
+          type: number
+        max_tokens:
+          minimum: 1
+          type: integer
+        stop:
+          anyOf:
+            - minLength: 1
+              type: string
+            - minItems: 1
+              maxItems: 4
+              type: array
+              items:
+                minLength: 1
+                type: string
+        stream:
+          default: false
+          const: false
+          type: boolean
+        n:
+          default: 1
+          const: 1
+          type: number
+        user:
+          minLength: 1
+          maxLength: 256
+          type: string
+    ChatCompletionResponse:
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - object
+        - created
+        - model
+        - choices
+        - usage
+        - genchi
+      properties:
+        id:
+          type: string
+        object:
+          const: chat.completion
+          type: string
+        created:
+          minimum: 0
+          type: integer
+        model:
+          type: string
+        choices:
+          minItems: 1
+          maxItems: 1
+          type: array
+          items:
+            additionalProperties: false
+            type: object
+            required:
+              - index
+              - message
+              - finish_reason
+            properties:
+              index:
+                const: 0
+                type: number
+              message:
+                additionalProperties: false
+                type: object
+                required:
+                  - role
+                  - content
+                properties:
+                  role:
+                    const: assistant
+                    type: string
+                  content:
+                    type: string
+              finish_reason:
+                anyOf:
+                  - const: stop
+                    type: string
+                  - const: length
+                    type: string
+                  - const: tool_calls
+                    type: string
+                  - const: content_filter
+                    type: string
+                  - type: "null"
+        usage:
+          additionalProperties: false
+          type: object
+          required:
+            - prompt_tokens
+            - completion_tokens
+            - total_tokens
+          properties:
+            prompt_tokens:
+              minimum: 0
+              type: integer
+            completion_tokens:
+              minimum: 0
+              type: integer
+            total_tokens:
+              minimum: 0
+              type: integer
+        genchi:
+          additionalProperties: false
+          type: object
+          required:
+            - request_id
+            - provider
+            - provider_model
+            - attempts
+          properties:
+            request_id:
+              type: string
+            provider:
+              type: string
+            provider_model:
+              type: string
+            attempts:
+              minimum: 1
+              type: integer
+    ErrorResponse:
+      additionalProperties: false
+      type: object
+      required:
+        - error
+        - genchi
+      properties:
+        error:
+          additionalProperties: false
+          type: object
+          required:
+            - message
+            - type
+            - code
+            - param
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              type: string
+            param:
+              anyOf:
+                - type: string
+                - type: "null"
+        genchi:
+          additionalProperties: false
+          type: object
+          required:
+            - request_id
+            - retryable
+          properties:
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+    LivenessResponse:
+      additionalProperties: false
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          const: ok
+          type: string
+    ReadinessResponse:
+      additionalProperties: false
+      type: object
+      required:
+        - status
+        - checks
+      properties:
+        status:
+          anyOf:
+            - const: ready
+              type: string
+            - const: not_ready
+              type: string
+        checks:
+          additionalProperties: false
+          type: object
+          required:
+            - postgres
+          properties:
+            postgres:
+              anyOf:
+                - const: ok
+                  type: string
+                - const: error
+                  type: string

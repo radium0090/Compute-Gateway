@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@genchi/api-contract': fromRoot('./packages/api-contract/src/index.ts'),
+      '@genchi/application': fromRoot('./packages/application/src/index.ts'),
       '@genchi/auth': fromRoot('./packages/auth/src/index.ts'),
       '@genchi/config': fromRoot('./packages/config/src/index.ts'),
       '@genchi/domain': fromRoot('./packages/domain/src/index.ts'),
@@ -18,6 +19,10 @@ export default defineConfig({
       '@genchi/persistence-postgres': fromRoot(
         './packages/persistence-postgres/src/index.ts',
       ),
+      '@genchi/provider-openai': fromRoot(
+        './packages/provider-openai/src/index.ts',
+      ),
+      '@genchi/router': fromRoot('./packages/router/src/index.ts'),
     },
   },
   test: {

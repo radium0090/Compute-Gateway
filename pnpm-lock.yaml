@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@genchi/api-contract':
+        specifier: workspace:*
+        version: link:packages/api-contract
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -32,21 +35,39 @@ importers:
       vitest:
         specifier: 4.1.10
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(vite@8.2.0(@types/node@22.20.1)(tsx@4.20.6)(yaml@2.9.0))
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
 
   apps/gateway:
     dependencies:
       '@genchi/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
+      '@genchi/application':
+        specifier: workspace:*
+        version: link:../../packages/application
+      '@genchi/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@genchi/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@genchi/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@genchi/observability':
         specifier: workspace:*
         version: link:../../packages/observability
       '@genchi/persistence-postgres':
         specifier: workspace:*
         version: link:../../packages/persistence-postgres
+      '@genchi/provider-openai':
+        specifier: workspace:*
+        version: link:../../packages/provider-openai
+      '@genchi/router':
+        specifier: workspace:*
+        version: link:../../packages/router
       fastify:
         specifier: 5.11.0
         version: 5.11.0
@@ -66,6 +87,12 @@ importers:
       '@sinclair/typebox':
         specifier: 0.34.52
         version: 0.34.52
+
+  packages/application:
+    dependencies:
+      '@genchi/domain':
+        specifier: workspace:*
+        version: link:../domain
 
   packages/auth:
     dependencies:
@@ -110,6 +137,9 @@ importers:
       '@opentelemetry/sdk-node':
         specifier: 0.221.0
         version: 0.221.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-base':
+        specifier: 2.10.0
+        version: 2.10.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions':
         specifier: 1.43.0
         version: 1.43.0
@@ -129,6 +159,24 @@ importers:
       '@types/pg':
         specifier: 8.20.3
         version: 8.20.3
+
+  packages/provider-openai:
+    dependencies:
+      '@genchi/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@sinclair/typebox':
+        specifier: 0.34.52
+        version: 0.34.52
+
+  packages/router:
+    dependencies:
+      '@genchi/config':
+        specifier: workspace:*
+        version: link:../config
+      '@genchi/domain':
+        specifier: workspace:*
+        version: link:../domain
 
 packages:
 
