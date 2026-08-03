@@ -1,6 +1,6 @@
 # ADR 0001: TypeScript and Node.js Gateway Runtime
 
-- Status: Accepted
+- Status: Superseded by [ADR 0011](0011-node-24-runtime.md)
 - Date: 2026-08-03
 
 ## Context
@@ -32,4 +32,3 @@ must not run synchronously on the event loop.
   type-sharing and high-concurrency streaming baseline.
 - **Multiple runtimes initially:** increases release and contributor complexity
   before clear component boundaries justify it.
-

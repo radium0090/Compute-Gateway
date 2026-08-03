@@ -12,7 +12,7 @@ must follow the private process in `SECURITY.md`, not a public issue.
 
 ## Development setup
 
-Prerequisites: Node.js 22, pnpm 9, Docker 26+, and Git.
+Prerequisites: Node.js 24, pnpm 9, Docker 26+, and Git.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -79,4 +79,3 @@ respectful, and assume good intent while reviewing technical claims critically.
 AI assistance is allowed, but the human contributor remains responsible for
 license provenance, correctness, tests, security, and understanding the code.
 Do not submit secrets, proprietary source, or unreviewed bulk-generated changes.
-

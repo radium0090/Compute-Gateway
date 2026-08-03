@@ -8,7 +8,7 @@ documents.
 
 | ADR | Decision | Status |
 | --- | --- | --- |
-| [0001](0001-typescript-node-runtime.md) | TypeScript and Node.js gateway runtime | Accepted |
+| [0001](0001-typescript-node-runtime.md) | TypeScript and Node.js gateway runtime | Superseded by 0011 |
 | [0002](0002-openai-compatible-api.md) | OpenAI-compatible public API | Accepted |
 | [0003](0003-canonical-provider-adapters.md) | Canonical domain and provider adapters | Accepted |
 | [0004](0004-deterministic-policy-routing.md) | Deterministic policy routing | Accepted |
@@ -18,6 +18,7 @@ documents.
 | [0008](0008-stateless-oci-kubernetes-deployment.md) | Stateless OCI/Kubernetes deployment | Accepted |
 | [0009](0009-no-content-persistence-by-default.md) | No content persistence by default | Accepted |
 | [0010](0010-apache-2-license.md) | Apache-2.0 licensing intent | Accepted |
+| [0011](0011-node-24-runtime.md) | Node.js 24 runtime baseline | Accepted |
 
 ## Format and lifecycle
 
@@ -28,4 +29,3 @@ decision by adding a new ADR and marking the old one Superseded with a link.
 
 New ADR filenames use the next four-digit number and a short kebab-case title.
 Pull requests include implementation and documentation links once available.
-

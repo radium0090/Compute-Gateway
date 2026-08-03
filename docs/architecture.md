@@ -102,7 +102,7 @@ Database writes are strongly consistent; data-plane reads may use these caches.
 
 ## Technology baseline
 
-- Node.js 22 LTS, TypeScript 5.x, pnpm workspaces
+- Node.js 24 LTS, TypeScript 5.x, pnpm workspaces
 - Fastify with JSON Schema/TypeBox validation
 - PostgreSQL 16, Redis 7 (optional locally, required for multi-replica limits)
 - OpenTelemetry SDK and Collector
@@ -110,4 +110,3 @@ Database writes are strongly consistent; data-plane reads may use these caches.
 - OCI images built from a pinned, minimal non-root runtime image
 
 See the [ADRs](adr/README.md) for the rationale behind binding decisions.
-

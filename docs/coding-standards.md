@@ -2,7 +2,7 @@
 
 ## Language baseline
 
-Use TypeScript in strict mode targeting Node.js 22. Avoid `any`; use `unknown`
+Use TypeScript in strict mode targeting Node.js 24. Avoid `any`; use `unknown`
 at trust boundaries and narrow it through schemas. Public functions, exported
 types, and domain decisions require concise documentation.
 
@@ -74,4 +74,3 @@ tests, and rollback. Generated changes are committed separately when helpful.
 Reviewers verify public compatibility, tenant isolation, secret/content safety,
 deadline/cancellation paths, resource bounds, telemetry cardinality, database
 rollout, tests, and documentation—not only the happy path.
-

@@ -34,7 +34,7 @@ quality-based model selection.
 
 ## Five-minute local start
 
-Prerequisites: Node.js 22+, pnpm 9+, Docker 26+, and at least one provider API
+Prerequisites: Node.js 24, pnpm 9+, Docker 26+, and at least one provider API
 key.
 
 ```bash
@@ -135,4 +135,3 @@ design exploration, and pull requests for reviewed changes. Please read
 
 The intended project license is Apache License 2.0. See
 [licensing.md](docs/licensing.md) for release requirements and dependency rules.
-

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22.22.0-bookworm-slim AS toolchain
+FROM node:24.13.0-bookworm-slim AS toolchain
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -14,7 +14,7 @@ FROM dependencies AS build
 RUN pnpm build
 RUN pnpm --filter @genchi/gateway deploy --prod /opt/genchi
 
-FROM node:22.22.0-bookworm-slim AS runtime
+FROM node:24.13.0-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 
