@@ -5,5 +5,6 @@ export {
   getCorrelationContext,
   getGenchiMeter,
   type CorrelationContext,
+  type MetricsRequestHandler,
   type TelemetryOptions,
 } from './telemetry.js';

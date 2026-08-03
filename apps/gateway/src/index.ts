@@ -39,6 +39,11 @@ async function main(): Promise<void> {
       await runtime.runMigrationCommand(config);
       return;
     }
+    if (command[0] === 'keys') {
+      const { runKeyCommand } = await import('./key-commands.js');
+      await runKeyCommand(config, command.slice(1));
+      return;
+    }
     const policy = await loadPolicyConfig(
       config.configFile,
       config.environment,
@@ -51,7 +56,12 @@ async function main(): Promise<void> {
     if (command.length !== 0) {
       throw new Error('Unsupported command');
     }
-    await runtime.runGateway(config, policy, credentials);
+    await runtime.runGateway(
+      config,
+      policy,
+      credentials,
+      telemetry.metricsRequestHandler(),
+    );
   } finally {
     await stopTelemetrySafely(telemetry, bootstrapLogger);
   }

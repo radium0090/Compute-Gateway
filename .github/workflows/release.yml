@@ -48,12 +48,20 @@ jobs:
       - name: Validate release source
         run: |
           pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check -r sdk/python/requirements-compatibility.txt
           pnpm format:check
           pnpm lint
           pnpm typecheck
           pnpm test:coverage
           pnpm build
           pnpm openapi:check
+          pnpm openapi:lint
+          pnpm openapi:breaking --base HEAD^
+          pnpm sdk:check
+          pnpm sdk:test
+          pnpm sdk:test:openai-python
+          pnpm test:rc
+          pnpm performance:check
           pnpm docs:check
           pnpm operations:check
       - name: Set up Helm

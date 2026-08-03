@@ -62,6 +62,12 @@ It records only configured alias/provider/model names and bounded reason codes;
 request IDs, API key IDs, credentials, prompts, and completions are excluded
 from metric labels.
 
+When `GENCHI_METRICS_ENABLED=true`, `GET /metrics` exposes the same process-local
+OpenTelemetry instruments in Prometheus text format. It is unauthenticated at
+the application layer and MUST remain on a private Service/ingress policy. When
+metrics are disabled, the route is not registered. OTLP export may run at the
+same time without duplicating instrumentation.
+
 Release builds also register `genchi_build_info` from
 `GENCHI_SERVICE_VERSION` and `GENCHI_COMMIT_SHA`. The Docker build sets both
 from release identity; operators can use them as deployment markers without

@@ -124,6 +124,18 @@ export class PostgresApiKeyRepository implements ApiKeyRepository {
     );
   }
 
+  public async revoke(id: ApiKeyId): Promise<boolean> {
+    const result = await this.pool.query(
+      `UPDATE api_keys
+          SET status = 'revoked'
+        WHERE id = $1
+          AND status <> 'revoked'
+      RETURNING id`,
+      [id],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
   public async markLastUsed(id: ApiKeyId, usedAt: Date): Promise<void> {
     await this.pool.query(
       `UPDATE api_keys

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "scenario": "loopback_non_streaming_stub_provider",
+  "warmup_requests": 100,
+  "measured_requests": 500,
+  "concurrency": 20,
+  "p95_threshold_ms": 50
+}

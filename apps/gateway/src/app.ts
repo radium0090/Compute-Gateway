@@ -12,10 +12,12 @@ import type {
   CreateChatCompletionService,
   ListModelsService,
 } from '@genchi/application';
+import type { MetricsRequestHandler } from '@genchi/observability';
 
 import { registerChatCompletionRoute } from './chat-completion.js';
 import { registerErrorHandling } from './error-handling.js';
 import { registerHealthRoutes, type ReadinessProbe } from './health.js';
+import { registerMetricsRoute } from './metrics.js';
 import { registerModelsRoute } from './models.js';
 import { registerRequestTelemetry } from './request-telemetry.js';
 
@@ -28,6 +30,7 @@ export interface GatewayDependencies {
     'execute' | 'executeStream'
   >;
   readonly listModelsService?: Pick<ListModelsService, 'execute'>;
+  readonly metricsRequestHandler?: MetricsRequestHandler;
   readonly requestTimeoutSignalFactory?: (timeoutMs: number) => AbortSignal;
 }
 
@@ -68,6 +71,9 @@ export async function buildGateway(
   registerRequestTelemetry(app);
   registerErrorHandling(app);
   registerHealthRoutes(app, dependencies.readinessProbe);
+  if (dependencies.metricsRequestHandler !== undefined) {
+    registerMetricsRoute(app, dependencies.metricsRequestHandler);
+  }
   if (dependencies.chatCompletionService !== undefined) {
     registerChatCompletionRoute(app, {
       service: dependencies.chatCompletionService,

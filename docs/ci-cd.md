@@ -26,12 +26,12 @@ Untrusted fork workflows use no repository secrets and do not run live provider
 tests. Expensive nightly jobs are supplemental, never a substitute for core PR
 checks.
 
-The current Operations baseline uses only fake provider values. Live-provider
-and performance gates begin in the release-candidate stage and require protected
-environments; they are never part of untrusted pull request workflows. Until a
-previous release exists, migration CI verifies empty installation and
-idempotency; the first upgrade fixture becomes mandatory before the next schema
-migration is accepted.
+The deterministic performance check uses a stub provider and is safe for pull
+requests. Live-provider tests use the protected `live-provider-smoke`
+environment, run only by manual dispatch, and are never part of untrusted pull
+request workflows. Until a previous release exists, migration CI verifies empty
+installation and idempotency; the first upgrade fixture becomes mandatory
+before the next schema migration is accepted.
 
 ## Test layers
 
@@ -81,5 +81,8 @@ it, advisories identify affected digests, and credentials are rotated.
 
 Nightly and release-candidate tests measure non-streaming overhead, connection
 capacity, memory per stream, cancellation cleanup, and route/fallback behavior.
-Regression thresholds are stored with the benchmark scenario and reference
-hardware; noisy microbenchmarks do not block PRs without confirmation.
+The loopback stub-provider scenario stores workload and the MVP p95 threshold in
+`benchmarks/reference.json`. A failure blocks the candidate, but maintainers
+confirm a regression on a second runner before changing code or the threshold.
+Threshold changes require performance evidence and review; CI never rewrites
+the reference.

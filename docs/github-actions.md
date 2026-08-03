@@ -9,10 +9,12 @@
 | `container.yml` | PR, main | image build, scan, smoke test |
 | `kubernetes.yml` | PR, main | Helm and kind verification |
 | `nightly.yml` | schedule/manual | full deterministic and datastore integration suites |
+| `live-provider.yml` | manual | protected OpenAI/Anthropic/Gemini smoke through OpenAI SDK |
 | `release.yml` | signed `v*` tag | publish signed release artifacts |
 
-Live-provider, performance, and SDK-publication workflows are release-candidate
-work and are deliberately not enabled in the Operations stage.
+The CI workflow also verifies both SDK previews, OpenAPI compatibility, network
+stream cancellation, and the stored p95 performance threshold. SDK publication
+is deliberately not enabled until registry ownership is verified.
 
 ## Security defaults
 
@@ -89,3 +91,8 @@ Workflow logs are public for a public repository; commands must not print
 environment variables or configuration. Failed release jobs are resumable only
 when doing so cannot overwrite an already published version. All jobs have
 timeouts and artifact retention limits.
+
+The `live-provider-smoke` environment must require maintainer approval. It holds
+the three provider secrets and non-secret current model names. Its workflow
+checks only that values are non-empty, never prints them, caps each request at
+eight output tokens, and cannot run on pull requests.

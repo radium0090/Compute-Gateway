@@ -8,6 +8,9 @@
 
 # Dependencies
 node_modules/
+__pycache__/
+*.py[cod]
+.venv/
 
 # Build and test output
 dist/

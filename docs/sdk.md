@@ -13,6 +13,11 @@ MVP languages:
 
 Package names are provisional until registry ownership is verified.
 
+The preview implementations live in `sdk/typescript` and `sdk/python`. The
+TypeScript preview follows the repository's Node.js 24 runtime and the Python
+package supports Python 3.10+. They are not published until package ownership
+and the release candidate are approved.
+
 ## TypeScript example
 
 ```ts
@@ -98,9 +103,25 @@ SDKs follow Semantic Versioning independently from the gateway. A supported
 gateway declares the OpenAPI contract version it implements. CI tests the
 oldest and newest supported SDK minor versions against the gateway release.
 
+## Contributor checks
+
+```bash
+pnpm sdk:generate
+pnpm sdk:check
+pnpm sdk:test
+```
+
+`sdk:check` regenerates both tracked type surfaces from OpenAPI and rejects a
+diff. TypeScript uses `openapi-typescript`; Python's deterministic generator is
+kept in `scripts/generate-python-sdk.ts`. Generated files are never hand-edited.
+
 ## OpenAI SDK compatibility
 
 Compatibility examples are maintained for current supported OpenAI Python and
 JavaScript SDK majors. Those third-party SDK versions are test inputs, not
 Genchi runtime dependencies.
 
+The deterministic suite exercises pinned current OpenAI Node and Python SDKs.
+A protected, manual workflow sends bounded completion and streaming requests
+through the Node SDK to each real provider adapter; the provider-independent
+wire format is also parsed by the Python SDK fixture.

@@ -37,7 +37,7 @@ jobs:
 
   server-validation:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,3 +59,74 @@ jobs:
           helm template genchi deploy/helm/genchi --include-crds \
             | kubectl apply --dry-run=server -f -
           kubectl apply --dry-run=server -f deploy/kubernetes/examples/genchi.yaml
+          kubectl apply --dry-run=server -f deploy/kubernetes/ci/dependencies.yaml
+      - name: Build and load release-candidate image
+        run: |
+          docker build \
+            --build-arg VERSION=0.1.0-rc \
+            --build-arg REVISION="$GITHUB_SHA" \
+            --tag genchi:rc .
+          kind load docker-image genchi:rc --name genchi-validation
+      - name: Start disposable dependencies
+        run: |
+          kubectl create namespace genchi-rc
+          kubectl -n genchi-rc create secret generic genchi-ci-secrets \
+            --from-literal=postgres-password=ci-only-password \
+            --from-literal=database-url=postgresql://genchi:ci-only-password@postgres:5432/genchi \
+            --from-literal=redis-url=redis://redis:6379 \
+            --from-literal=key-hash-pepper=ci-only-pepper-with-at-least-32-characters \
+            --from-literal=openai-api-key=fake-openai \
+            --from-literal=anthropic-api-key=fake-anthropic \
+            --from-literal=gemini-api-key=fake-gemini
+          kubectl -n genchi-rc apply -f deploy/kubernetes/ci/dependencies.yaml
+          kubectl -n genchi-rc rollout status deployment/postgres --timeout=180s
+          kubectl -n genchi-rc rollout status deployment/redis --timeout=180s
+      - name: Install two ready replicas
+        run: |
+          helm upgrade --install genchi deploy/helm/genchi \
+            --namespace genchi-rc \
+            --set image.repository=genchi \
+            --set image.tag=rc \
+            --set image.pullPolicy=Never \
+            --set existingSecret=genchi-ci-secrets \
+            --set runtime.environment=test \
+            --set-string runtime.otlpEndpoint="" \
+            --set-string podAnnotations.rc-generation=initial \
+            --wait --timeout=5m
+          test "$(kubectl -n genchi-rc get deployment genchi-genchi -o jsonpath='{.status.readyReplicas}')" = 2
+          test "$(kubectl -n genchi-rc get deployment genchi-genchi -o jsonpath='{.status.availableReplicas}')" = 2
+      - name: Exercise readiness and rolling upgrade
+        run: |
+          kubectl -n genchi-rc port-forward service/genchi-genchi 18080:80 >port-forward.log 2>&1 &
+          FORWARD_PID=$!
+          trap 'kill "$FORWARD_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/health/ready >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18080/health/ready >/dev/null
+          kill "$FORWARD_PID"
+          wait "$FORWARD_PID" 2>/dev/null || true
+          helm upgrade genchi deploy/helm/genchi \
+            --namespace genchi-rc \
+            --set image.repository=genchi \
+            --set image.tag=rc \
+            --set image.pullPolicy=Never \
+            --set existingSecret=genchi-ci-secrets \
+            --set runtime.environment=test \
+            --set-string runtime.otlpEndpoint="" \
+            --set-string podAnnotations.rc-generation=rollout \
+            --wait --timeout=5m
+          kubectl -n genchi-rc rollout status deployment/genchi-genchi --timeout=180s
+          test "$(kubectl -n genchi-rc get deployment genchi-genchi -o jsonpath='{.status.readyReplicas}')" = 2
+          kubectl -n genchi-rc port-forward service/genchi-genchi 18080:80 >port-forward-after-rollout.log 2>&1 &
+          FORWARD_PID=$!
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/health/ready >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18080/health/ready >/dev/null

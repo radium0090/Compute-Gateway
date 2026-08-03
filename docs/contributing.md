@@ -33,7 +33,14 @@ pnpm lint
 pnpm typecheck
 pnpm test:coverage
 pnpm test:integration
+pnpm test:rc
 pnpm openapi:check
+pnpm openapi:lint
+pnpm openapi:breaking --base origin/main
+pnpm sdk:check
+pnpm sdk:test
+pnpm sdk:test:openai-python
+pnpm performance:check
 pnpm docs:check
 pnpm operations:check
 pnpm build
@@ -42,6 +49,9 @@ pnpm build
 Integration tests skip unless `GENCHI_TEST_DATABASE_URL` and/or
 `GENCHI_TEST_REDIS_URL` are set. Container and kind checks run in CI and should
 also be run locally when those tools are available and their assets change.
+`pnpm release:check` runs the complete locally reproducible candidate gate.
+`pnpm test:live` safely skips unless explicitly enabled; use the protected
+GitHub workflow instead of exporting long-lived provider credentials locally.
 
 ## Pull requests
 

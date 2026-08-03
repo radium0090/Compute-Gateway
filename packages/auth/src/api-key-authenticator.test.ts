@@ -36,6 +36,10 @@ class InMemoryApiKeyRepository implements ApiKeyRepository {
     return Promise.resolve();
   }
 
+  public revoke(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
   public markLastUsed(): Promise<void> {
     return Promise.resolve();
   }

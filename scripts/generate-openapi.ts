@@ -139,6 +139,23 @@ const document = {
         },
       },
     },
+    '/metrics': {
+      get: {
+        operationId: 'getMetrics',
+        summary: 'Get process metrics in Prometheus text format',
+        security: [],
+        responses: {
+          200: {
+            description: 'Prometheus text exposition',
+            content: {
+              'text/plain': {
+                schema: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {

@@ -20,6 +20,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - name: Set up pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -30,6 +31,8 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Install pinned OpenAI Python compatibility client
+        run: python -m pip install --disable-pip-version-check -r sdk/python/requirements-compatibility.txt
       - name: Validate source and generated contracts
         run: |
           pnpm format:check
@@ -38,6 +41,13 @@ jobs:
           pnpm test:coverage
           pnpm build
           pnpm openapi:check
+          pnpm openapi:lint
+          pnpm openapi:breaking --base "${{ github.event_name == 'pull_request' && 'origin/main' || 'HEAD^' }}"
+          pnpm sdk:check
+          pnpm sdk:test
+          pnpm sdk:test:openai-python
+          pnpm test:rc
+          pnpm performance:check
           pnpm docs:check
           pnpm operations:check
       - name: Validate development configuration

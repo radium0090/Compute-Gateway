@@ -1,3 +1,5 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+
 import { FastifyOtelInstrumentation } from '@fastify/otel';
 import {
   isSpanContextValid,
@@ -6,6 +8,7 @@ import {
   type Meter,
 } from '@opentelemetry/api';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
+import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
@@ -36,6 +39,11 @@ export interface BuildIdentity {
   readonly commitSha: string;
 }
 
+export type MetricsRequestHandler = (
+  request: IncomingMessage,
+  response: ServerResponse,
+) => void;
+
 function signalsEndpoint(
   baseUrl: string,
   signal: 'v1/traces' | 'v1/metrics',
@@ -59,15 +67,19 @@ export function registerBuildInfo(meter: Meter, identity: BuildIdentity): void {
 /** Owns OpenTelemetry SDK startup and shutdown for one gateway process. */
 export class TelemetryLifecycle {
   private readonly sdk: NodeSDK;
+  private readonly prometheusExporter: PrometheusExporter | undefined;
+  private readonly buildIdentity: BuildIdentity;
+  private started = false;
 
   public constructor(options: TelemetryOptions) {
+    this.buildIdentity = options;
     const traceExporter =
       options.otlpEndpoint === undefined
         ? undefined
         : new OTLPTraceExporter({
             url: signalsEndpoint(options.otlpEndpoint, 'v1/traces'),
           });
-    const metricReader =
+    const otlpMetricReader =
       options.otlpEndpoint === undefined || !options.metricsEnabled
         ? undefined
         : new PeriodicExportingMetricReader({
@@ -75,6 +87,19 @@ export class TelemetryLifecycle {
               url: signalsEndpoint(options.otlpEndpoint, 'v1/metrics'),
             }),
           });
+    this.prometheusExporter = options.metricsEnabled
+      ? new PrometheusExporter({
+          preventServerStart: true,
+          withoutScopeInfo: true,
+          withoutTargetInfo: true,
+        })
+      : undefined;
+    const metricReaders = [
+      ...(this.prometheusExporter === undefined
+        ? []
+        : [this.prometheusExporter]),
+      ...(otlpMetricReader === undefined ? [] : [otlpMetricReader]),
+    ];
 
     this.sdk = new NodeSDK({
       resource: resourceFromAttributes({
@@ -92,17 +117,29 @@ export class TelemetryLifecycle {
         traceExporter === undefined
           ? []
           : [new BatchSpanProcessor(traceExporter)],
-      ...(metricReader === undefined ? {} : { metricReader }),
+      ...(metricReaders.length === 0 ? {} : { metricReaders }),
     });
-    registerBuildInfo(metrics.getMeter('genchi-gateway'), options);
   }
 
   public start(): void {
     this.sdk.start();
+    if (!this.started) {
+      registerBuildInfo(metrics.getMeter('genchi-gateway'), this.buildIdentity);
+      this.started = true;
+    }
   }
 
   public async stop(): Promise<void> {
     await this.sdk.shutdown();
+  }
+
+  public metricsRequestHandler(): MetricsRequestHandler | undefined {
+    const exporter = this.prometheusExporter;
+    return exporter === undefined
+      ? undefined
+      : (request, response) => {
+          exporter.getMetricsRequestHandler(request, response);
+        };
   }
 }
 

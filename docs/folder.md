@@ -32,13 +32,15 @@ genchi/
 ├── deploy/
 │   ├── compose/
 │   ├── helm/genchi/
-│   └── kubernetes/examples/
+│   └── kubernetes/             # examples and disposable CI fixtures
+├── benchmarks/                 # repeatable scenarios and checked thresholds
 ├── examples/
 │   ├── curl/
 │   ├── node/
 │   └── python/
 ├── docs/
-│   └── adr/
+│   ├── adr/
+│   └── runbooks/
 ├── scripts/                     # deterministic repository automation only
 ├── openapi/
 │   └── genchi.openapi.yaml      # generated and release-pinned contract
@@ -77,4 +79,3 @@ variables use `GENCHI_UPPER_SNAKE_CASE`. Test files live next to source as
 Packages declare explicit workspace dependencies. CI builds affected packages
 but release validation always builds and tests the complete graph. Circular
 workspace dependencies are forbidden and checked automatically.
-

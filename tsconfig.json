@@ -6,8 +6,14 @@
   "files": [
     "vitest.config.ts",
     "vitest.integration.config.ts",
+    "vitest.live.config.ts",
+    "vitest.rc.config.ts",
+    "benchmarks/gateway-overhead.ts",
+    "scripts/check-openapi-breaking.ts",
     "scripts/generate-openapi.ts",
+    "scripts/generate-python-sdk.ts",
     "scripts/validate-docs.ts",
+    "scripts/validate-openapi.ts",
     "scripts/validate-operations.ts"
   ],
   "references": [
@@ -24,6 +30,7 @@
     { "path": "packages/provider-gemini" },
     { "path": "packages/persistence-postgres" },
     { "path": "packages/observability" },
+    { "path": "sdk/typescript" },
     { "path": "apps/gateway" }
   ]
 }

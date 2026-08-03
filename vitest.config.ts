@@ -45,8 +45,17 @@ export default defineConfig({
         statements: 74,
       },
     },
-    exclude: [...configDefaults.exclude, '**/*.integration.test.ts'],
-    include: ['apps/**/*.test.ts', 'packages/**/*.test.ts'],
+    exclude: [
+      ...configDefaults.exclude,
+      '**/*.integration.test.ts',
+      '**/*.live.test.ts',
+      '**/*.rc.test.ts',
+    ],
+    include: [
+      'apps/**/*.test.ts',
+      'packages/**/*.test.ts',
+      'sdk/typescript/**/*.test.ts',
+    ],
     testTimeout: 10_000,
   },
 });

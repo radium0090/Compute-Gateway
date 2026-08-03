@@ -105,7 +105,8 @@ rolling restart so configuration changes apply atomically per replica.
 
 ## Precedence
 
-1. command-line flags limited to `--config`, `--check-config`, and migrations;
+1. command-line flags limited to configuration checks, migrations, and local
+   operator key commands;
 2. documented environment overrides;
 3. YAML policy;
 4. safe development defaults.

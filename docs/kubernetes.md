@@ -106,5 +106,9 @@ safe active-request and memory thresholds before production autoscaling.
 ## Helm quality gates
 
 CI runs chart linting, schema validation, rendered-manifest policy checks, and a
-kind-cluster smoke test. Chart and application versions are independently
+kind-cluster smoke test. The kind job builds the candidate image, starts
+disposable PostgreSQL/Redis fixtures, runs the migration hook, waits for two
+ready replicas, exercises `/health/ready`, and performs a rolling Helm upgrade.
+The fixtures under `deploy/kubernetes/ci` are test-only and are not supported
+production databases. Chart and application versions are independently
 versioned but a chart release pins a supported application image.

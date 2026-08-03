@@ -14,10 +14,11 @@
     "!dist/**/*.test.*"
   ],
   "dependencies": {
-    "@genchi/domain": "workspace:*",
     "@fastify/otel": "0.20.1",
+    "@genchi/domain": "workspace:*",
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/exporter-metrics-otlp-http": "0.221.0",
+    "@opentelemetry/exporter-prometheus": "0.221.0",
     "@opentelemetry/exporter-trace-otlp-http": "0.221.0",
     "@opentelemetry/instrumentation-http": "0.221.0",
     "@opentelemetry/resources": "2.10.0",

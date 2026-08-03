@@ -12,9 +12,10 @@ Application -> Genchi Gateway -> OpenAI | Anthropic | Gemini | future providers
 
 ## Status
 
-Genchi is in active MVP implementation. The gateway, provider/routing core, and
-operations baseline are implemented; release-candidate performance and live
-provider acceptance remain outstanding. The documents in this repository are
+Genchi is in release-candidate validation for the MVP. The gateway,
+provider/routing core, operations baseline, SDK previews, contract gates, and
+repeatable performance checks are implemented. Real-provider smoke and final
+release approval remain protected operator-run gates. The documents in this repository are
 normative for the first release unless an accepted Architecture Decision Record
 (ADR) supersedes them.
 
@@ -45,6 +46,19 @@ cp .env.example .env
 docker compose up --build
 curl http://localhost:8080/health/ready
 ```
+
+Bootstrap a development tenant and create a client key after migrations finish:
+
+```bash
+docker compose exec postgres psql -U genchi -d genchi -c \
+  "INSERT INTO tenants (id, name, status) VALUES ('123e4567-e89b-42d3-a456-426614174000', 'local', 'active') ON CONFLICT DO NOTHING"
+docker compose run --rm gateway keys create \
+  --tenant-id 123e4567-e89b-42d3-a456-426614174000 \
+  --name local-app --environment dev --models 'genchi/*' --allow-streaming
+```
+
+The second command displays the new `GENCHI_API_KEY` once. Keep it out of shell
+history, source control, logs, and URLs.
 
 Compose supplies PostgreSQL and Redis. Outside production, running the gateway
 without `GENCHI_REDIS_URL` uses process-local limits and circuit state; every
@@ -109,6 +123,9 @@ response = client.chat.completions.create(
 - [Observability](docs/observability.md)
 - [CI/CD](docs/ci-cd.md)
 - [GitHub Actions](docs/github-actions.md)
+- [Release-candidate runbook](docs/runbooks/release-candidate.md)
+- [Rollback runbook](docs/runbooks/rollback.md)
+- [Incident response](docs/runbooks/incident-response.md)
 - [Security reporting](SECURITY.md)
 
 ### Project governance

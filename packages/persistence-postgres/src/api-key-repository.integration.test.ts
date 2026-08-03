@@ -65,6 +65,13 @@ describeIntegration('PostgresApiKeyRepository integration', () => {
     await repository.create(key);
     await expect(repository.findByPublicId(key.publicId)).resolves.toEqual(key);
     await repository.markLastUsed(key.id, new Date('2026-08-03T00:01:00.000Z'));
+    await expect(repository.revoke(key.id)).resolves.toBe(true);
+    await expect(repository.revoke(key.id)).resolves.toBe(false);
+    await expect(
+      repository.findByPublicId(key.publicId),
+    ).resolves.toMatchObject({
+      status: 'revoked',
+    });
     await expect(runMigrations(pool, 'db/migrations')).resolves.toEqual({
       appliedVersions: [],
     });

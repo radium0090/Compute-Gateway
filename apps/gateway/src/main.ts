@@ -17,7 +17,11 @@ import type {
   RequestAdmissionController,
   RoutingExecutionPolicy,
 } from '@genchi/domain';
-import { createLogger, createRoutingObserver } from '@genchi/observability';
+import {
+  createLogger,
+  createRoutingObserver,
+  type MetricsRequestHandler,
+} from '@genchi/observability';
 import {
   PostgresApiKeyRepository,
   PostgresReadinessProbe,
@@ -230,6 +234,7 @@ export async function runGateway(
   config: RuntimeConfig,
   policy: PolicyConfig,
   credentials: ReadonlyMap<string, string>,
+  metricsRequestHandler?: MetricsRequestHandler,
 ): Promise<void> {
   const logger = createLogger({
     environment: config.environment,
@@ -253,6 +258,9 @@ export async function runGateway(
       const app = await buildGateway({
         config,
         logger,
+        ...(metricsRequestHandler === undefined
+          ? {}
+          : { metricsRequestHandler }),
         readinessProbe: readinessProbe(
           new PostgresReadinessProbe(pool),
           coordination,

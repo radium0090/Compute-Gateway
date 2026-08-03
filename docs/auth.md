@@ -72,9 +72,17 @@ Future encrypted database storage requires a separate ADR and external KMS.
 The release includes an operator CLI:
 
 ```bash
-genchi keys create --name local-app --environment dev --models 'genchi/*'
-genchi keys revoke --id key_01J...
+genchi keys create --tenant-id 123e4567-e89b-42d3-a456-426614174000 \
+  --name local-app --environment dev --models 'genchi/*' --allow-streaming
+genchi keys revoke --id 223e4567-e89b-42d3-a456-426614174000
 ```
+
+Key commands require `GENCHI_MASTER_KEY`, direct PostgreSQL connectivity, an
+applied schema, and an existing tenant UUID. The master key is only an operator
+command gate; it is never sent to PostgreSQL or the public HTTP service. In
+production, execute the command as a short-lived approved job and remove the
+master key from normal gateway pods after bootstrap. The CLI never accepts a
+plaintext credential for storage.
 
 The CLI prints a new key exactly once. Rotation means create, deploy to client,
 verify traffic, then revoke the old key. Emergency revocation may flush the
@@ -93,4 +101,3 @@ Create, revoke, expire, policy change, repeated authentication failure, and
 provider credential configuration change produce metadata-only audit events.
 Events include actor, action, target public ID, timestamp, result, and request
 ID. They do not include secrets or prompt content.
-
