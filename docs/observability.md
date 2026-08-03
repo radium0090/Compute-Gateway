@@ -62,6 +62,16 @@ It records only configured alias/provider/model names and bounded reason codes;
 request IDs, API key IDs, credentials, prompts, and completions are excluded
 from metric labels.
 
+Release builds also register `genchi_build_info` from
+`GENCHI_SERVICE_VERSION` and `GENCHI_COMMIT_SHA`. The Docker build sets both
+from release identity; operators can use them as deployment markers without
+adding unbounded labels.
+
+The reference Compose Collector enables health checking, memory limiting, and
+batching before exporting OTLP. Production deployments should keep the
+Collector separate from the gateway and add vendor authentication only through
+the platform secret system.
+
 ## Traces
 
 One server span encloses child spans for auth, policy, routing, each provider

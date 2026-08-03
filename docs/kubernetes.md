@@ -6,6 +6,25 @@ The supported package is `deploy/helm/genchi`. Plain manifests in
 `deploy/kubernetes/examples` illustrate integration but are not a substitute
 for environment-specific secret, ingress, and database configuration.
 
+Create the secret through the cluster's secret-management path, then install by
+immutable image digest:
+
+```bash
+helm lint --strict deploy/helm/genchi
+helm upgrade --install genchi deploy/helm/genchi \
+  --namespace genchi --create-namespace \
+  --set existingSecret=genchi-production-secrets \
+  --set image.tag=v0.1.0 \
+  --set image.digest=sha256:<digest>
+```
+
+The referenced secret uses the default keys `database-url`, `redis-url`,
+`key-hash-pepper`, `openai-api-key`, `anthropic-api-key`, and `gemini-api-key`.
+Key names are configurable under `secretKeys`; secret values are never accepted
+by chart values. An unused provider should be removed from `policy.providers`
+and alias candidates, with its corresponding `secretKeys` entry set to an empty
+string instead of receiving a credential.
+
 ## Workloads
 
 - `Deployment` for stateless gateway replicas;
@@ -39,6 +58,8 @@ containers:
 
 The chart sets resource requests/limits, graceful termination, and a
 `preStop`/shutdown grace compatible with the longest accepted request deadline.
+Schema and operations checks reject a `latest` tag and a termination window
+shorter than total request deadline + shutdown grace + pre-stop delay.
 
 ## Probes
 
@@ -66,8 +87,14 @@ Helm NOTES or diagnostic output.
 Ingress enforces TLS and request body limits at least as strict as the gateway.
 Streaming routes disable response buffering and use timeouts longer than the
 gateway total deadline. Only trusted proxy CIDRs can set forwarding headers.
-Network policy allows DNS, database, Redis, telemetry collector, and configured
-provider endpoints. Operators account for provider IP/domain variability.
+An enabled network policy must allow DNS, database, Redis, telemetry collector,
+and configured provider endpoints. Operators account for provider IP/domain
+variability.
+Because Kubernetes NetworkPolicy does not resolve provider domain names, the
+chart keeps the policy disabled by default. Enabling it permits DNS only until
+the operator supplies the required database, Redis, Collector, ingress, and
+provider CIDR/selector rules through `networkPolicy.extraEgress` and the ingress
+namespace selector.
 
 ## Scaling and disruption
 
@@ -81,4 +108,3 @@ safe active-request and memory thresholds before production autoscaling.
 CI runs chart linting, schema validation, rendered-manifest policy checks, and a
 kind-cluster smoke test. Chart and application versions are independently
 versioned but a chart release pins a supported application image.
-

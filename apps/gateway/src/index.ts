@@ -16,7 +16,8 @@ async function main(): Promise<void> {
 
   const telemetry = new TelemetryLifecycle({
     environment: config.environment,
-    serviceVersion: '0.0.0',
+    serviceVersion: config.serviceVersion,
+    commitSha: config.commitSha,
     metricsEnabled: config.metricsEnabled,
     ...(config.otlpEndpoint === undefined
       ? {}

@@ -4,13 +4,15 @@
 
 | Workflow | Trigger | Purpose |
 | --- | --- | --- |
-| `ci.yml` | pull request, main push | lint, types, tests, contract, docs |
-| `security.yml` | PR, schedule | CodeQL/static, secrets, dependency/license scans |
+| `ci.yml` | pull request, main push | format, lint, types, coverage, contracts, PostgreSQL/Redis integration |
+| `security.yml` | PR, main, schedule | CodeQL, secrets, dependency/license/IaC scans |
 | `container.yml` | PR, main | image build, scan, smoke test |
 | `kubernetes.yml` | PR, main | Helm and kind verification |
-| `nightly.yml` | schedule/manual | compatibility, live provider, load/regression |
+| `nightly.yml` | schedule/manual | full deterministic and datastore integration suites |
 | `release.yml` | signed `v*` tag | publish signed release artifacts |
-| `sdk-release.yml` | SDK tag/manual approval | publish language packages |
+
+Live-provider, performance, and SDK-publication workflows are release-candidate
+work and are deliberately not enabled in the Operations stage.
 
 ## Security defaults
 
@@ -62,7 +64,7 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm ci
+      - run: pnpm test:coverage
 ```
 
 Placeholders MUST be replaced with reviewed SHAs before merging.
@@ -76,10 +78,10 @@ registry credentials. Artifact attestations include source commit and workflow.
 
 ## Dependabot
 
-Dependabot groups low-risk development updates and separates runtime, provider
-SDK, security, Docker, and GitHub Actions updates. Lockfile/workflow changes
-receive CODEOWNERS review. Automated dependency pull requests run the same test
-suite and are not auto-merged initially.
+Dependabot groups development-package and GitHub Actions updates and separately
+tracks Docker and npm ecosystems. Lockfile/workflow changes receive CODEOWNERS
+review. Automated dependency pull requests run the same test suite and are not
+auto-merged initially.
 
 ## Operational rules
 
@@ -87,4 +89,3 @@ Workflow logs are public for a public repository; commands must not print
 environment variables or configuration. Failed release jobs are resumable only
 when doing so cannot overwrite an already published version. All jobs have
 timeouts and artifact retention limits.
-

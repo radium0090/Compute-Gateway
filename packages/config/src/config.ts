@@ -35,6 +35,12 @@ export const RuntimeConfigSchema = Type.Object(
     configCacheTtlSeconds: Type.Integer({ minimum: 0, maximum: 60 }),
     trustProxy: Type.Boolean(),
     metricsEnabled: Type.Boolean(),
+    serviceVersion: Type.String({
+      minLength: 1,
+      maxLength: 64,
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._+-]*$',
+    }),
+    commitSha: Type.String({ pattern: '^(unknown|[a-f0-9]{7,64})$' }),
   },
   { additionalProperties: false },
 );
@@ -61,6 +67,8 @@ const fieldToEnvironmentVariable: Readonly<Record<string, string>> = {
   configCacheTtlSeconds: 'CONFIG_CACHE_TTL_SECONDS',
   trustProxy: 'GENCHI_TRUST_PROXY',
   metricsEnabled: 'GENCHI_METRICS_ENABLED',
+  serviceVersion: 'GENCHI_SERVICE_VERSION',
+  commitSha: 'GENCHI_COMMIT_SHA',
 };
 
 export class ConfigValidationError extends Error {
@@ -133,6 +141,8 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     configCacheTtlSeconds: parseInteger(source.CONFIG_CACHE_TTL_SECONDS, 15),
     trustProxy: parseBoolean(source.GENCHI_TRUST_PROXY, false),
     metricsEnabled: parseBoolean(source.GENCHI_METRICS_ENABLED, true),
+    serviceVersion: source.GENCHI_SERVICE_VERSION ?? '0.0.0',
+    commitSha: source.GENCHI_COMMIT_SHA ?? 'unknown',
   };
 
   const issues = [...Value.Errors(RuntimeConfigSchema, candidate)].map(

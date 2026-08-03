@@ -38,6 +38,12 @@ credential name; the value is never included in route YAML.
 | `CONFIG_CACHE_TTL_SECONDS` | `15` | 0..60 |
 | `GENCHI_TRUST_PROXY` | `false` | explicit proxy CIDRs in production |
 | `GENCHI_METRICS_ENABLED` | `true` | boolean |
+| `GENCHI_SERVICE_VERSION` | `0.0.0` | build/release identifier, maximum 64 characters |
+| `GENCHI_COMMIT_SHA` | `unknown` | `unknown` or a 7..64 character lowercase Git SHA |
+
+Release images set the last two values from immutable build metadata. Operators
+normally leave them unchanged so traces and `genchi_build_info` match the image
+provenance.
 
 ## Route policy example
 

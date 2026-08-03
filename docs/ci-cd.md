@@ -12,7 +12,7 @@ an operator's environment.
 Required checks:
 
 1. repository policy, formatting, linting, and type checking;
-2. unit tests and coverage thresholds on changed packages;
+2. unit tests and repository coverage thresholds;
 3. integration tests with PostgreSQL, Redis, and mock providers;
 4. adapter conformance and OpenAI SDK compatibility tests;
 5. OpenAPI generation, lint, and breaking-change comparison;
@@ -25,6 +25,13 @@ Required checks:
 Untrusted fork workflows use no repository secrets and do not run live provider
 tests. Expensive nightly jobs are supplemental, never a substitute for core PR
 checks.
+
+The current Operations baseline uses only fake provider values. Live-provider
+and performance gates begin in the release-candidate stage and require protected
+environments; they are never part of untrusted pull request workflows. Until a
+previous release exists, migration CI verifies empty installation and
+idempotency; the first upgrade fixture becomes mandatory before the next schema
+migration is accepted.
 
 ## Test layers
 
@@ -41,8 +48,8 @@ Tests use deterministic clocks/IDs and never assert against live provider text.
 
 ## Main branch
 
-Merges to main build a candidate image tagged by commit SHA and publish test
-results. Main is protected: pull request, passing required checks, current
+Merges to main validate a candidate image and publish test evidence. Main is
+protected: pull request, passing required checks, current
 review, resolved discussions, and CODEOWNERS approval for sensitive paths.
 
 ## Release flow
@@ -76,4 +83,3 @@ Nightly and release-candidate tests measure non-streaming overhead, connection
 capacity, memory per stream, cancellation cleanup, and route/fallback behavior.
 Regression thresholds are stored with the benchmark scenario and reference
 hardware; noisy microbenchmarks do not block PRs without confirmation.
-

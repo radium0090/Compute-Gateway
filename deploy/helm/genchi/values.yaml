@@ -1,0 +1,144 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/radium0090/compute-gateway
+  tag: v0.1.0
+  digest: ''
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ''
+fullnameOverride: ''
+
+serviceAccount:
+  create: true
+  name: ''
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+existingSecret: genchi-secrets
+secretKeys:
+  databaseUrl: database-url
+  redisUrl: redis-url
+  keyHashPepper: key-hash-pepper
+  masterKey: ''
+  openaiApiKey: openai-api-key
+  anthropicApiKey: anthropic-api-key
+  geminiApiKey: gemini-api-key
+
+runtime:
+  environment: production
+  logLevel: info
+  requestBodyLimitBytes: 2097152
+  totalTimeoutMs: 60000
+  connectTimeoutMs: 5000
+  shutdownGraceMs: 30000
+  authCacheTtlSeconds: 30
+  configCacheTtlSeconds: 15
+  trustProxy: false
+  metricsEnabled: true
+  otlpEndpoint: http://otel-collector.observability.svc.cluster.local:4318
+
+policy:
+  version: 1
+  providers:
+    openai-primary:
+      adapter: openai
+      credential_env: OPENAI_API_KEY
+      base_url: https://api.openai.com/v1
+      models:
+        gpt-5-mini:
+          capabilities: [chat, streaming]
+    anthropic-primary:
+      adapter: anthropic
+      credential_env: ANTHROPIC_API_KEY
+      base_url: https://api.anthropic.com/v1
+      models:
+        claude-sonnet-4-6:
+          capabilities: [chat, streaming]
+    gemini-primary:
+      adapter: gemini
+      credential_env: GEMINI_API_KEY
+      base_url: https://generativelanguage.googleapis.com/v1beta
+      models:
+        gemini-3.5-flash:
+          capabilities: [chat, streaming]
+  aliases:
+    genchi/fast:
+      candidates:
+        - provider: openai-primary
+          model: gpt-5-mini
+          weight: 100
+        - provider: anthropic-primary
+          model: claude-sonnet-4-6
+          weight: 0
+        - provider: gemini-primary
+          model: gemini-3.5-flash
+          weight: 0
+  routing:
+    max_attempts: 2
+    total_timeout_ms: 60000
+    connect_timeout_ms: 5000
+    same_route_retries: 0
+    minimum_attempt_budget_ms: 2000
+    retry_base_delay_ms: 100
+    global_max_concurrent_calls: 1000
+    provider_max_concurrent_calls: 100
+    circuit:
+      failure_threshold: 5
+      rolling_window_ms: 30000
+      open_duration_ms: 30000
+      half_open_max_calls: 1
+
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ''
+  annotations: {}
+  hosts:
+    - host: genchi.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: '1'
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: false
+  ingressNamespaceSelector: {}
+  extraEgress: []
+
+terminationGracePeriodSeconds: 95
+preStopDelaySeconds: 5
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

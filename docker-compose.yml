@@ -33,12 +33,26 @@ services:
       - no-new-privileges:true
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.132.0
+    image: otel/opentelemetry-collector-contrib:0.157.0
     command: ['--config=/etc/otelcol-contrib/config.yaml']
     volumes:
       - ./deploy/compose/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    healthcheck:
+      test:
+        [
+          'CMD',
+          '/otelcol-contrib',
+          'validate',
+          '--config=/etc/otelcol-contrib/config.yaml',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
 
   migrate:
     build:
@@ -74,12 +88,12 @@ services:
       redis:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test:
         [
           'CMD',
-          'node',
+          '/nodejs/bin/node',
           '-e',
           "fetch('http://127.0.0.1:8080/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
@@ -88,6 +102,11 @@ services:
       retries: 20
       start_period: 10s
     init: true
+    stop_grace_period: 95s
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     read_only: true
     tmpfs:
       - /tmp

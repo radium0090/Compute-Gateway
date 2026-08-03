@@ -1,0 +1,175 @@
+# Illustrative only: replace the image digest, Secret name, endpoints, and policy.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: genchi
+  labels:
+    app.kubernetes.io/part-of: genchi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: genchi
+  namespace: genchi
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: genchi-policy
+  namespace: genchi
+data:
+  config.yaml: |
+    version: 1
+    providers:
+      openai-primary:
+        adapter: openai
+        credential_env: OPENAI_API_KEY
+        base_url: https://api.openai.com/v1
+        models:
+          gpt-5-mini:
+            capabilities: [chat, streaming]
+    aliases:
+      genchi/fast:
+        candidates:
+          - provider: openai-primary
+            model: gpt-5-mini
+            weight: 100
+    routing:
+      max_attempts: 2
+      total_timeout_ms: 60000
+      connect_timeout_ms: 5000
+      same_route_retries: 0
+      minimum_attempt_budget_ms: 2000
+      retry_base_delay_ms: 100
+      global_max_concurrent_calls: 1000
+      provider_max_concurrent_calls: 100
+      circuit:
+        failure_threshold: 5
+        rolling_window_ms: 30000
+        open_duration_ms: 30000
+        half_open_max_calls: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: genchi
+  namespace: genchi
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: genchi
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: genchi
+    spec:
+      serviceAccountName: genchi
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 95
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: genchi
+      containers:
+        - name: gateway
+          image: ghcr.io/radium0090/compute-gateway:v0.1.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - { name: GENCHI_ENVIRONMENT, value: production }
+            - { name: GENCHI_CONFIG_FILE, value: /etc/genchi/config.yaml }
+            - { name: GENCHI_HOST, value: 0.0.0.0 }
+            - { name: GENCHI_PORT, value: '8080' }
+            - { name: GENCHI_TOTAL_TIMEOUT_MS, value: '60000' }
+            - { name: GENCHI_CONNECT_TIMEOUT_MS, value: '5000' }
+            - { name: GENCHI_SHUTDOWN_GRACE_MS, value: '30000' }
+            - { name: GENCHI_METRICS_ENABLED, value: 'true' }
+            - name: GENCHI_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  { name: genchi-production-secrets, key: database-url }
+            - name: GENCHI_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  { name: genchi-production-secrets, key: redis-url }
+            - name: GENCHI_KEY_HASH_PEPPER
+              valueFrom:
+                secretKeyRef:
+                  { name: genchi-production-secrets, key: key-hash-pepper }
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  { name: genchi-production-secrets, key: openai-api-key }
+          volumeMounts:
+            - name: policy
+              mountPath: /etc/genchi/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          startupProbe:
+            httpGet: { path: /health/live, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: '1', memory: 512Mi }
+      volumes:
+        - name: policy
+          configMap: { name: genchi-policy }
+        - name: tmp
+          emptyDir: { medium: Memory, sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: genchi
+  namespace: genchi
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: genchi
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: genchi
+  namespace: genchi
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: genchi

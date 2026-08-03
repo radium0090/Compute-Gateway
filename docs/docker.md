@@ -6,7 +6,8 @@ The gateway uses a multi-stage Dockerfile:
 
 1. pinned build image installs dependencies using the frozen lockfile;
 2. build stage compiles TypeScript and prunes development dependencies;
-3. minimal pinned runtime image receives only runtime files;
+3. a digest-pinned, shellless Distroless Node.js 24 runtime receives only
+   runtime files;
 4. runtime uses a fixed non-root UID/GID and an explicit entrypoint.
 
 The image declares port 8080, handles `SIGTERM`, writes logs to stdout/stderr,
@@ -15,8 +16,11 @@ and writes no persistent application state to its filesystem.
 ## Build
 
 ```bash
-docker build --pull --tag genchi:dev .
-docker run --rm genchi:dev --check-config
+docker build --pull --build-arg VERSION=0.0.0-dev \
+  --build-arg REVISION=unknown --tag genchi:dev .
+docker run --rm --read-only --tmpfs /tmp --env-file .env \
+  --mount type=bind,src="$PWD/deploy/compose/genchi.yaml",dst=/etc/genchi/config.yaml,readonly \
+  genchi:dev --check-config
 ```
 
 Build context excludes `.git`, test output, local environment files, and
@@ -40,8 +44,9 @@ docker compose logs -f gateway
 docker compose down
 ```
 
-The Compose file uses health checks and dependency health conditions. It does
-not contain real secrets. Database ports bind to loopback by default.
+The Compose file uses health checks and dependency health conditions. Its
+Collector validates the mounted pipeline before becoming healthy. Compose does
+not contain real secrets, and database ports bind to loopback by default.
 
 ## Runtime hardening
 

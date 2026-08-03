@@ -1,0 +1,5 @@
+Genchi has been rendered as {{ include "genchi.fullname" . }}.
+
+The chart references the existing Secret {{ .Values.existingSecret | quote }};
+it never renders secret values. Wait for the migration hook and all replicas to
+be ready, then access the private Service on port {{ .Values.service.port }}.

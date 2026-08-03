@@ -1,5 +1,10 @@
 import { FastifyOtelInstrumentation } from '@fastify/otel';
-import { isSpanContextValid, metrics, trace } from '@opentelemetry/api';
+import {
+  isSpanContextValid,
+  metrics,
+  trace,
+  type Meter,
+} from '@opentelemetry/api';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
@@ -16,6 +21,7 @@ import {
 export interface TelemetryOptions {
   readonly environment: string;
   readonly serviceVersion: string;
+  readonly commitSha: string;
   readonly otlpEndpoint?: string;
   readonly metricsEnabled: boolean;
 }
@@ -25,11 +31,29 @@ export interface CorrelationContext {
   readonly spanId?: string;
 }
 
+export interface BuildIdentity {
+  readonly serviceVersion: string;
+  readonly commitSha: string;
+}
+
 function signalsEndpoint(
   baseUrl: string,
   signal: 'v1/traces' | 'v1/metrics',
 ): string {
   return `${baseUrl.replace(/\/$/, '')}/${signal}`;
+}
+
+/** Registers a constant gauge that lets operators match telemetry to a build. */
+export function registerBuildInfo(meter: Meter, identity: BuildIdentity): void {
+  const buildInfo = meter.createObservableGauge('genchi_build_info', {
+    description: 'Build identity for the running gateway',
+  });
+  buildInfo.addCallback((result) => {
+    result.observe(1, {
+      version: identity.serviceVersion,
+      commit: identity.commitSha,
+    });
+  });
 }
 
 /** Owns OpenTelemetry SDK startup and shutdown for one gateway process. */
@@ -70,6 +94,7 @@ export class TelemetryLifecycle {
           : [new BatchSpanProcessor(traceExporter)],
       ...(metricReader === undefined ? {} : { metricReader }),
     });
+    registerBuildInfo(metrics.getMeter('genchi-gateway'), options);
   }
 
   public start(): void {

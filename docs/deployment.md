@@ -30,6 +30,13 @@ Deploy by digest in production:
 ghcr.io/<owner>/genchi:v0.1.0@sha256:<digest>
 ```
 
+The `release.yml` workflow accepts an annotated signed `v*.*.*` tag whose
+commit is on `main` and whose version matches the chart `appVersion`. It refuses
+an existing registry tag, publishes a multi-architecture image and chart,
+generates checksums and SPDX SBOMs, and attaches keyless image signature and
+provenance. It publishes artifacts only; environment deployment remains an
+operator-controlled action.
+
 ## Deployment sequence
 
 1. Read release notes and schema compatibility requirements.
@@ -74,4 +81,3 @@ configuration publication.
 Development, staging, and production use separate databases, API key prefixes,
 provider credentials, and telemetry destinations. Staging mirrors production
 topology without using production user traffic or secrets.
-

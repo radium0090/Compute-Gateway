@@ -3,7 +3,13 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "files": ["vitest.config.ts", "scripts/generate-openapi.ts"],
+  "files": [
+    "vitest.config.ts",
+    "vitest.integration.config.ts",
+    "scripts/generate-openapi.ts",
+    "scripts/validate-docs.ts",
+    "scripts/validate-operations.ts"
+  ],
   "references": [
     { "path": "packages/api-contract" },
     { "path": "packages/domain" },

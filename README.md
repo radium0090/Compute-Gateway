@@ -12,9 +12,11 @@ Application -> Genchi Gateway -> OpenAI | Anthropic | Gemini | future providers
 
 ## Status
 
-Genchi is in the specification and MVP implementation stage. The documents in
-this repository are normative for the first release unless an accepted
-Architecture Decision Record (ADR) supersedes them.
+Genchi is in active MVP implementation. The gateway, provider/routing core, and
+operations baseline are implemented; release-candidate performance and live
+provider acceptance remain outstanding. The documents in this repository are
+normative for the first release unless an accepted Architecture Decision Record
+(ADR) supersedes them.
 
 ## MVP capabilities
 
@@ -107,6 +109,7 @@ response = client.chat.completions.create(
 - [Observability](docs/observability.md)
 - [CI/CD](docs/ci-cd.md)
 - [GitHub Actions](docs/github-actions.md)
+- [Security reporting](SECURITY.md)
 
 ### Project governance
 

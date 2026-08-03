@@ -18,12 +18,16 @@ describe('loadConfig', () => {
       ...validEnvironment,
       GENCHI_PORT: '9090',
       GENCHI_METRICS_ENABLED: 'false',
+      GENCHI_SERVICE_VERSION: 'v0.1.0',
+      GENCHI_COMMIT_SHA: 'abcdef1234567',
     });
 
     expect(config.port).toBe(9090);
     expect(config.metricsEnabled).toBe(false);
     expect(config.totalTimeoutMs).toBe(60_000);
     expect(config.configFile).toBe('/etc/genchi/config.yaml');
+    expect(config.serviceVersion).toBe('v0.1.0');
+    expect(config.commitSha).toBe('abcdef1234567');
   });
 
   it('rejects missing required settings without echoing secret values', () => {

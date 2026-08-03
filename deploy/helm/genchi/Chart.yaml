@@ -1,0 +1,13 @@
+apiVersion: v2
+name: genchi
+description: Open-source AI compute gateway
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.30.0-0'
+home: https://github.com/radium0090/Compute-Gateway
+sources:
+  - https://github.com/radium0090/Compute-Gateway
+maintainers:
+  - name: Genchi maintainers
+    url: https://github.com/radium0090/Compute-Gateway

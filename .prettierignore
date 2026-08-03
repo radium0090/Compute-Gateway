@@ -6,3 +6,4 @@ LICENSE
 README.md
 docs
 openapi/genchi.openapi.yaml
+deploy/helm/genchi/templates

@@ -18,7 +18,7 @@ Prerequisites: Node.js 24, pnpm 9, Docker 26+, and Git.
 pnpm install --frozen-lockfile
 cp .env.example .env
 docker compose up -d postgres redis otel-collector
-pnpm db:migrate
+pnpm migrate
 pnpm dev
 ```
 
@@ -31,14 +31,17 @@ Real provider credentials are optional and must never be committed.
 pnpm format:check
 pnpm lint
 pnpm typecheck
-pnpm test
+pnpm test:coverage
 pnpm test:integration
 pnpm openapi:check
 pnpm docs:check
+pnpm operations:check
+pnpm build
 ```
 
-`pnpm ci` runs the required local-equivalent suite. Some container/Kubernetes
-checks run only in CI but should be run locally when modifying those areas.
+Integration tests skip unless `GENCHI_TEST_DATABASE_URL` and/or
+`GENCHI_TEST_REDIS_URL` are set. Container and kind checks run in CI and should
+also be run locally when those tools are available and their assets change.
 
 ## Pull requests
 

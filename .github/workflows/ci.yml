@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate source and generated contracts
+        run: |
+          pnpm format:check
+          pnpm lint
+          pnpm typecheck
+          pnpm test:coverage
+          pnpm build
+          pnpm openapi:check
+          pnpm docs:check
+          pnpm operations:check
+      - name: Validate development configuration
+        run: node apps/gateway/dist/index.js --check-config
+        env:
+          GENCHI_ENVIRONMENT: development
+          GENCHI_DATABASE_URL: postgresql://genchi:fake@localhost:5432/genchi
+          GENCHI_KEY_HASH_PEPPER: fake-pepper-with-at-least-32-characters
+          GENCHI_CONFIG_FILE: deploy/compose/genchi.yaml
+          OPENAI_API_KEY: fake-openai
+          ANTHROPIC_API_KEY: fake-anthropic
+          GEMINI_API_KEY: fake-gemini
+      - name: Validate production configuration
+        run: node apps/gateway/dist/index.js --check-config
+        env:
+          GENCHI_ENVIRONMENT: production
+          GENCHI_DATABASE_URL: postgresql://genchi:fake@postgres.invalid:5432/genchi
+          GENCHI_REDIS_URL: rediss://redis.invalid:6379
+          GENCHI_KEY_HASH_PEPPER: fake-pepper-with-at-least-32-characters
+          GENCHI_CONFIG_FILE: deploy/compose/genchi.yaml
+          OPENAI_API_KEY: fake-openai
+          ANTHROPIC_API_KEY: fake-anthropic
+          GEMINI_API_KEY: fake-gemini
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.10-bookworm
+        env:
+          POSTGRES_DB: genchi
+          POSTGRES_USER: genchi
+          POSTGRES_PASSWORD: integration-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U genchi -d genchi"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:7.4.9-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+      - name: Run PostgreSQL and Redis integration tests
+        run: pnpm test:integration
+        env:
+          GENCHI_TEST_DATABASE_URL: postgresql://genchi:integration-only@127.0.0.1:5432/genchi
+          GENCHI_TEST_REDIS_URL: redis://127.0.0.1:6379

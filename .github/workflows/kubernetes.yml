@@ -1,0 +1,61 @@
+name: Kubernetes
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kubernetes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.1.1
+      - name: Lint and render chart variants
+        run: |
+          helm lint --strict deploy/helm/genchi
+          helm template genchi deploy/helm/genchi > rendered-default.yaml
+          helm template genchi deploy/helm/genchi \
+            --set autoscaling.enabled=true \
+            --set ingress.enabled=true \
+            --set ingress.className=nginx \
+            --set networkPolicy.enabled=true > rendered-options.yaml
+
+  server-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.1.1
+      - name: Create pinned kind cluster
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
+        with:
+          version: v0.31.0
+          node_image: kindest/node:v1.35.0@sha256:452d707d4862f52530247495d180205e029056831160e22870e37e3f6c1ac31f
+          cluster_name: genchi-validation
+          wait: 90s
+      - name: Validate rendered manifests against Kubernetes API
+        run: |
+          helm template genchi deploy/helm/genchi --include-crds \
+            | kubectl apply --dry-run=server -f -
+          kubectl apply --dry-run=server -f deploy/kubernetes/examples/genchi.yaml
