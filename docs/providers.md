@@ -102,3 +102,15 @@ Provider SDK versions are pinned through the lockfile. Direct HTTP clients MAY
 be preferred when an official SDK prevents cancellation, redaction, or stable
 error handling.
 
+## Current chat compatibility rules
+
+- Anthropic and Gemini map only leading `system` messages to their native
+  system-instruction field. A system message after conversation turns is
+  rejected rather than reordered.
+- Anthropic maps `user` to `metadata.user_id`; Gemini treats `user` as gateway
+  metadata and does not send it upstream.
+- Anthropic temperatures above `1` are rejected because the native API cannot
+  represent them without changing their meaning.
+- Tool calls and structured outputs are not declared for these adapters in the
+  multi-provider milestone. They remain later work even where a provider has a
+  native feature.

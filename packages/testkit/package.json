@@ -1,5 +1,5 @@
 {
-  "name": "@genchi/provider-openai",
+  "name": "@genchi/testkit",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,9 +15,6 @@
   ],
   "dependencies": {
     "@genchi/domain": "workspace:*",
-    "@sinclair/typebox": "0.34.52"
-  },
-  "devDependencies": {
-    "@genchi/testkit": "workspace:*"
+    "vitest": "4.1.10"
   }
 }

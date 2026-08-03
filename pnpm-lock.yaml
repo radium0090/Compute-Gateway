@@ -65,6 +65,12 @@ importers:
       '@genchi/persistence-postgres':
         specifier: workspace:*
         version: link:../../packages/persistence-postgres
+      '@genchi/provider-anthropic':
+        specifier: workspace:*
+        version: link:../../packages/provider-anthropic
+      '@genchi/provider-gemini':
+        specifier: workspace:*
+        version: link:../../packages/provider-gemini
       '@genchi/provider-openai':
         specifier: workspace:*
         version: link:../../packages/provider-openai
@@ -163,6 +169,32 @@ importers:
         specifier: 8.20.3
         version: 8.20.3
 
+  packages/provider-anthropic:
+    dependencies:
+      '@genchi/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@sinclair/typebox':
+        specifier: 0.34.52
+        version: 0.34.52
+    devDependencies:
+      '@genchi/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
+  packages/provider-gemini:
+    dependencies:
+      '@genchi/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@sinclair/typebox':
+        specifier: 0.34.52
+        version: 0.34.52
+    devDependencies:
+      '@genchi/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
   packages/provider-openai:
     dependencies:
       '@genchi/domain':
@@ -171,6 +203,10 @@ importers:
       '@sinclair/typebox':
         specifier: 0.34.52
         version: 0.34.52
+    devDependencies:
+      '@genchi/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/router:
     dependencies:
@@ -180,6 +216,15 @@ importers:
       '@genchi/domain':
         specifier: workspace:*
         version: link:../domain
+
+  packages/testkit:
+    dependencies:
+      '@genchi/domain':
+        specifier: workspace:*
+        version: link:../domain
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(tsx@4.20.6)(yaml@2.9.0))
 
 packages:
 

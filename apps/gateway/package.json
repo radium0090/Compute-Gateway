@@ -23,6 +23,8 @@
     "@genchi/domain": "workspace:*",
     "@genchi/observability": "workspace:*",
     "@genchi/persistence-postgres": "workspace:*",
+    "@genchi/provider-anthropic": "workspace:*",
+    "@genchi/provider-gemini": "workspace:*",
     "@genchi/provider-openai": "workspace:*",
     "@genchi/router": "workspace:*",
     "fastify": "5.11.0",

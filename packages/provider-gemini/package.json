@@ -1,5 +1,5 @@
 {
-  "name": "@genchi/provider-openai",
+  "name": "@genchi/provider-gemini",
   "version": "0.0.0",
   "private": true,
   "type": "module",

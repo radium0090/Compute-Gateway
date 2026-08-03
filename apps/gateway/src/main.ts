@@ -16,6 +16,8 @@ import {
   createPostgresPool,
   runMigrations,
 } from '@genchi/persistence-postgres';
+import { AnthropicAdapter } from '@genchi/provider-anthropic';
+import { GeminiAdapter } from '@genchi/provider-gemini';
 import { OpenAiAdapter } from '@genchi/provider-openai';
 import { StaticModelCatalog, StaticPolicyRouter } from '@genchi/router';
 
@@ -55,35 +57,59 @@ function modelCapabilities(
   };
 }
 
-function buildProviderRegistry(
+export function buildProviderRegistry(
   policy: PolicyConfig,
   credentials: ReadonlyMap<string, string>,
 ): ReadonlyMap<string, ProviderAdapter> {
   const adapters = new Map<string, ProviderAdapter>();
   for (const [providerRef, provider] of Object.entries(policy.providers)) {
-    if (provider.adapter !== 'openai') {
-      continue;
-    }
     const apiKey = credentials.get(providerRef);
     if (apiKey === undefined) {
       throw new TypeError(
         `Validated provider ${providerRef} has no credential`,
       );
     }
-    adapters.set(
-      providerRef,
-      new OpenAiAdapter({
-        id: providerRef,
-        baseUrl: provider.base_url,
-        apiKey,
-        models: Object.fromEntries(
-          Object.entries(provider.models).map(([model, definition]) => [
-            model,
-            modelCapabilities(definition.capabilities),
-          ]),
-        ),
-      }),
+    const models = Object.fromEntries(
+      Object.entries(provider.models).map(([model, definition]) => [
+        model,
+        modelCapabilities(definition.capabilities),
+      ]),
     );
+    switch (provider.adapter) {
+      case 'openai':
+        adapters.set(
+          providerRef,
+          new OpenAiAdapter({
+            id: providerRef,
+            baseUrl: provider.base_url,
+            apiKey,
+            models,
+          }),
+        );
+        break;
+      case 'anthropic':
+        adapters.set(
+          providerRef,
+          new AnthropicAdapter({
+            id: providerRef,
+            baseUrl: provider.base_url,
+            apiKey,
+            models,
+          }),
+        );
+        break;
+      case 'gemini':
+        adapters.set(
+          providerRef,
+          new GeminiAdapter({
+            id: providerRef,
+            baseUrl: provider.base_url,
+            apiKey,
+            models,
+          }),
+        );
+        break;
+    }
   }
   return adapters;
 }

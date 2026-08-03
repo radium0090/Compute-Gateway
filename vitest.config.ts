@@ -19,10 +19,17 @@ export default defineConfig({
       '@genchi/persistence-postgres': fromRoot(
         './packages/persistence-postgres/src/index.ts',
       ),
+      '@genchi/provider-anthropic': fromRoot(
+        './packages/provider-anthropic/src/index.ts',
+      ),
+      '@genchi/provider-gemini': fromRoot(
+        './packages/provider-gemini/src/index.ts',
+      ),
       '@genchi/provider-openai': fromRoot(
         './packages/provider-openai/src/index.ts',
       ),
       '@genchi/router': fromRoot('./packages/router/src/index.ts'),
+      '@genchi/testkit': fromRoot('./packages/testkit/src/index.ts'),
     },
   },
   test: {

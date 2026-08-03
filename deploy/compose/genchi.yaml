@@ -7,11 +7,35 @@ providers:
     models:
       gpt-5-mini:
         capabilities: [chat, streaming]
+  anthropic-primary:
+    adapter: anthropic
+    credential_env: ANTHROPIC_API_KEY
+    base_url: https://api.anthropic.com/v1
+    models:
+      claude-sonnet-4-6:
+        capabilities: [chat, streaming]
+  gemini-primary:
+    adapter: gemini
+    credential_env: GEMINI_API_KEY
+    base_url: https://generativelanguage.googleapis.com/v1beta
+    models:
+      gemini-3.5-flash:
+        capabilities: [chat, streaming]
 aliases:
   genchi/fast:
     candidates:
       - provider: openai-primary
         model: gpt-5-mini
+        weight: 100
+  genchi/anthropic:
+    candidates:
+      - provider: anthropic-primary
+        model: claude-sonnet-4-6
+        weight: 100
+  genchi/gemini:
+    candidates:
+      - provider: gemini-primary
+        model: gemini-3.5-flash
         weight: 100
 routing:
   max_attempts: 2

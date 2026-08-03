@@ -11,7 +11,10 @@
     { "path": "packages/auth" },
     { "path": "packages/application" },
     { "path": "packages/router" },
+    { "path": "packages/testkit" },
     { "path": "packages/provider-openai" },
+    { "path": "packages/provider-anthropic" },
+    { "path": "packages/provider-gemini" },
     { "path": "packages/persistence-postgres" },
     { "path": "packages/observability" },
     { "path": "apps/gateway" }
