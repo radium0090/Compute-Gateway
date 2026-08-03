@@ -36,13 +36,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatCompletionResponse"
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE data events containing ChatCompletionChunk JSON, terminated by [DONE].
         "400":
           description: Canonical Genchi error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-        "401":
+        "401": &a1
           description: Canonical Genchi error
           content:
             application/json:
@@ -55,6 +59,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
+          description: Canonical Genchi error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "408":
           description: Canonical Genchi error
           content:
             application/json:
@@ -90,6 +100,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/models:
+    get:
+      operationId: listModels
+      summary: List configured models allowed for the API key
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Policy-filtered model list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelList"
+        "401": *a1
   /health/live:
     get:
       operationId: getLiveness
@@ -183,7 +207,6 @@ components:
                 type: string
         stream:
           default: false
-          const: false
           type: boolean
         n:
           default: 1
@@ -288,6 +311,96 @@ components:
             attempts:
               minimum: 1
               type: integer
+    ChatCompletionChunk:
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - object
+        - created
+        - model
+        - choices
+        - genchi
+      properties:
+        id:
+          type: string
+        object:
+          const: chat.completion.chunk
+          type: string
+        created:
+          minimum: 0
+          type: integer
+        model:
+          type: string
+        choices:
+          maxItems: 1
+          type: array
+          items:
+            additionalProperties: false
+            type: object
+            required:
+              - index
+              - delta
+              - finish_reason
+            properties:
+              index:
+                const: 0
+                type: number
+              delta:
+                additionalProperties: false
+                type: object
+                properties:
+                  role:
+                    const: assistant
+                    type: string
+                  content:
+                    type: string
+              finish_reason:
+                anyOf:
+                  - const: stop
+                    type: string
+                  - const: length
+                    type: string
+                  - const: tool_calls
+                    type: string
+                  - const: content_filter
+                    type: string
+                  - type: "null"
+        usage:
+          additionalProperties: false
+          type: object
+          required:
+            - prompt_tokens
+            - completion_tokens
+            - total_tokens
+          properties:
+            prompt_tokens:
+              minimum: 0
+              type: integer
+            completion_tokens:
+              minimum: 0
+              type: integer
+            total_tokens:
+              minimum: 0
+              type: integer
+        genchi:
+          additionalProperties: false
+          type: object
+          required:
+            - request_id
+            - provider
+            - provider_model
+            - attempts
+          properties:
+            request_id:
+              type: string
+            provider:
+              type: string
+            provider_model:
+              type: string
+            attempts:
+              minimum: 1
+              type: integer
     ErrorResponse:
       additionalProperties: false
       type: object
@@ -334,6 +447,39 @@ components:
         status:
           const: ok
           type: string
+    ModelList:
+      additionalProperties: false
+      type: object
+      required:
+        - object
+        - data
+      properties:
+        object:
+          const: list
+          type: string
+        data:
+          type: array
+          items:
+            additionalProperties: false
+            type: object
+            required:
+              - id
+              - object
+              - created
+              - owned_by
+            properties:
+              id:
+                minLength: 1
+                type: string
+              object:
+                const: model
+                type: string
+              created:
+                minimum: 0
+                type: integer
+              owned_by:
+                const: genchi
+                type: string
     ReadinessResponse:
       additionalProperties: false
       type: object

@@ -28,7 +28,7 @@ export const ChatCompletionRequestSchema = Type.Object(
         }),
       ]),
     ),
-    stream: Type.Optional(Type.Literal(false, { default: false })),
+    stream: Type.Optional(Type.Boolean({ default: false })),
     n: Type.Optional(Type.Literal(1, { default: 1 })),
     user: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
   },
@@ -90,6 +90,60 @@ export const ChatCompletionResponseSchema = Type.Object(
 export type ChatCompletionResponse = Static<
   typeof ChatCompletionResponseSchema
 >;
+
+const UsageSchema = Type.Object(
+  {
+    prompt_tokens: Type.Integer({ minimum: 0 }),
+    completion_tokens: Type.Integer({ minimum: 0 }),
+    total_tokens: Type.Integer({ minimum: 0 }),
+  },
+  { additionalProperties: false },
+);
+
+export const ChatCompletionChunkSchema = Type.Object(
+  {
+    id: Type.String(),
+    object: Type.Literal('chat.completion.chunk'),
+    created: Type.Integer({ minimum: 0 }),
+    model: Type.String(),
+    choices: Type.Array(
+      Type.Object(
+        {
+          index: Type.Literal(0),
+          delta: Type.Object(
+            {
+              role: Type.Optional(Type.Literal('assistant')),
+              content: Type.Optional(Type.String()),
+            },
+            { additionalProperties: false },
+          ),
+          finish_reason: Type.Union([
+            Type.Literal('stop'),
+            Type.Literal('length'),
+            Type.Literal('tool_calls'),
+            Type.Literal('content_filter'),
+            Type.Null(),
+          ]),
+        },
+        { additionalProperties: false },
+      ),
+      { maxItems: 1 },
+    ),
+    usage: Type.Optional(UsageSchema),
+    genchi: Type.Object(
+      {
+        request_id: Type.String(),
+        provider: Type.String(),
+        provider_model: Type.String(),
+        attempts: Type.Integer({ minimum: 1 }),
+      },
+      { additionalProperties: false },
+    ),
+  },
+  { additionalProperties: false },
+);
+
+export type ChatCompletionChunk = Static<typeof ChatCompletionChunkSchema>;
 
 export const ErrorResponseSchema = Type.Object(
   {

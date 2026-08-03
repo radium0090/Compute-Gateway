@@ -15,6 +15,7 @@ export {
   type TenantId,
 } from './api-key.js';
 export type { ApiKeyRepository } from './api-key-repository.js';
+export { ProviderStreamFailure } from './chat-completion.js';
 export type {
   CanonicalChatMessage,
   CanonicalChatChunk,
@@ -27,10 +28,13 @@ export type {
   ProviderAdapter,
   ProviderCallContext,
   ProviderCallResult,
+  ProviderStreamCallResult,
   ProviderCapabilities,
   ProviderError,
   ProviderErrorClass,
   ResolvedRoute,
   RouteResolutionResult,
   RouteResolver,
+  ModelCatalog,
+  PublicModel,
 } from './chat-completion.js';

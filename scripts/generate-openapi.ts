@@ -5,15 +5,17 @@ import { stringify } from 'yaml';
 import {
   ChatCompletionRequestSchema,
   ChatCompletionResponseSchema,
+  ChatCompletionChunkSchema,
   ErrorResponseSchema,
   LivenessResponseSchema,
+  ModelListSchema,
   ReadinessResponseSchema,
 } from '@genchi/api-contract';
 
 const outputPath = new URL('../openapi/genchi.openapi.yaml', import.meta.url);
 
 const errorResponses = Object.fromEntries(
-  [400, 401, 403, 404, 413, 429, 502, 503, 504].map((status) => [
+  [400, 401, 403, 404, 408, 413, 429, 502, 503, 504].map((status) => [
     status,
     {
       description: 'Canonical Genchi error',
@@ -64,9 +66,34 @@ const document = {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ChatCompletionResponse' },
               },
+              'text/event-stream': {
+                schema: {
+                  type: 'string',
+                  description:
+                    'SSE data events containing ChatCompletionChunk JSON, terminated by [DONE].',
+                },
+              },
             },
           },
           ...errorResponses,
+        },
+      },
+    },
+    '/v1/models': {
+      get: {
+        operationId: 'listModels',
+        summary: 'List configured models allowed for the API key',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Policy-filtered model list',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ModelList' },
+              },
+            },
+          },
+          401: errorResponses[401],
         },
       },
     },
@@ -124,8 +151,10 @@ const document = {
     schemas: {
       ChatCompletionRequest: ChatCompletionRequestSchema,
       ChatCompletionResponse: ChatCompletionResponseSchema,
+      ChatCompletionChunk: ChatCompletionChunkSchema,
       ErrorResponse: ErrorResponseSchema,
       LivenessResponse: LivenessResponseSchema,
+      ModelList: ModelListSchema,
       ReadinessResponse: ReadinessResponseSchema,
     },
   },

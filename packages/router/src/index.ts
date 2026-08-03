@@ -1,1 +1,1 @@
-export { StaticPolicyRouter } from './policy-router.js';
+export { StaticModelCatalog, StaticPolicyRouter } from './policy-router.js';

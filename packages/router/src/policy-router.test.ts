@@ -9,7 +9,7 @@ import {
   type ApiKey,
 } from '@genchi/domain';
 
-import { StaticPolicyRouter } from './policy-router.js';
+import { StaticModelCatalog, StaticPolicyRouter } from './policy-router.js';
 
 const policy = parsePolicyConfig(
   `
@@ -26,7 +26,7 @@ providers:
     credential_env: OPENAI_API_KEY_B
     base_url: https://api.openai.com/v1
     models:
-      model-b: { capabilities: [chat] }
+      model-b: { capabilities: [chat, streaming] }
 aliases:
   genchi/fast:
     candidates:
@@ -108,5 +108,42 @@ describe('StaticPolicyRouter', () => {
       ok: true,
       route: { provider: 'openai', providerModel: 'model-a' },
     });
+  });
+
+  it('filters routes that do not support requested streaming', () => {
+    const router = new StaticPolicyRouter(policy);
+
+    expect(
+      router.resolve({
+        requestedModel: 'genchi/fast',
+        requestId: 'req_streaming',
+        apiKey: key(['genchi/*']),
+        requireStreaming: true,
+      }),
+    ).toMatchObject({
+      ok: true,
+      route: { providerRef: 'openai-b', providerModel: 'model-b' },
+    });
+    expect(
+      router.resolve({
+        requestedModel: 'openai/model-a',
+        requestId: 'req_streaming_qualified',
+        apiKey: key(['openai/*']),
+        requireStreaming: true,
+      }),
+    ).toEqual({ ok: false, reason: 'model_not_found' });
+  });
+
+  it('lists only configured and key-allowed public models', () => {
+    const catalog = new StaticModelCatalog(policy);
+
+    expect(catalog.listAllowed(key(['genchi/*']))).toEqual([
+      { id: 'genchi/fast' },
+    ]);
+    expect(catalog.listAllowed(key(['openai/*']))).toEqual([
+      { id: 'openai/model-a' },
+      { id: 'openai/model-b' },
+    ]);
+    expect(catalog.listAllowed(key([]))).toEqual([]);
   });
 });

@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import type { PolicyConfig } from '@genchi/config';
 import type {
   ApiKey,
+  ModelCatalog,
+  PublicModel,
   ResolvedRoute,
   RouteResolutionResult,
   RouteResolver,
@@ -46,6 +48,7 @@ export class StaticPolicyRouter implements RouteResolver {
     readonly requestedModel: string;
     readonly requestId: string;
     readonly apiKey: ApiKey;
+    readonly requireStreaming?: boolean;
   }): RouteResolutionResult {
     if (
       !input.apiKey.policy.allowedModelPatterns.some((pattern) =>
@@ -56,20 +59,32 @@ export class StaticPolicyRouter implements RouteResolver {
     }
 
     if (input.requestedModel.startsWith('genchi/')) {
-      return this.resolveAlias(input.requestedModel, input.requestId);
+      return this.resolveAlias(
+        input.requestedModel,
+        input.requestId,
+        input.requireStreaming === true,
+      );
     }
-    return this.resolveQualifiedModel(input.requestedModel);
+    return this.resolveQualifiedModel(
+      input.requestedModel,
+      input.requireStreaming === true,
+    );
   }
 
   private resolveAlias(
     aliasName: string,
     requestId: string,
+    requireStreaming: boolean,
   ): RouteResolutionResult {
     const alias = this.policy.aliases[aliasName];
     if (alias === undefined) {
       return { ok: false, reason: 'model_not_found' };
     }
-    const required = new Set(['chat', ...(alias.required_capabilities ?? [])]);
+    const required = new Set([
+      'chat',
+      ...(requireStreaming ? ['streaming'] : []),
+      ...(alias.required_capabilities ?? []),
+    ]);
     const candidates = alias.candidates.filter((candidate) => {
       if (candidate.weight <= 0) {
         return false;
@@ -94,7 +109,10 @@ export class StaticPolicyRouter implements RouteResolver {
       : this.toResolvedRoute(selected.provider, selected.model);
   }
 
-  private resolveQualifiedModel(requestedModel: string): RouteResolutionResult {
+  private resolveQualifiedModel(
+    requestedModel: string,
+    requireStreaming: boolean,
+  ): RouteResolutionResult {
     const separator = requestedModel.indexOf('/');
     if (separator <= 0 || separator === requestedModel.length - 1) {
       return { ok: false, reason: 'model_not_found' };
@@ -102,9 +120,15 @@ export class StaticPolicyRouter implements RouteResolver {
     const adapter = requestedModel.slice(0, separator);
     const modelName = requestedModel.slice(separator + 1);
     const matches = Object.entries(this.policy.providers).filter(
-      ([, provider]) =>
-        provider.adapter === adapter &&
-        provider.models[modelName]?.capabilities.includes('chat') === true,
+      ([, provider]) => {
+        const model = provider.models[modelName];
+        return (
+          provider.adapter === adapter &&
+          model !== undefined &&
+          model.capabilities.includes('chat') &&
+          (!requireStreaming || model.capabilities.includes('streaming'))
+        );
+      },
     );
     if (matches.length !== 1) {
       return { ok: false, reason: 'model_not_found' };
@@ -131,5 +155,48 @@ export class StaticPolicyRouter implements RouteResolver {
         providerModel,
       },
     };
+  }
+}
+
+/** Enumerates configured, unambiguous public models allowed by one key. */
+export class StaticModelCatalog implements ModelCatalog {
+  public constructor(private readonly policy: PolicyConfig) {}
+
+  public listAllowed(apiKey: ApiKey): readonly PublicModel[] {
+    const ids = new Set<string>();
+    for (const [aliasName, alias] of Object.entries(this.policy.aliases)) {
+      const exposesChat = alias.candidates.some(
+        (candidate) =>
+          this.policy.providers[candidate.provider]?.models[
+            candidate.model
+          ]?.capabilities.includes('chat') === true,
+      );
+      if (exposesChat && this.keyAllows(apiKey, aliasName)) {
+        ids.add(aliasName);
+      }
+    }
+
+    const qualifiedCounts = new Map<string, number>();
+    for (const provider of Object.values(this.policy.providers)) {
+      for (const [modelName, model] of Object.entries(provider.models)) {
+        if (!model.capabilities.includes('chat')) {
+          continue;
+        }
+        const id = `${provider.adapter}/${modelName}`;
+        qualifiedCounts.set(id, (qualifiedCounts.get(id) ?? 0) + 1);
+      }
+    }
+    for (const [id, count] of qualifiedCounts) {
+      if (count === 1 && this.keyAllows(apiKey, id)) {
+        ids.add(id);
+      }
+    }
+    return [...ids].sort().map((id) => ({ id }));
+  }
+
+  private keyAllows(apiKey: ApiKey, model: string): boolean {
+    return apiKey.policy.allowedModelPatterns.some((pattern) =>
+      patternAllows(pattern, model),
+    );
   }
 }

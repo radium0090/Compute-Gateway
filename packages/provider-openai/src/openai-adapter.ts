@@ -1,6 +1,7 @@
 import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 
+import { ProviderStreamFailure } from '@genchi/domain';
 import type {
   CanonicalChatChunk,
   CanonicalChatRequest,
@@ -9,7 +10,14 @@ import type {
   ProviderCallResult,
   ProviderCapabilities,
   ProviderError,
+  ProviderStreamCallResult,
 } from '@genchi/domain';
+
+const OpenAiUsageSchema = Type.Object({
+  prompt_tokens: Type.Integer({ minimum: 0 }),
+  completion_tokens: Type.Integer({ minimum: 0 }),
+  total_tokens: Type.Integer({ minimum: 0 }),
+});
 
 const OpenAiResponseSchema = Type.Object({
   choices: Type.Array(
@@ -28,11 +36,28 @@ const OpenAiResponseSchema = Type.Object({
     }),
     { minItems: 1 },
   ),
-  usage: Type.Object({
-    prompt_tokens: Type.Integer({ minimum: 0 }),
-    completion_tokens: Type.Integer({ minimum: 0 }),
-    total_tokens: Type.Integer({ minimum: 0 }),
-  }),
+  usage: OpenAiUsageSchema,
+});
+
+const OpenAiStreamChunkSchema = Type.Object({
+  choices: Type.Array(
+    Type.Object({
+      index: Type.Literal(0),
+      delta: Type.Object({
+        role: Type.Optional(Type.Literal('assistant')),
+        content: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+      }),
+      finish_reason: Type.Union([
+        Type.Literal('stop'),
+        Type.Literal('length'),
+        Type.Literal('tool_calls'),
+        Type.Literal('content_filter'),
+        Type.Null(),
+      ]),
+    }),
+    { maxItems: 1 },
+  ),
+  usage: Type.Optional(Type.Union([OpenAiUsageSchema, Type.Null()])),
 });
 
 export interface OpenAiAdapterOptions {
@@ -42,6 +67,7 @@ export interface OpenAiAdapterOptions {
   readonly models: Readonly<Record<string, ProviderCapabilities>>;
   readonly fetchImplementation?: typeof fetch;
   readonly maxResponseBytes?: number;
+  readonly maxStreamEventBytes?: number;
 }
 
 const invalidBody = Symbol('invalid-provider-body');
@@ -129,7 +155,123 @@ function statusError(response: Response): ProviderError {
   };
 }
 
-/** Direct-HTTP OpenAI adapter for the non-streaming vertical slice. */
+function connectionError(signal: AbortSignal): ProviderError {
+  return signal.aborted
+    ? {
+        class: 'timeout',
+        code: 'provider_timeout',
+        retryable: true,
+      }
+    : {
+        class: 'unavailable',
+        code: 'provider_connection_failed',
+        retryable: true,
+      };
+}
+
+async function cancelResponse(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Status classification remains valid when upstream cleanup fails.
+  }
+}
+
+function requestBody(
+  request: CanonicalChatRequest,
+  providerModel: string,
+  stream: boolean,
+): string {
+  return JSON.stringify({
+    model: providerModel,
+    messages: request.messages,
+    ...(request.temperature === undefined
+      ? {}
+      : { temperature: request.temperature }),
+    ...(request.topP === undefined ? {} : { top_p: request.topP }),
+    ...(request.maxTokens === undefined
+      ? {}
+      : { max_tokens: request.maxTokens }),
+    ...(request.stop === undefined ? {} : { stop: request.stop }),
+    ...(request.user === undefined ? {} : { user: request.user }),
+    n: 1,
+    stream,
+    ...(stream ? { stream_options: { include_usage: true } } : {}),
+  });
+}
+
+type ParsedStreamEvent =
+  | { readonly kind: 'chunk'; readonly chunk: CanonicalChatChunk }
+  | { readonly kind: 'done' }
+  | { readonly kind: 'ignored' };
+
+function streamProtocolFailure(): ProviderStreamFailure {
+  return new ProviderStreamFailure({
+    class: 'protocol',
+    code: 'provider_invalid_stream',
+    retryable: true,
+  });
+}
+
+function parseStreamEvent(event: string): ParsedStreamEvent {
+  const data = event
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice('data:'.length).trimStart())
+    .join('\n');
+  if (data.length === 0) {
+    return { kind: 'ignored' };
+  }
+  if (data.trim() === '[DONE]') {
+    return { kind: 'done' };
+  }
+
+  let value: unknown;
+  try {
+    value = JSON.parse(data) as unknown;
+  } catch {
+    throw streamProtocolFailure();
+  }
+  if (!Value.Check(OpenAiStreamChunkSchema, value)) {
+    throw streamProtocolFailure();
+  }
+  const choice = value.choices[0];
+  const usage = value.usage;
+  if (choice === undefined && (usage === undefined || usage === null)) {
+    throw streamProtocolFailure();
+  }
+  return {
+    kind: 'chunk',
+    chunk: {
+      ...(choice === undefined
+        ? {}
+        : {
+            choice: {
+              delta: {
+                ...(choice.delta.role === undefined
+                  ? {}
+                  : { role: choice.delta.role }),
+                ...(typeof choice.delta.content === 'string'
+                  ? { content: choice.delta.content }
+                  : {}),
+              },
+              finishReason: choice.finish_reason,
+            },
+          }),
+      ...(usage === undefined || usage === null
+        ? {}
+        : {
+            usage: {
+              promptTokens: usage.prompt_tokens,
+              completionTokens: usage.completion_tokens,
+              totalTokens: usage.total_tokens,
+            },
+          }),
+    },
+  };
+}
+
+/** Direct-HTTP OpenAI adapter with bounded JSON and SSE parsing. */
 export class OpenAiAdapter implements ProviderAdapter {
   public readonly id: string;
   private readonly baseUrl: string;
@@ -137,6 +279,7 @@ export class OpenAiAdapter implements ProviderAdapter {
   private readonly models: Readonly<Record<string, ProviderCapabilities>>;
   private readonly fetchImplementation: typeof fetch;
   private readonly maxResponseBytes: number;
+  private readonly maxStreamEventBytes: number;
 
   public constructor(options: OpenAiAdapterOptions) {
     this.id = options.id;
@@ -145,6 +288,7 @@ export class OpenAiAdapter implements ProviderAdapter {
     this.models = options.models;
     this.fetchImplementation = options.fetchImplementation ?? fetch;
     this.maxResponseBytes = options.maxResponseBytes ?? 2_097_152;
+    this.maxStreamEventBytes = options.maxStreamEventBytes ?? 1_048_576;
   }
 
   public capabilities(model: string): ProviderCapabilities | null {
@@ -177,47 +321,16 @@ export class OpenAiAdapter implements ProviderAdapter {
             'content-type': 'application/json',
             'x-request-id': context.requestId,
           },
-          body: JSON.stringify({
-            model: context.providerModel,
-            messages: request.messages,
-            ...(request.temperature === undefined
-              ? {}
-              : { temperature: request.temperature }),
-            ...(request.topP === undefined ? {} : { top_p: request.topP }),
-            ...(request.maxTokens === undefined
-              ? {}
-              : { max_tokens: request.maxTokens }),
-            ...(request.stop === undefined ? {} : { stop: request.stop }),
-            ...(request.user === undefined ? {} : { user: request.user }),
-            n: 1,
-            stream: false,
-          }),
+          body: requestBody(request, context.providerModel, false),
           signal: context.signal,
         },
       );
     } catch {
-      return {
-        ok: false,
-        error: context.signal.aborted
-          ? {
-              class: 'timeout',
-              code: 'provider_timeout',
-              retryable: true,
-            }
-          : {
-              class: 'unavailable',
-              code: 'provider_connection_failed',
-              retryable: true,
-            },
-      };
+      return { ok: false, error: connectionError(context.signal) };
     }
 
     if (!response.ok) {
-      try {
-        await response.body?.cancel();
-      } catch {
-        // The typed status classification remains valid if cancellation fails.
-      }
+      await cancelResponse(response);
       return { ok: false, error: statusError(response) };
     }
 
@@ -247,20 +360,134 @@ export class OpenAiAdapter implements ProviderAdapter {
     };
   }
 
-  public streamChatCompletion(
+  public async streamChatCompletion(
     request: CanonicalChatRequest,
     context: ProviderCallContext,
-  ): AsyncIterable<CanonicalChatChunk> {
-    void request;
-    void context;
+  ): Promise<ProviderStreamCallResult> {
+    const capabilities = this.capabilities(context.providerModel);
+    if (capabilities?.streaming !== true) {
+      return {
+        ok: false,
+        error: {
+          class: 'request',
+          code: 'provider_streaming_not_configured',
+          retryable: false,
+        },
+      };
+    }
+
+    let response: Response;
+    try {
+      response = await this.fetchImplementation(
+        `${this.baseUrl}/chat/completions`,
+        {
+          method: 'POST',
+          headers: {
+            authorization: `Bearer ${this.apiKey}`,
+            accept: 'text/event-stream',
+            'content-type': 'application/json',
+            'x-request-id': context.requestId,
+          },
+          body: requestBody(request, context.providerModel, true),
+          signal: context.signal,
+        },
+      );
+    } catch {
+      return { ok: false, error: connectionError(context.signal) };
+    }
+    if (!response.ok) {
+      await cancelResponse(response);
+      return { ok: false, error: statusError(response) };
+    }
+    if (
+      response.body === null ||
+      !response.headers
+        .get('content-type')
+        ?.toLowerCase()
+        .includes('text/event-stream')
+    ) {
+      await cancelResponse(response);
+      return this.streamProtocolError();
+    }
     return {
-      [Symbol.asyncIterator]: () => ({
-        next: () =>
-          Promise.reject(
-            new Error('Streaming is not implemented in the vertical slice'),
-          ),
-      }),
+      ok: true,
+      stream: this.parseEventStream(response.body, context.signal),
     };
+  }
+
+  private async *parseEventStream(
+    body: ReadableStream<Uint8Array>,
+    signal: AbortSignal,
+  ): AsyncIterable<CanonicalChatChunk> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+    let buffer = '';
+    let sourceEnded = false;
+    try {
+      for (;;) {
+        const read = await reader.read().catch(() => {
+          throw new ProviderStreamFailure(connectionError(signal));
+        });
+        if (read.done) {
+          sourceEnded = true;
+          try {
+            buffer += decoder.decode();
+          } catch {
+            throw streamProtocolFailure();
+          }
+          break;
+        }
+        try {
+          buffer += decoder.decode(read.value, { stream: true });
+        } catch {
+          throw streamProtocolFailure();
+        }
+        for (;;) {
+          const separator = /\r?\n\r?\n/.exec(buffer);
+          if (separator?.index === undefined) {
+            break;
+          }
+          const event = buffer.slice(0, separator.index);
+          buffer = buffer.slice(separator.index + separator[0].length);
+          if (Buffer.byteLength(event, 'utf8') > this.maxStreamEventBytes) {
+            throw streamProtocolFailure();
+          }
+          const parsed = parseStreamEvent(event);
+          if (parsed.kind === 'done') {
+            return;
+          }
+          if (parsed.kind === 'chunk') {
+            yield parsed.chunk;
+          }
+        }
+        if (Buffer.byteLength(buffer, 'utf8') > this.maxStreamEventBytes) {
+          throw streamProtocolFailure();
+        }
+      }
+
+      if (buffer.trim().length > 0) {
+        if (Buffer.byteLength(buffer, 'utf8') > this.maxStreamEventBytes) {
+          throw streamProtocolFailure();
+        }
+        const parsed = parseStreamEvent(buffer);
+        if (parsed.kind === 'done') {
+          return;
+        }
+        if (parsed.kind === 'chunk') {
+          yield parsed.chunk;
+        }
+      }
+      throw streamProtocolFailure();
+    } finally {
+      if (!sourceEnded) {
+        try {
+          await reader.cancel();
+        } catch {
+          // Cancellation is best-effort after the typed stream failure.
+        }
+      }
+      reader.releaseLock();
+    }
   }
 
   private protocolError(): ProviderCallResult {
@@ -269,6 +496,17 @@ export class OpenAiAdapter implements ProviderAdapter {
       error: {
         class: 'protocol',
         code: 'provider_invalid_response',
+        retryable: true,
+      },
+    };
+  }
+
+  private streamProtocolError(): ProviderStreamCallResult {
+    return {
+      ok: false,
+      error: {
+        class: 'protocol',
+        code: 'provider_invalid_stream',
         retryable: true,
       },
     };

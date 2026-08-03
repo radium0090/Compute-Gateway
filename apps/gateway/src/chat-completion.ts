@@ -1,154 +1,67 @@
 import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
 
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import {
   ChatCompletionRequestSchema,
   ChatCompletionResponseSchema,
+  type ChatCompletionChunk,
   ErrorResponseSchema,
   type ChatCompletionRequest,
   type ChatCompletionResponse,
   type ErrorResponse,
 } from '@genchi/api-contract';
-import type {
-  CreateChatCompletionResult,
-  CreateChatCompletionService,
-} from '@genchi/application';
-import type { CanonicalChatRequest, ProviderError } from '@genchi/domain';
+import type { CreateChatCompletionService } from '@genchi/application';
+import {
+  ProviderStreamFailure,
+  type CanonicalChatChunk,
+  type CanonicalChatRequest,
+  type ProviderError,
+} from '@genchi/domain';
+
+import { bearerCredential } from './authentication.js';
+import {
+  errorResponse,
+  providerErrorMapping,
+  requestDeadlineMapping,
+  resultErrorMapping,
+} from './chat-errors.js';
 
 export interface ChatCompletionRouteOptions {
-  readonly service: Pick<CreateChatCompletionService, 'execute'>;
+  readonly service: Pick<
+    CreateChatCompletionService,
+    'execute' | 'executeStream'
+  >;
   readonly totalTimeoutMs: number;
   readonly clock?: () => Date;
   readonly idGenerator?: () => string;
+  readonly timeoutSignalFactory?: (timeoutMs: number) => AbortSignal;
 }
 
-interface ErrorMapping {
-  readonly statusCode: 400 | 401 | 403 | 404 | 429 | 502 | 503 | 504;
-  readonly type: string;
-  readonly code: string;
-  readonly message: string;
-  readonly param: string | null;
-  readonly retryable: boolean;
-  readonly retryAfterSeconds?: number;
-}
+const deadlineExceeded = Symbol('request-deadline-exceeded');
 
-function providerErrorMapping(error: ProviderError): ErrorMapping {
-  switch (error.class) {
-    case 'rate_limit':
-      return {
-        statusCode: 429,
-        type: 'rate_limit_error',
-        code: error.code,
-        message: 'The model provider is rate limited.',
-        param: null,
-        retryable: error.retryable,
-        ...(error.retryAfterSeconds === undefined
-          ? {}
-          : { retryAfterSeconds: error.retryAfterSeconds }),
-      };
-    case 'timeout':
-      return {
-        statusCode: 504,
-        type: 'timeout_error',
-        code: error.code,
-        message: 'The model provider timed out.',
-        param: null,
-        retryable: error.retryable,
-      };
-    case 'request':
-    case 'policy':
-      return {
-        statusCode: 400,
-        type: 'invalid_request_error',
-        code: error.code,
-        message: 'The model provider rejected the request.',
-        param: null,
-        retryable: false,
-      };
-    case 'authentication':
-    case 'unavailable':
-      return {
-        statusCode: 503,
-        type: 'model_unavailable_error',
-        code: error.code,
-        message: 'The requested model is temporarily unavailable.',
-        param: 'model',
-        retryable: error.retryable,
-      };
-    case 'protocol':
-      return {
-        statusCode: 502,
-        type: 'provider_error',
-        code: error.code,
-        message: 'The model provider returned an invalid response.',
-        param: null,
-        retryable: error.retryable,
-      };
+async function withinDeadline<Value>(
+  operation: Promise<Value>,
+  timeoutSignal: AbortSignal,
+): Promise<Value | typeof deadlineExceeded> {
+  if (timeoutSignal.aborted) {
+    return deadlineExceeded;
   }
-}
-
-function resultErrorMapping(result: CreateChatCompletionResult): ErrorMapping {
-  if (result.ok) {
-    throw new TypeError('A successful result has no error mapping');
-  }
-  if (result.failure.kind === 'authentication') {
-    return {
-      statusCode: 401,
-      type: 'authentication_error',
-      code: 'invalid_api_key',
-      message: 'Invalid authentication credentials.',
-      param: null,
-      retryable: false,
+  let onAbort: (() => void) | undefined;
+  const timeout = new Promise<typeof deadlineExceeded>((resolve) => {
+    onAbort = () => {
+      resolve(deadlineExceeded);
     };
+    timeoutSignal.addEventListener('abort', onAbort, { once: true });
+  });
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    if (onAbort !== undefined) {
+      timeoutSignal.removeEventListener('abort', onAbort);
+    }
   }
-  if (result.failure.kind === 'provider') {
-    return providerErrorMapping(result.failure.error);
-  }
-  switch (result.failure.reason) {
-    case 'model_not_allowed':
-      return {
-        statusCode: 403,
-        type: 'permission_error',
-        code: 'model_not_allowed',
-        message: 'The API key is not permitted to use this model.',
-        param: 'model',
-        retryable: false,
-      };
-    case 'model_not_found':
-      return {
-        statusCode: 404,
-        type: 'not_found_error',
-        code: 'model_not_found',
-        message: 'The requested model was not found.',
-        param: 'model',
-        retryable: false,
-      };
-    case 'no_healthy_route':
-      return {
-        statusCode: 503,
-        type: 'model_unavailable_error',
-        code: 'no_healthy_route',
-        message: 'The requested model is not available.',
-        param: 'model',
-        retryable: true,
-      };
-  }
-}
-
-function errorResponse(
-  mapping: ErrorMapping,
-  requestId: string,
-): ErrorResponse {
-  return {
-    error: {
-      message: mapping.message,
-      type: mapping.type,
-      code: mapping.code,
-      param: mapping.param,
-    },
-    genchi: { request_id: requestId, retryable: mapping.retryable },
-  };
 }
 
 function toCanonical(request: ChatCompletionRequest): CanonicalChatRequest {
@@ -167,7 +80,211 @@ function toCanonical(request: ChatCompletionRequest): CanonicalChatRequest {
   };
 }
 
-/** Registers the authenticated non-streaming chat completion operation. */
+function streamProviderError(error: unknown): ProviderError {
+  return error instanceof ProviderStreamFailure
+    ? error.providerError
+    : {
+        class: 'protocol',
+        code: 'provider_invalid_stream',
+        retryable: true,
+      };
+}
+
+function toPublicChunk(
+  chunk: CanonicalChatChunk,
+  metadata: {
+    readonly id: string;
+    readonly created: number;
+    readonly requestedModel: string;
+    readonly requestId: string;
+    readonly provider: string;
+    readonly providerModel: string;
+    readonly attempts: number;
+  },
+  includeRole: boolean,
+): ChatCompletionChunk {
+  return {
+    id: metadata.id,
+    object: 'chat.completion.chunk',
+    created: metadata.created,
+    model: metadata.requestedModel,
+    choices:
+      chunk.choice === undefined
+        ? []
+        : [
+            {
+              index: 0,
+              delta: {
+                ...(includeRole ? { role: 'assistant' as const } : {}),
+                ...chunk.choice.delta,
+              },
+              finish_reason: chunk.choice.finishReason,
+            },
+          ],
+    ...(chunk.usage === undefined
+      ? {}
+      : {
+          usage: {
+            prompt_tokens: chunk.usage.promptTokens,
+            completion_tokens: chunk.usage.completionTokens,
+            total_tokens: chunk.usage.totalTokens,
+          },
+        }),
+    genchi: {
+      request_id: metadata.requestId,
+      provider: metadata.provider,
+      provider_model: metadata.providerModel,
+      attempts: metadata.attempts,
+    },
+  };
+}
+
+async function closeIterator(
+  iterator: AsyncIterator<CanonicalChatChunk>,
+): Promise<void> {
+  try {
+    await iterator.return?.();
+  } catch {
+    // The stream error was already classified and logged without content.
+  }
+}
+
+async function* streamBody(
+  first: CanonicalChatChunk,
+  iterator: AsyncIterator<CanonicalChatChunk>,
+  request: FastifyRequest<{ Body: ChatCompletionRequest }>,
+  signal: AbortSignal,
+  metadata: Parameters<typeof toPublicChunk>[1],
+): AsyncIterable<string> {
+  let roleSent = false;
+  const serialize = (chunk: CanonicalChatChunk): string => {
+    const includeRole = chunk.choice !== undefined && !roleSent;
+    if (includeRole) {
+      roleSent = true;
+    }
+    return `data: ${JSON.stringify(
+      toPublicChunk(chunk, metadata, includeRole),
+    )}\n\n`;
+  };
+  try {
+    yield serialize(first);
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) {
+        break;
+      }
+      yield serialize(next.value);
+    }
+    if (!signal.aborted) {
+      yield 'data: [DONE]\n\n';
+    }
+  } catch (error: unknown) {
+    const providerError = streamProviderError(error);
+    request.log.warn(
+      {
+        event: 'stream.failed',
+        provider_error_code: providerError.code,
+      },
+      'provider stream failed',
+    );
+  } finally {
+    await closeIterator(iterator);
+  }
+}
+
+async function sendStreamingCompletion(
+  request: FastifyRequest<{ Body: ChatCompletionRequest }>,
+  reply: FastifyReply,
+  options: ChatCompletionRouteOptions,
+  credential: string,
+  canonicalRequest: CanonicalChatRequest,
+  signal: AbortSignal,
+  timeoutSignal: AbortSignal,
+  clock: () => Date,
+  idGenerator: () => string,
+  cleanup: () => void,
+): Promise<
+  | { readonly streaming: false; readonly response: ErrorResponse }
+  | { readonly streaming: true; readonly response: FastifyReply }
+> {
+  const result = await withinDeadline(
+    options.service.executeStream({
+      credential,
+      requestId: request.id,
+      request: canonicalRequest,
+      signal,
+    }),
+    timeoutSignal,
+  );
+  if (result === deadlineExceeded) {
+    const mapping = requestDeadlineMapping();
+    reply.code(mapping.statusCode);
+    return {
+      streaming: false,
+      response: errorResponse(mapping, request.id),
+    };
+  }
+  if (!result.ok) {
+    const mapping = resultErrorMapping(result);
+    if (mapping.retryAfterSeconds !== undefined) {
+      reply.header('retry-after', String(mapping.retryAfterSeconds));
+    }
+    reply.code(mapping.statusCode);
+    return {
+      streaming: false,
+      response: errorResponse(mapping, request.id),
+    };
+  }
+
+  const iterator = result.stream[Symbol.asyncIterator]();
+  try {
+    const first = await iterator.next();
+    if (first.done) {
+      const mapping = providerErrorMapping({
+        class: 'protocol',
+        code: 'provider_invalid_stream',
+        retryable: true,
+      });
+      reply.code(mapping.statusCode);
+      await closeIterator(iterator);
+      return {
+        streaming: false,
+        response: errorResponse(mapping, request.id),
+      };
+    }
+
+    const metadata = {
+      id: `chatcmpl_gch_${idGenerator()}`,
+      created: Math.floor(clock().getTime() / 1_000),
+      requestedModel: request.body.model,
+      requestId: request.id,
+      provider: result.route.provider,
+      providerModel: result.route.providerModel,
+      attempts: result.attempts,
+    };
+    const body = Readable.from(
+      streamBody(first.value, iterator, request, signal, metadata),
+    );
+    body.once('close', cleanup);
+    reply
+      .header('cache-control', 'no-cache, no-transform')
+      .header('content-type', 'text/event-stream; charset=utf-8')
+      .header('x-accel-buffering', 'no');
+    reply.send(body);
+    return { streaming: true, response: reply };
+  } catch (error: unknown) {
+    const providerError = streamProviderError(error);
+    const mapping = providerErrorMapping(providerError);
+    reply.code(mapping.statusCode);
+    await closeIterator(iterator);
+    return {
+      streaming: false,
+      response: errorResponse(mapping, request.id),
+    };
+  }
+}
+
+/** Registers authenticated streaming and non-streaming chat completions. */
 export function registerChatCompletionRoute(
   app: FastifyInstance,
   options: ChatCompletionRouteOptions,
@@ -175,6 +292,9 @@ export function registerChatCompletionRoute(
   const clock = options.clock ?? (() => new Date());
   const idGenerator =
     options.idGenerator ?? (() => randomUUID().replaceAll('-', ''));
+  const timeoutSignalFactory =
+    options.timeoutSignalFactory ??
+    ((timeoutMs) => AbortSignal.timeout(timeoutMs));
 
   app.post<{ Body: ChatCompletionRequest }>(
     '/v1/chat/completions',
@@ -187,6 +307,7 @@ export function registerChatCompletionRoute(
           401: ErrorResponseSchema,
           403: ErrorResponseSchema,
           404: ErrorResponseSchema,
+          408: ErrorResponseSchema,
           429: ErrorResponseSchema,
           502: ErrorResponseSchema,
           503: ErrorResponseSchema,
@@ -195,29 +316,53 @@ export function registerChatCompletionRoute(
       },
     },
     async (request, reply) => {
-      const authorization = request.headers.authorization;
-      const credential =
-        typeof authorization === 'string' && authorization.startsWith('Bearer ')
-          ? authorization.slice('Bearer '.length)
-          : '';
+      const credential = bearerCredential(request.headers.authorization);
       const clientAbort = new AbortController();
       const abort = (): void => {
         clientAbort.abort();
       };
       request.raw.once('aborted', abort);
       reply.raw.once('close', abort);
-      const signal = AbortSignal.any([
-        clientAbort.signal,
-        AbortSignal.timeout(options.totalTimeoutMs),
-      ]);
+      const timeoutSignal = timeoutSignalFactory(options.totalTimeoutMs);
+      const signal = AbortSignal.any([clientAbort.signal, timeoutSignal]);
+      const cleanup = (): void => {
+        request.raw.off('aborted', abort);
+        reply.raw.off('close', abort);
+      };
+      let streamOwnsCleanup = false;
 
       try {
-        const result = await options.service.execute({
-          credential,
-          requestId: request.id,
-          request: toCanonical(request.body),
-          signal,
-        });
+        const canonicalRequest = toCanonical(request.body);
+        if (request.body.stream === true) {
+          const streamResult = await sendStreamingCompletion(
+            request,
+            reply,
+            options,
+            credential,
+            canonicalRequest,
+            signal,
+            timeoutSignal,
+            clock,
+            idGenerator,
+            cleanup,
+          );
+          streamOwnsCleanup = streamResult.streaming;
+          return await streamResult.response;
+        }
+        const result = await withinDeadline(
+          options.service.execute({
+            credential,
+            requestId: request.id,
+            request: canonicalRequest,
+            signal,
+          }),
+          timeoutSignal,
+        );
+        if (result === deadlineExceeded) {
+          const mapping = requestDeadlineMapping();
+          reply.code(mapping.statusCode);
+          return errorResponse(mapping, request.id);
+        }
         if (!result.ok) {
           const mapping = resultErrorMapping(result);
           if (mapping.retryAfterSeconds !== undefined) {
@@ -253,8 +398,9 @@ export function registerChatCompletionRoute(
         };
         return response;
       } finally {
-        request.raw.off('aborted', abort);
-        reply.raw.off('close', abort);
+        if (!streamOwnsCleanup) {
+          cleanup();
+        }
       }
     },
   );

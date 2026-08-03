@@ -33,8 +33,14 @@ export interface CanonicalChatResponse {
 }
 
 export interface CanonicalChatChunk {
-  readonly content: string;
-  readonly finishReason: CanonicalFinishReason;
+  readonly choice?: {
+    readonly delta: {
+      readonly role?: 'assistant';
+      readonly content?: string;
+    };
+    readonly finishReason: CanonicalFinishReason;
+  };
+  readonly usage?: CanonicalUsage;
 }
 
 export interface ProviderCapabilities {
@@ -64,8 +70,23 @@ export interface ProviderError {
   readonly retryAfterSeconds?: number;
 }
 
+/** Safe typed failure emitted after a provider stream has been established. */
+export class ProviderStreamFailure extends Error {
+  public constructor(public readonly providerError: ProviderError) {
+    super(providerError.code);
+    this.name = 'ProviderStreamFailure';
+  }
+}
+
 export type ProviderCallResult =
   | { readonly ok: true; readonly response: CanonicalChatResponse }
+  | { readonly ok: false; readonly error: ProviderError };
+
+export type ProviderStreamCallResult =
+  | {
+      readonly ok: true;
+      readonly stream: AsyncIterable<CanonicalChatChunk>;
+    }
   | { readonly ok: false; readonly error: ProviderError };
 
 export interface ProviderCallContext {
@@ -85,7 +106,7 @@ export interface ProviderAdapter {
   streamChatCompletion(
     request: CanonicalChatRequest,
     context: ProviderCallContext,
-  ): AsyncIterable<CanonicalChatChunk>;
+  ): Promise<ProviderStreamCallResult>;
 }
 
 export interface ResolvedRoute {
@@ -107,7 +128,17 @@ export interface RouteResolver {
     readonly requestedModel: string;
     readonly requestId: string;
     readonly apiKey: ApiKey;
+    readonly requireStreaming?: boolean;
   }): RouteResolutionResult;
+}
+
+export interface PublicModel {
+  readonly id: string;
+}
+
+/** Policy-backed model catalog, independent of HTTP serialization. */
+export interface ModelCatalog {
+  listAllowed(apiKey: ApiKey): readonly PublicModel[];
 }
 
 export interface ClientAuthenticator {

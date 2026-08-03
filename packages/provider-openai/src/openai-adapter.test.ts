@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { ProviderStreamFailure } from '@genchi/domain';
+
 import { OpenAiAdapter } from './openai-adapter.js';
 
 const capabilities = {
@@ -10,6 +12,8 @@ const capabilities = {
   jsonSchema: false,
   systemMessages: true,
 };
+
+const streamingCapabilities = { ...capabilities, streaming: true };
 
 const request = {
   model: 'genchi/fast',
@@ -193,5 +197,157 @@ describe('OpenAiAdapter', () => {
         retryable: true,
       },
     });
+  });
+
+  it('parses ordered SSE chunks and normalizes terminal usage', async () => {
+    const encoded = new TextEncoder().encode(
+      [
+        'data: {"choices":[{"index":0,"delta":{"role":"assistant","content":"你"},"finish_reason":null}]}\n\n',
+        'data: {"choices":[{"index":0,"delta":{"content":"好"},"finish_reason":"stop"}]}\n\n',
+        'data: {"choices":[],"usage":{"prompt_tokens":2,"completion_tokens":1,"total_tokens":3}}\n\n',
+        'data: [DONE]\n\n',
+      ].join(''),
+    );
+    let sentBody: unknown;
+    const adapter = new OpenAiAdapter({
+      id: 'openai-primary',
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'fake-provider-secret',
+      models: { 'gpt-test': streamingCapabilities },
+      fetchImplementation: (_input, init) => {
+        sentBody =
+          typeof init?.body === 'string'
+            ? (JSON.parse(init.body) as unknown)
+            : null;
+        return Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(encoded.subarray(0, 97));
+                controller.enqueue(encoded.subarray(97, 101));
+                controller.enqueue(encoded.subarray(101));
+                controller.close();
+              },
+            }),
+            { headers: { 'content-type': 'text/event-stream' } },
+          ),
+        );
+      },
+    });
+
+    const result = await adapter.streamChatCompletion(request, context);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('expected a stream');
+    }
+    const chunks = [];
+    for await (const chunk of result.stream) {
+      chunks.push(chunk);
+    }
+    expect(sentBody).toMatchObject({
+      model: 'gpt-test',
+      stream: true,
+      stream_options: { include_usage: true },
+    });
+    expect(chunks).toEqual([
+      {
+        choice: {
+          delta: { role: 'assistant', content: '你' },
+          finishReason: null,
+        },
+      },
+      {
+        choice: { delta: { content: '好' }, finishReason: 'stop' },
+      },
+      {
+        usage: { promptTokens: 2, completionTokens: 1, totalTokens: 3 },
+      },
+    ]);
+  });
+
+  it('returns typed pre-commit stream errors without exposing the body', async () => {
+    const adapter = new OpenAiAdapter({
+      id: 'openai-primary',
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'fake-provider-secret',
+      models: { 'gpt-test': streamingCapabilities },
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response('secret upstream failure', { status: 429 }),
+        ),
+    });
+
+    const result = await adapter.streamChatCompletion(request, context);
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { class: 'rate_limit', code: 'provider_rate_limited' },
+    });
+    expect(JSON.stringify(result)).not.toContain('secret upstream failure');
+  });
+
+  it('cancels an incomplete upstream stream when consumption stops', async () => {
+    let cancelled = false;
+    const adapter = new OpenAiAdapter({
+      id: 'openai-primary',
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'fake-provider-secret',
+      models: { 'gpt-test': streamingCapabilities },
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    'data: {"choices":[{"index":0,"delta":{"content":"first"},"finish_reason":null}]}\n\n',
+                  ),
+                );
+              },
+              cancel() {
+                cancelled = true;
+              },
+            }),
+            { headers: { 'content-type': 'text/event-stream' } },
+          ),
+        ),
+    });
+    const result = await adapter.streamChatCompletion(request, context);
+    if (!result.ok) {
+      throw new Error('expected a stream');
+    }
+    const iterator = result.stream[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toMatchObject({ done: false });
+    await iterator.return?.();
+
+    expect(cancelled).toBe(true);
+  });
+
+  it('fails malformed streams with a safe typed error', async () => {
+    const adapter = new OpenAiAdapter({
+      id: 'openai-primary',
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'fake-provider-secret',
+      models: { 'gpt-test': streamingCapabilities },
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response('data: {"invalid":true}\n\n', {
+            headers: { 'content-type': 'text/event-stream' },
+          }),
+        ),
+    });
+    const result = await adapter.streamChatCompletion(request, context);
+    if (!result.ok) {
+      throw new Error('expected a stream');
+    }
+
+    const consume = async (): Promise<void> => {
+      for await (const chunk of result.stream) {
+        void chunk;
+      }
+    };
+    await expect(consume()).rejects.toBeInstanceOf(ProviderStreamFailure);
   });
 });

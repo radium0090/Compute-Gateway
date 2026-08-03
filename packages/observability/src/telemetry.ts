@@ -1,5 +1,5 @@
 import { FastifyOtelInstrumentation } from '@fastify/otel';
-import { metrics, trace } from '@opentelemetry/api';
+import { isSpanContextValid, metrics, trace } from '@opentelemetry/api';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
@@ -83,7 +83,7 @@ export class TelemetryLifecycle {
 
 export function getCorrelationContext(): CorrelationContext {
   const context = trace.getActiveSpan()?.spanContext();
-  return context === undefined
+  return context === undefined || !isSpanContextValid(context)
     ? {}
     : { traceId: context.traceId, spanId: context.spanId };
 }

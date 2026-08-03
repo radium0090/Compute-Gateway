@@ -2,7 +2,10 @@ import { resolve } from 'node:path';
 
 import type { FastifyInstance } from 'fastify';
 
-import { CreateChatCompletionService } from '@genchi/application';
+import {
+  CreateChatCompletionService,
+  ListModelsService,
+} from '@genchi/application';
 import { ApiKeyAuthenticator } from '@genchi/auth';
 import type { PolicyConfig, RuntimeConfig } from '@genchi/config';
 import type { ProviderAdapter, ProviderCapabilities } from '@genchi/domain';
@@ -14,7 +17,7 @@ import {
   runMigrations,
 } from '@genchi/persistence-postgres';
 import { OpenAiAdapter } from '@genchi/provider-openai';
-import { StaticPolicyRouter } from '@genchi/router';
+import { StaticModelCatalog, StaticPolicyRouter } from '@genchi/router';
 
 import { buildGateway } from './app.js';
 
@@ -99,19 +102,24 @@ export async function runGateway(
     databaseUrl: config.databaseUrl,
     connectTimeoutMs: config.connectTimeoutMs,
   });
+  const authenticator = new ApiKeyAuthenticator(
+    new PostgresApiKeyRepository(pool),
+    config.keyHashPepper,
+    config.environment,
+    () => new Date(),
+  );
   const app = await buildGateway({
     config,
     logger,
     readinessProbe: new PostgresReadinessProbe(pool),
     chatCompletionService: new CreateChatCompletionService(
-      new ApiKeyAuthenticator(
-        new PostgresApiKeyRepository(pool),
-        config.keyHashPepper,
-        config.environment,
-        () => new Date(),
-      ),
+      authenticator,
       new StaticPolicyRouter(policy),
       buildProviderRegistry(policy, credentials),
+    ),
+    listModelsService: new ListModelsService(
+      authenticator,
+      new StaticModelCatalog(policy),
     ),
   });
   let shuttingDown = false;

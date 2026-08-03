@@ -8,18 +8,27 @@ import Fastify, {
 } from 'fastify';
 
 import type { RuntimeConfig } from '@genchi/config';
-import type { CreateChatCompletionService } from '@genchi/application';
+import type {
+  CreateChatCompletionService,
+  ListModelsService,
+} from '@genchi/application';
 
 import { registerChatCompletionRoute } from './chat-completion.js';
 import { registerErrorHandling } from './error-handling.js';
 import { registerHealthRoutes, type ReadinessProbe } from './health.js';
+import { registerModelsRoute } from './models.js';
 import { registerRequestTelemetry } from './request-telemetry.js';
 
 export interface GatewayDependencies {
   readonly config: RuntimeConfig;
   readonly logger: FastifyBaseLogger;
   readonly readinessProbe: ReadinessProbe;
-  readonly chatCompletionService?: Pick<CreateChatCompletionService, 'execute'>;
+  readonly chatCompletionService?: Pick<
+    CreateChatCompletionService,
+    'execute' | 'executeStream'
+  >;
+  readonly listModelsService?: Pick<ListModelsService, 'execute'>;
+  readonly requestTimeoutSignalFactory?: (timeoutMs: number) => AbortSignal;
 }
 
 function requestId(request: IncomingMessage): string {
@@ -63,7 +72,15 @@ export async function buildGateway(
     registerChatCompletionRoute(app, {
       service: dependencies.chatCompletionService,
       totalTimeoutMs: dependencies.config.totalTimeoutMs,
+      ...(dependencies.requestTimeoutSignalFactory === undefined
+        ? {}
+        : {
+            timeoutSignalFactory: dependencies.requestTimeoutSignalFactory,
+          }),
     });
+  }
+  if (dependencies.listModelsService !== undefined) {
+    registerModelsRoute(app, { service: dependencies.listModelsService });
   }
   return app;
 }
