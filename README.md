@@ -44,6 +44,11 @@ docker compose up --build
 curl http://localhost:8080/health/ready
 ```
 
+Compose supplies PostgreSQL and Redis. Outside production, running the gateway
+without `GENCHI_REDIS_URL` uses process-local limits and circuit state; every
+production replica requires Redis coordination and fails startup if it is not
+configured.
+
 Send a request:
 
 ```bash

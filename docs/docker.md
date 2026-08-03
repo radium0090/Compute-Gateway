@@ -29,7 +29,7 @@ The root `docker-compose.yml` is a development/evaluation experience. It starts:
 
 - `gateway` on port 8080;
 - PostgreSQL 16 with a named volume;
-- Redis 7;
+- Redis 7.4 (the reference Compose file pins 7.4.9);
 - OpenTelemetry Collector;
 - optional observability profiles, not required for a first request.
 
@@ -70,4 +70,3 @@ findings block release.
 `docker compose down` preserves named database volumes. Removing volumes is a
 destructive, explicit operator action and is not part of normal setup or test
 instructions.
-

@@ -44,7 +44,7 @@ const CandidateSchema = Type.Object(
   { additionalProperties: false },
 );
 
-/** Versioned route policy shape. Foundation validates but does not execute it. */
+/** Versioned provider and routing policy shape. */
 export const PolicyConfigSchema = Type.Object(
   {
     version: Type.Literal(1),
@@ -71,6 +71,24 @@ export const PolicyConfigSchema = Type.Object(
         connect_timeout_ms: Type.Optional(Type.Integer({ minimum: 1 })),
         same_route_retries: Type.Optional(Type.Integer({ minimum: 0 })),
         minimum_attempt_budget_ms: Type.Optional(Type.Integer({ minimum: 1 })),
+        retry_base_delay_ms: Type.Optional(Type.Integer({ minimum: 0 })),
+        global_max_concurrent_calls: Type.Optional(
+          Type.Integer({ minimum: 1 }),
+        ),
+        provider_max_concurrent_calls: Type.Optional(
+          Type.Integer({ minimum: 1 }),
+        ),
+        circuit: Type.Optional(
+          Type.Object(
+            {
+              failure_threshold: Type.Integer({ minimum: 1 }),
+              rolling_window_ms: Type.Integer({ minimum: 1_000 }),
+              open_duration_ms: Type.Integer({ minimum: 1_000 }),
+              half_open_max_calls: Type.Integer({ minimum: 1 }),
+            },
+            { additionalProperties: false },
+          ),
+        ),
       },
       { additionalProperties: false },
     ),
@@ -115,6 +133,25 @@ export function parsePolicyConfig(
   );
 
   if (Value.Check(PolicyConfigSchema, candidate)) {
+    if (
+      candidate.routing.connect_timeout_ms !== undefined &&
+      candidate.routing.connect_timeout_ms >= candidate.routing.total_timeout_ms
+    ) {
+      issues.push('routing connect timeout must be less than total timeout');
+    }
+    if (
+      candidate.routing.minimum_attempt_budget_ms !== undefined &&
+      candidate.routing.minimum_attempt_budget_ms >
+        candidate.routing.total_timeout_ms
+    ) {
+      issues.push('routing minimum attempt budget exceeds total timeout');
+    }
+    if (
+      (candidate.routing.same_route_retries ?? 0) >=
+      candidate.routing.max_attempts
+    ) {
+      issues.push('routing same-route retries must be less than max attempts');
+    }
     for (const [providerName, provider] of Object.entries(
       candidate.providers,
     )) {

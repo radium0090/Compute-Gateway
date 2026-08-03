@@ -62,6 +62,20 @@ describe('loadConfig', () => {
     ).toThrow(/must be less|explicit proxy CIDRs/);
   });
 
+  it('requires Redis for production distributed controls', () => {
+    expect(() =>
+      loadConfig({ ...validEnvironment, GENCHI_ENVIRONMENT: 'production' }),
+    ).toThrow(/GENCHI_REDIS_URL is required/);
+
+    expect(
+      loadConfig({
+        ...validEnvironment,
+        GENCHI_ENVIRONMENT: 'production',
+        GENCHI_REDIS_URL: 'rediss://redis.example:6379',
+      }).redisUrl,
+    ).toBe('rediss://redis.example:6379');
+  });
+
   it('reports only whether secrets are set', () => {
     const config = loadConfig({
       ...validEnvironment,

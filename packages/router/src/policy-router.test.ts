@@ -27,11 +27,18 @@ providers:
     base_url: https://api.openai.com/v1
     models:
       model-b: { capabilities: [chat, streaming] }
+  openai-c:
+    adapter: openai
+    credential_env: OPENAI_API_KEY_C
+    base_url: https://api.openai.com/v1
+    models:
+      model-c: { capabilities: [chat, streaming] }
 aliases:
   genchi/fast:
     candidates:
       - { provider: openai-a, model: model-a, weight: 50 }
       - { provider: openai-b, model: model-b, weight: 50 }
+      - { provider: openai-c, model: model-c, weight: 0 }
 routing:
   max_attempts: 2
   total_timeout_ms: 60000
@@ -88,6 +95,26 @@ describe('StaticPolicyRouter', () => {
     expect(selected).toEqual(new Set(['openai-a', 'openai-b']));
   });
 
+  it('builds a primary-first plan followed by ordered fallback candidates', () => {
+    const router = new StaticPolicyRouter(policy);
+    const result = router.plan({
+      requestedModel: 'genchi/fast',
+      requestId: 'req_plan',
+      apiKey: key(['genchi/*']),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.plan.routes).toHaveLength(3);
+    expect(result.plan.routes[0]?.providerRef).toMatch(/^openai-[ab]$/);
+    expect(result.plan.routes.at(-1)?.providerRef).toBe('openai-c');
+    expect(
+      new Set(result.plan.routes.map((route) => route.providerRef)),
+    ).toEqual(new Set(['openai-a', 'openai-b', 'openai-c']));
+    expect(result.plan.candidateCount).toBe(3);
+    expect(result.plan.selectionReason).toBe('stable_weighted_primary');
+  });
+
   it('denies by default and resolves an unambiguous qualified model', () => {
     const router = new StaticPolicyRouter(policy);
 
@@ -107,6 +134,16 @@ describe('StaticPolicyRouter', () => {
     ).toMatchObject({
       ok: true,
       route: { provider: 'openai', providerModel: 'model-a' },
+    });
+    expect(
+      router.plan({
+        requestedModel: 'openai/model-a',
+        requestId: 'req_qualified',
+        apiKey: key(['openai/*']),
+      }),
+    ).toMatchObject({
+      ok: true,
+      plan: { selectionReason: 'qualified_model' },
     });
   });
 
@@ -143,6 +180,7 @@ describe('StaticPolicyRouter', () => {
     expect(catalog.listAllowed(key(['openai/*']))).toEqual([
       { id: 'openai/model-a' },
       { id: 'openai/model-b' },
+      { id: 'openai/model-c' },
     ]);
     expect(catalog.listAllowed(key([]))).toEqual([]);
   });

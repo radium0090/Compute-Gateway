@@ -12,6 +12,9 @@ export default defineConfig({
       '@genchi/application': fromRoot('./packages/application/src/index.ts'),
       '@genchi/auth': fromRoot('./packages/auth/src/index.ts'),
       '@genchi/config': fromRoot('./packages/config/src/index.ts'),
+      '@genchi/coordination-redis': fromRoot(
+        './packages/coordination-redis/src/index.ts',
+      ),
       '@genchi/domain': fromRoot('./packages/domain/src/index.ts'),
       '@genchi/observability': fromRoot(
         './packages/observability/src/index.ts',

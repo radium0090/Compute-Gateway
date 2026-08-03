@@ -8,8 +8,16 @@ import {
 } from '@genchi/application';
 import { ApiKeyAuthenticator } from '@genchi/auth';
 import type { PolicyConfig, RuntimeConfig } from '@genchi/config';
-import type { ProviderAdapter, ProviderCapabilities } from '@genchi/domain';
-import { createLogger } from '@genchi/observability';
+import { createRedisCoordination } from '@genchi/coordination-redis';
+import type {
+  CircuitBreaker,
+  ProviderAdapter,
+  ProviderCapabilities,
+  ProviderConcurrencyController,
+  RequestAdmissionController,
+  RoutingExecutionPolicy,
+} from '@genchi/domain';
+import { createLogger, createRoutingObserver } from '@genchi/observability';
 import {
   PostgresApiKeyRepository,
   PostgresReadinessProbe,
@@ -19,9 +27,112 @@ import {
 import { AnthropicAdapter } from '@genchi/provider-anthropic';
 import { GeminiAdapter } from '@genchi/provider-gemini';
 import { OpenAiAdapter } from '@genchi/provider-openai';
-import { StaticModelCatalog, StaticPolicyRouter } from '@genchi/router';
+import {
+  InMemoryCircuitBreaker,
+  InMemoryCoordination,
+  StaticModelCatalog,
+  StaticPolicyRouter,
+} from '@genchi/router';
 
 import { buildGateway } from './app.js';
+import type { ReadinessProbe } from './health.js';
+
+interface CoordinationRuntime {
+  readonly requestAdmission: RequestAdmissionController;
+  readonly providerConcurrency: ProviderConcurrencyController;
+  readonly circuitBreaker: CircuitBreaker;
+  readonly readiness?: { check(): Promise<{ readonly ready: boolean }> };
+  close(): Promise<void>;
+}
+
+function executionPolicy(
+  config: RuntimeConfig,
+  policy: PolicyConfig,
+): RoutingExecutionPolicy {
+  return {
+    totalTimeoutMs: Math.min(
+      config.totalTimeoutMs,
+      policy.routing.total_timeout_ms,
+    ),
+    connectTimeoutMs:
+      policy.routing.connect_timeout_ms ?? config.connectTimeoutMs,
+    maxAttempts: policy.routing.max_attempts,
+    sameRouteRetries: policy.routing.same_route_retries ?? 0,
+    minimumAttemptBudgetMs: policy.routing.minimum_attempt_budget_ms ?? 2_000,
+    globalMaxConcurrentCalls:
+      policy.routing.global_max_concurrent_calls ?? 1_000,
+    providerMaxConcurrentCalls:
+      policy.routing.provider_max_concurrent_calls ?? 100,
+    retryBaseDelayMs: policy.routing.retry_base_delay_ms ?? 100,
+  };
+}
+
+async function coordinationRuntime(
+  config: RuntimeConfig,
+  policy: PolicyConfig,
+): Promise<CoordinationRuntime> {
+  const circuit = policy.routing.circuit ?? {
+    failure_threshold: 5,
+    rolling_window_ms: 30_000,
+    open_duration_ms: 30_000,
+    half_open_max_calls: 1,
+  };
+  if (config.redisUrl !== undefined) {
+    const redis = await createRedisCoordination({
+      redisUrl: config.redisUrl,
+      connectTimeoutMs: config.connectTimeoutMs,
+      circuit: {
+        failureThreshold: circuit.failure_threshold,
+        rollingWindowMs: circuit.rolling_window_ms,
+        openDurationMs: circuit.open_duration_ms,
+        halfOpenMaxCalls: circuit.half_open_max_calls,
+      },
+    });
+    return {
+      requestAdmission: redis,
+      providerConcurrency: redis,
+      circuitBreaker: redis,
+      readiness: redis,
+      close: () => redis.close(),
+    };
+  }
+  const coordination = new InMemoryCoordination();
+  return {
+    requestAdmission: coordination,
+    providerConcurrency: coordination,
+    circuitBreaker: new InMemoryCircuitBreaker({
+      failureThreshold: circuit.failure_threshold,
+      rollingWindowMs: circuit.rolling_window_ms,
+      openDurationMs: circuit.open_duration_ms,
+      halfOpenMaxCalls: circuit.half_open_max_calls,
+    }),
+    close: () => Promise.resolve(),
+  };
+}
+
+function readinessProbe(
+  postgres: PostgresReadinessProbe,
+  coordination: CoordinationRuntime,
+): ReadinessProbe {
+  return {
+    check: async () => {
+      const database = await postgres.check();
+      const redis =
+        coordination.readiness === undefined
+          ? undefined
+          : await coordination.readiness.check();
+      return {
+        ready: database.ready && (redis?.ready ?? true),
+        checks: {
+          postgres: database.ready ? 'ok' : 'error',
+          ...(redis === undefined
+            ? {}
+            : { redis: redis.ready ? ('ok' as const) : ('error' as const) }),
+        },
+      };
+    },
+  };
+}
 
 async function closeWithinGrace(
   app: FastifyInstance,
@@ -134,20 +245,47 @@ export async function runGateway(
     config.environment,
     () => new Date(),
   );
-  const app = await buildGateway({
-    config,
-    logger,
-    readinessProbe: new PostgresReadinessProbe(pool),
-    chatCompletionService: new CreateChatCompletionService(
-      authenticator,
-      new StaticPolicyRouter(policy),
-      buildProviderRegistry(policy, credentials),
-    ),
-    listModelsService: new ListModelsService(
-      authenticator,
-      new StaticModelCatalog(policy),
-    ),
-  });
+  const runtime = await (async () => {
+    let coordination: CoordinationRuntime | undefined;
+    try {
+      coordination = await coordinationRuntime(config, policy);
+      const router = new StaticPolicyRouter(policy);
+      const app = await buildGateway({
+        config,
+        logger,
+        readinessProbe: readinessProbe(
+          new PostgresReadinessProbe(pool),
+          coordination,
+        ),
+        chatCompletionService: new CreateChatCompletionService(
+          authenticator,
+          router,
+          buildProviderRegistry(policy, credentials),
+          {
+            requestAdmission: coordination.requestAdmission,
+            providerConcurrency: coordination.providerConcurrency,
+            circuitBreaker: coordination.circuitBreaker,
+            policy: executionPolicy(config, policy),
+            observer: createRoutingObserver(),
+          },
+        ),
+        listModelsService: new ListModelsService(
+          authenticator,
+          new StaticModelCatalog(policy),
+        ),
+      });
+      return { coordination, app };
+    } catch {
+      await coordination?.close();
+      await pool.end();
+      logger.error(
+        { event: 'gateway.start_failed' },
+        'gateway failed to start',
+      );
+      throw new Error('Gateway startup failed');
+    }
+  })();
+  const { coordination, app } = runtime;
   let shuttingDown = false;
   let finishShutdown: (() => void) | undefined;
   const shutdownCompleted = new Promise<void>((resolveShutdown) => {
@@ -170,6 +308,7 @@ export async function runGateway(
       );
       process.exitCode = 1;
     } finally {
+      await coordination.close();
       await pool.end();
       finishShutdown?.();
     }
@@ -190,6 +329,7 @@ export async function runGateway(
     );
     await shutdownCompleted;
   } catch {
+    await coordination.close();
     await pool.end();
     logger.error({ event: 'gateway.start_failed' }, 'gateway failed to start');
     throw new Error('Gateway startup failed');

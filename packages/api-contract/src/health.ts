@@ -17,6 +17,9 @@ export const ReadinessResponseSchema = Type.Object(
     checks: Type.Object(
       {
         postgres: Type.Union([Type.Literal('ok'), Type.Literal('error')]),
+        redis: Type.Optional(
+          Type.Union([Type.Literal('ok'), Type.Literal('error')]),
+        ),
       },
       { additionalProperties: false },
     ),

@@ -11,6 +11,7 @@
     { "path": "packages/auth" },
     { "path": "packages/application" },
     { "path": "packages/router" },
+    { "path": "packages/coordination-redis" },
     { "path": "packages/testkit" },
     { "path": "packages/provider-openai" },
     { "path": "packages/provider-anthropic" },

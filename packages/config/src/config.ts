@@ -176,6 +176,15 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     );
   }
 
+  if (
+    candidate.environment === 'production' &&
+    candidate.redisUrl === undefined
+  ) {
+    issues.push(
+      'GENCHI_REDIS_URL is required in production for distributed limits',
+    );
+  }
+
   if (issues.length > 0 || !Value.Check(RuntimeConfigSchema, candidate)) {
     throw new ConfigValidationError([...new Set(issues)]);
   }

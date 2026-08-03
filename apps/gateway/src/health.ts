@@ -8,7 +8,13 @@ import {
 } from '@genchi/api-contract';
 
 export interface ReadinessProbe {
-  check(): Promise<{ readonly ready: boolean }>;
+  check(): Promise<{
+    readonly ready: boolean;
+    readonly checks?: {
+      readonly postgres: 'ok' | 'error';
+      readonly redis?: 'ok' | 'error';
+    };
+  }>;
 }
 
 /** Registers orchestration health signals without application business logic. */
@@ -44,9 +50,15 @@ export function registerHealthRoutes(
       const result = await readinessProbe.check();
       if (!result.ready) {
         reply.code(503);
-        return { status: 'not_ready', checks: { postgres: 'error' } };
+        return {
+          status: 'not_ready',
+          checks: result.checks ?? { postgres: 'error' },
+        };
       }
-      return { status: 'ready', checks: { postgres: 'ok' } };
+      return {
+        status: 'ready',
+        checks: result.checks ?? { postgres: 'ok' },
+      };
     },
   );
 }

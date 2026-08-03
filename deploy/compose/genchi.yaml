@@ -27,6 +27,12 @@ aliases:
       - provider: openai-primary
         model: gpt-5-mini
         weight: 100
+      - provider: anthropic-primary
+        model: claude-sonnet-4-6
+        weight: 0
+      - provider: gemini-primary
+        model: gemini-3.5-flash
+        weight: 0
   genchi/anthropic:
     candidates:
       - provider: anthropic-primary
@@ -40,3 +46,14 @@ aliases:
 routing:
   max_attempts: 2
   total_timeout_ms: 60000
+  connect_timeout_ms: 5000
+  same_route_retries: 0
+  minimum_attempt_budget_ms: 2000
+  retry_base_delay_ms: 100
+  global_max_concurrent_calls: 1000
+  provider_max_concurrent_calls: 100
+  circuit:
+    failure_threshold: 5
+    rolling_window_ms: 30000
+    open_duration_ms: 30000
+    half_open_max_calls: 1

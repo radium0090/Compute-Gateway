@@ -20,6 +20,7 @@
     "@genchi/application": "workspace:*",
     "@genchi/auth": "workspace:*",
     "@genchi/config": "workspace:*",
+    "@genchi/coordination-redis": "workspace:*",
     "@genchi/domain": "workspace:*",
     "@genchi/observability": "workspace:*",
     "@genchi/persistence-postgres": "workspace:*",

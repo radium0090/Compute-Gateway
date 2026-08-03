@@ -1,6 +1,7 @@
 export {
   CreateChatCompletionService,
   type ChatCompletionFailure,
+  type ChatCompletionResilienceOptions,
   type CreateChatCompletionInput,
   type CreateChatCompletionResult,
   type CreateChatCompletionStreamResult,

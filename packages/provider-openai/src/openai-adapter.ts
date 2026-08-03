@@ -169,6 +169,45 @@ function connectionError(signal: AbortSignal): ProviderError {
       };
 }
 
+class ProviderConnectTimeoutError extends Error {}
+
+function connectTimeoutError(): ProviderError {
+  return {
+    class: 'timeout',
+    code: 'provider_connect_timeout',
+    retryable: true,
+  };
+}
+
+async function fetchWithConnectTimeout(
+  implementation: typeof fetch,
+  input: string,
+  init: RequestInit,
+  context: ProviderCallContext,
+): Promise<Response> {
+  if (context.connectTimeoutMs === undefined) {
+    return implementation(input, { ...init, signal: context.signal });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort(new ProviderConnectTimeoutError());
+  }, context.connectTimeoutMs);
+  timer.unref();
+  try {
+    return await implementation(input, {
+      ...init,
+      signal: AbortSignal.any([context.signal, controller.signal]),
+    });
+  } catch (error: unknown) {
+    if (controller.signal.reason instanceof ProviderConnectTimeoutError) {
+      throw controller.signal.reason;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function cancelResponse(response: Response): Promise<void> {
   try {
     await response.body?.cancel();
@@ -312,7 +351,8 @@ export class OpenAiAdapter implements ProviderAdapter {
 
     let response: Response;
     try {
-      response = await this.fetchImplementation(
+      response = await fetchWithConnectTimeout(
+        this.fetchImplementation,
         `${this.baseUrl}/chat/completions`,
         {
           method: 'POST',
@@ -322,11 +362,17 @@ export class OpenAiAdapter implements ProviderAdapter {
             'x-request-id': context.requestId,
           },
           body: requestBody(request, context.providerModel, false),
-          signal: context.signal,
         },
+        context,
       );
-    } catch {
-      return { ok: false, error: connectionError(context.signal) };
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error:
+          error instanceof ProviderConnectTimeoutError
+            ? connectTimeoutError()
+            : connectionError(context.signal),
+      };
     }
 
     if (!response.ok) {
@@ -378,7 +424,8 @@ export class OpenAiAdapter implements ProviderAdapter {
 
     let response: Response;
     try {
-      response = await this.fetchImplementation(
+      response = await fetchWithConnectTimeout(
+        this.fetchImplementation,
         `${this.baseUrl}/chat/completions`,
         {
           method: 'POST',
@@ -389,11 +436,17 @@ export class OpenAiAdapter implements ProviderAdapter {
             'x-request-id': context.requestId,
           },
           body: requestBody(request, context.providerModel, true),
-          signal: context.signal,
         },
+        context,
       );
-    } catch {
-      return { ok: false, error: connectionError(context.signal) };
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error:
+          error instanceof ProviderConnectTimeoutError
+            ? connectTimeoutError()
+            : connectionError(context.signal),
+      };
     }
     if (!response.ok) {
       await cancelResponse(response);

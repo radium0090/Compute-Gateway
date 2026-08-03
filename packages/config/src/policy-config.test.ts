@@ -81,4 +81,37 @@ describe('parsePolicyConfig', () => {
       /provider primary credential is not set/,
     );
   });
+
+  it('validates bounded retry, concurrency, and circuit policy', () => {
+    const configured = validPolicy.replace(
+      '  total_timeout_ms: 60000',
+      `  total_timeout_ms: 60000
+  connect_timeout_ms: 5000
+  same_route_retries: 1
+  minimum_attempt_budget_ms: 2000
+  retry_base_delay_ms: 100
+  global_max_concurrent_calls: 100
+  provider_max_concurrent_calls: 10
+  circuit:
+    failure_threshold: 5
+    rolling_window_ms: 30000
+    open_duration_ms: 30000
+    half_open_max_calls: 1`,
+    );
+    expect(parsePolicyConfig(configured, 'test').routing.circuit).toMatchObject(
+      {
+        failure_threshold: 5,
+      },
+    );
+
+    expect(() =>
+      parsePolicyConfig(
+        configured.replace(
+          'minimum_attempt_budget_ms: 2000',
+          'minimum_attempt_budget_ms: 70000',
+        ),
+        'test',
+      ),
+    ).toThrow(/minimum attempt budget/);
+  });
 });

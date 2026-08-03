@@ -56,6 +56,12 @@ Metric names use a `genchi_` prefix. Recommended baseline:
 Do not label metrics with request, tenant, key, user, or provider request IDs.
 Model labels are bounded to configured models to control cardinality.
 
+The routing implementation currently emits provider attempts and duration,
+route decisions, fallbacks, admission rejections, and observed circuit state.
+It records only configured alias/provider/model names and bounded reason codes;
+request IDs, API key IDs, credentials, prompts, and completions are excluded
+from metric labels.
+
 ## Traces
 
 One server span encloses child spans for auth, policy, routing, each provider
@@ -90,4 +96,3 @@ Avoid paging on a single transient provider failure.
 The reference dashboard shows traffic, success/error classification, gateway
 overhead, provider latency and errors, route distribution, fallback rate,
 active streams, circuit state, saturation, and deployment version markers.
-

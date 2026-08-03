@@ -10,6 +10,7 @@
     { "path": "../../packages/application" },
     { "path": "../../packages/auth" },
     { "path": "../../packages/config" },
+    { "path": "../../packages/coordination-redis" },
     { "path": "../../packages/domain" },
     { "path": "../../packages/observability" },
     { "path": "../../packages/persistence-postgres" },

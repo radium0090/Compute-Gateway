@@ -505,3 +505,9 @@ components:
                   type: string
                 - const: error
                   type: string
+            redis:
+              anyOf:
+                - const: ok
+                  type: string
+                - const: error
+                  type: string

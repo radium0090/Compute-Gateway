@@ -164,6 +164,40 @@ export function defineProviderAdapterConformance(
       });
     });
 
+    it('bounds connection establishment with a typed connect timeout', async () => {
+      const adapter = fixture.createAdapter(
+        (_input, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            if (signal == null) {
+              reject(new Error('missing signal'));
+              return;
+            }
+            signal.addEventListener(
+              'abort',
+              () => {
+                reject(new Error('connect aborted'));
+              },
+              { once: true },
+            );
+          }),
+      );
+
+      await expect(
+        adapter.createChatCompletion(fixture.request, {
+          ...requestContext(fixture.model, new AbortController().signal),
+          connectTimeoutMs: 1,
+        }),
+      ).resolves.toEqual({
+        ok: false,
+        error: {
+          class: 'timeout',
+          code: 'provider_connect_timeout',
+          retryable: true,
+        },
+      });
+    });
+
     it('preserves stream order, usage, and provider request semantics', async () => {
       let captured: CapturedProviderRequest | undefined;
       const adapter = fixture.createAdapter((input, init) => {

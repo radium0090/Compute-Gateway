@@ -146,6 +146,45 @@ function connectionError(signal: AbortSignal): ProviderError {
       };
 }
 
+class ProviderConnectTimeoutError extends Error {}
+
+async function fetchWithConnectTimeout(
+  implementation: typeof fetch,
+  input: string,
+  init: RequestInit,
+  context: ProviderCallContext,
+): Promise<Response> {
+  if (context.connectTimeoutMs === undefined) {
+    return implementation(input, { ...init, signal: context.signal });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort(new ProviderConnectTimeoutError());
+  }, context.connectTimeoutMs);
+  timer.unref();
+  try {
+    return await implementation(input, {
+      ...init,
+      signal: AbortSignal.any([context.signal, controller.signal]),
+    });
+  } catch (error: unknown) {
+    if (controller.signal.reason instanceof ProviderConnectTimeoutError) {
+      throw controller.signal.reason;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function connectTimeoutError(): ProviderError {
+  return {
+    class: 'timeout',
+    code: 'provider_connect_timeout',
+    retryable: true,
+  };
+}
+
 function requestError(code: string): ProviderError {
   return { class: 'request', code, retryable: false };
 }
@@ -380,7 +419,8 @@ export class GeminiAdapter implements ProviderAdapter {
     }
     let response: Response;
     try {
-      response = await this.fetchImplementation(
+      response = await fetchWithConnectTimeout(
+        this.fetchImplementation,
         `${this.baseUrl}/models/${encodeURIComponent(context.providerModel)}:generateContent`,
         {
           method: 'POST',
@@ -391,11 +431,17 @@ export class GeminiAdapter implements ProviderAdapter {
             'x-request-id': context.requestId,
           },
           body: translated.body,
-          signal: context.signal,
         },
+        context,
       );
-    } catch {
-      return { ok: false, error: connectionError(context.signal) };
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error:
+          error instanceof ProviderConnectTimeoutError
+            ? connectTimeoutError()
+            : connectionError(context.signal),
+      };
     }
     if (!response.ok) {
       await cancelResponse(response);
@@ -455,7 +501,8 @@ export class GeminiAdapter implements ProviderAdapter {
     }
     let response: Response;
     try {
-      response = await this.fetchImplementation(
+      response = await fetchWithConnectTimeout(
+        this.fetchImplementation,
         `${this.baseUrl}/models/${encodeURIComponent(context.providerModel)}:streamGenerateContent?alt=sse`,
         {
           method: 'POST',
@@ -466,11 +513,17 @@ export class GeminiAdapter implements ProviderAdapter {
             'x-request-id': context.requestId,
           },
           body: translated.body,
-          signal: context.signal,
         },
+        context,
       );
-    } catch {
-      return { ok: false, error: connectionError(context.signal) };
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error:
+          error instanceof ProviderConnectTimeoutError
+            ? connectTimeoutError()
+            : connectionError(context.signal),
+      };
     }
     if (!response.ok) {
       await cancelResponse(response);

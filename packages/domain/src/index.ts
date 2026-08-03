@@ -35,6 +35,23 @@ export type {
   ResolvedRoute,
   RouteResolutionResult,
   RouteResolver,
+  ResolvedRoutePlan,
+  RoutePlanResolutionResult,
+  RoutePlanner,
   ModelCatalog,
   PublicModel,
 } from './chat-completion.js';
+export { circuitOutcomeForProviderError } from './resilience.js';
+export type {
+  AdmissionRejectionReason,
+  AdmissionResult,
+  CircuitBreaker,
+  CircuitOutcome,
+  CircuitPermit,
+  CircuitPermitResult,
+  CoordinationLease,
+  ProviderConcurrencyController,
+  RequestAdmissionController,
+  RoutingExecutionPolicy,
+  RoutingObserver,
+} from './resilience.js';

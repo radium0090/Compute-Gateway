@@ -65,6 +65,29 @@ describe('health routes', () => {
     await app.close();
   });
 
+  it('reports required Redis coordination independently of PostgreSQL', async () => {
+    const app = await buildGateway({
+      config,
+      logger,
+      readinessProbe: {
+        check: () =>
+          Promise.resolve({
+            ready: false,
+            checks: { postgres: 'ok', redis: 'error' },
+          }),
+      },
+    });
+
+    const response = await app.inject({ method: 'GET', url: '/health/ready' });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({
+      status: 'not_ready',
+      checks: { postgres: 'ok', redis: 'error' },
+    });
+    await app.close();
+  });
+
   it('accepts only bounded request IDs from callers', async () => {
     const app = await buildGateway({
       config,

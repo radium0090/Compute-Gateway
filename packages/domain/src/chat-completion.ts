@@ -93,6 +93,7 @@ export interface ProviderCallContext {
   readonly requestId: string;
   readonly providerModel: string;
   readonly signal: AbortSignal;
+  readonly connectTimeoutMs?: number;
 }
 
 /** Provider-neutral port implemented independently by each provider package. */
@@ -123,6 +124,17 @@ export type RouteResolutionResult =
         'model_not_allowed' | 'model_not_found' | 'no_healthy_route';
     };
 
+export interface ResolvedRoutePlan {
+  readonly routes: readonly ResolvedRoute[];
+  readonly candidateCount: number;
+  readonly selectionReason:
+    'stable_weighted_primary' | 'qualified_model' | 'legacy_single_route';
+}
+
+export type RoutePlanResolutionResult =
+  | { readonly ok: true; readonly plan: ResolvedRoutePlan }
+  | Exclude<RouteResolutionResult, { readonly ok: true }>;
+
 export interface RouteResolver {
   resolve(input: {
     readonly requestedModel: string;
@@ -130,6 +142,16 @@ export interface RouteResolver {
     readonly apiKey: ApiKey;
     readonly requireStreaming?: boolean;
   }): RouteResolutionResult;
+}
+
+/** Builds an ordered, deterministic candidate plan for bounded fallback. */
+export interface RoutePlanner {
+  plan(input: {
+    readonly requestedModel: string;
+    readonly requestId: string;
+    readonly apiKey: ApiKey;
+    readonly requireStreaming?: boolean;
+  }): RoutePlanResolutionResult;
 }
 
 export interface PublicModel {

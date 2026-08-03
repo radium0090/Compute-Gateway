@@ -6,6 +6,8 @@ import type {
   ModelCatalog,
   PublicModel,
   ResolvedRoute,
+  RoutePlanResolutionResult,
+  RoutePlanner,
   RouteResolutionResult,
   RouteResolver,
 } from '@genchi/domain';
@@ -40,8 +42,8 @@ function selectStableWeighted<T extends { readonly weight: number }>(
   return null;
 }
 
-/** Resolves only the first deterministic provider attempt; fallback is later scope. */
-export class StaticPolicyRouter implements RouteResolver {
+/** Resolves deterministic primary routes and ordered fallback plans. */
+export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
   public constructor(private readonly policy: PolicyConfig) {}
 
   public resolve(input: {
@@ -50,6 +52,20 @@ export class StaticPolicyRouter implements RouteResolver {
     readonly apiKey: ApiKey;
     readonly requireStreaming?: boolean;
   }): RouteResolutionResult {
+    const result = this.plan(input);
+    if (!result.ok) return result;
+    const route = result.plan.routes[0];
+    return route === undefined
+      ? { ok: false, reason: 'no_healthy_route' }
+      : { ok: true, route };
+  }
+
+  public plan(input: {
+    readonly requestedModel: string;
+    readonly requestId: string;
+    readonly apiKey: ApiKey;
+    readonly requireStreaming?: boolean;
+  }): RoutePlanResolutionResult {
     if (
       !input.apiKey.policy.allowedModelPatterns.some((pattern) =>
         patternAllows(pattern, input.requestedModel),
@@ -59,23 +75,23 @@ export class StaticPolicyRouter implements RouteResolver {
     }
 
     if (input.requestedModel.startsWith('genchi/')) {
-      return this.resolveAlias(
+      return this.planAlias(
         input.requestedModel,
         input.requestId,
         input.requireStreaming === true,
       );
     }
-    return this.resolveQualifiedModel(
+    return this.planQualifiedModel(
       input.requestedModel,
       input.requireStreaming === true,
     );
   }
 
-  private resolveAlias(
+  private planAlias(
     aliasName: string,
     requestId: string,
     requireStreaming: boolean,
-  ): RouteResolutionResult {
+  ): RoutePlanResolutionResult {
     const alias = this.policy.aliases[aliasName];
     if (alias === undefined) {
       return { ok: false, reason: 'model_not_found' };
@@ -86,9 +102,6 @@ export class StaticPolicyRouter implements RouteResolver {
       ...(alias.required_capabilities ?? []),
     ]);
     const candidates = alias.candidates.filter((candidate) => {
-      if (candidate.weight <= 0) {
-        return false;
-      }
       const model =
         this.policy.providers[candidate.provider]?.models[candidate.model];
       return (
@@ -100,19 +113,33 @@ export class StaticPolicyRouter implements RouteResolver {
         )
       );
     });
+    const primaries = candidates.filter((candidate) => candidate.weight > 0);
     const selected = selectStableWeighted(
-      candidates,
+      primaries,
       `${requestId}\u0000${aliasName}`,
     );
-    return selected === null
-      ? { ok: false, reason: 'no_healthy_route' }
-      : this.toResolvedRoute(selected.provider, selected.model);
+    if (selected === null) return { ok: false, reason: 'no_healthy_route' };
+    const ordered = [
+      selected,
+      ...primaries.filter((candidate) => candidate !== selected),
+      ...candidates.filter((candidate) => candidate.weight === 0),
+    ];
+    return {
+      ok: true,
+      plan: {
+        routes: ordered.map((candidate) =>
+          this.toResolvedRoute(candidate.provider, candidate.model),
+        ),
+        candidateCount: alias.candidates.length,
+        selectionReason: 'stable_weighted_primary',
+      },
+    };
   }
 
-  private resolveQualifiedModel(
+  private planQualifiedModel(
     requestedModel: string,
     requireStreaming: boolean,
-  ): RouteResolutionResult {
+  ): RoutePlanResolutionResult {
     const separator = requestedModel.indexOf('/');
     if (separator <= 0 || separator === requestedModel.length - 1) {
       return { ok: false, reason: 'model_not_found' };
@@ -136,24 +163,28 @@ export class StaticPolicyRouter implements RouteResolver {
     const providerRef = matches[0]?.[0];
     return providerRef === undefined
       ? { ok: false, reason: 'model_not_found' }
-      : this.toResolvedRoute(providerRef, modelName);
+      : {
+          ok: true,
+          plan: {
+            routes: [this.toResolvedRoute(providerRef, modelName)],
+            candidateCount: 1,
+            selectionReason: 'qualified_model',
+          },
+        };
   }
 
   private toResolvedRoute(
     providerRef: string,
     providerModel: string,
-  ): { readonly ok: true; readonly route: ResolvedRoute } {
+  ): ResolvedRoute {
     const provider = this.policy.providers[providerRef];
     if (provider === undefined) {
       throw new TypeError('Validated policy contains an unknown provider');
     }
     return {
-      ok: true,
-      route: {
-        providerRef,
-        provider: provider.adapter,
-        providerModel,
-      },
+      providerRef,
+      provider: provider.adapter,
+      providerModel,
     };
   }
 }

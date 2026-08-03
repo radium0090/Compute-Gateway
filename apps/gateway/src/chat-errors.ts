@@ -100,6 +100,35 @@ export function resultErrorMapping(
   if (result.failure.kind === 'provider') {
     return providerErrorMapping(result.failure.error);
   }
+  if (result.failure.kind === 'admission') {
+    switch (result.failure.reason) {
+      case 'rate_limited':
+      case 'concurrency_limited':
+        return {
+          statusCode: 429,
+          type: 'rate_limit_error',
+          code:
+            result.failure.reason === 'rate_limited'
+              ? 'rate_limit_exceeded'
+              : 'concurrency_limit_exceeded',
+          message: 'The API key request limit was exceeded.',
+          param: null,
+          retryable: true,
+          ...(result.failure.retryAfterSeconds === undefined
+            ? {}
+            : { retryAfterSeconds: result.failure.retryAfterSeconds }),
+        };
+      case 'coordination_unavailable':
+        return {
+          statusCode: 503,
+          type: 'service_unavailable_error',
+          code: 'coordination_unavailable',
+          message: 'Request admission is temporarily unavailable.',
+          param: null,
+          retryable: true,
+        };
+    }
+  }
   switch (result.failure.reason) {
     case 'model_not_allowed':
       return {

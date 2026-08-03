@@ -262,6 +262,18 @@ async function sendStreamingCompletion(
       providerModel: result.route.providerModel,
       attempts: result.attempts,
     };
+    request.log.info(
+      {
+        event: 'routing.completed',
+        request_id: request.id,
+        model_alias: request.body.model,
+        provider: result.route.provider,
+        provider_model: result.route.providerModel,
+        attempts: result.attempts,
+        streaming: true,
+      },
+      'routing completed',
+    );
     const body = Readable.from(
       streamBody(first.value, iterator, request, signal, metadata),
     );
@@ -371,6 +383,19 @@ export function registerChatCompletionRoute(
           reply.code(mapping.statusCode);
           return errorResponse(mapping, request.id);
         }
+
+        request.log.info(
+          {
+            event: 'routing.completed',
+            request_id: request.id,
+            model_alias: request.body.model,
+            provider: result.route.provider,
+            provider_model: result.route.providerModel,
+            attempts: result.attempts,
+            streaming: false,
+          },
+          'routing completed',
+        );
 
         const response: ChatCompletionResponse = {
           id: `chatcmpl_gch_${idGenerator()}`,

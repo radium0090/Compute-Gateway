@@ -16,7 +16,7 @@ route policy. Environment variables override file values only where documented.
 | `GENCHI_MASTER_KEY` | bootstrap | initial operator secret; disable after bootstrap |
 | `GENCHI_KEY_HASH_PEPPER` | yes | HMAC pepper for API key verification |
 | `GENCHI_CONFIG_FILE` | no | route policy path; default `/etc/genchi/config.yaml` |
-| `GENCHI_REDIS_URL` | conditional | required for distributed limits/circuit state |
+| `GENCHI_REDIS_URL` | conditional | required in production for distributed limits/circuit state |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | no | OpenTelemetry Collector endpoint |
 
 Provider credentials follow explicit names such as `OPENAI_API_KEY`,
@@ -62,7 +62,29 @@ aliases:
 routing:
   max_attempts: 2
   total_timeout_ms: 60000
+  connect_timeout_ms: 5000
+  same_route_retries: 0
+  minimum_attempt_budget_ms: 2000
+  retry_base_delay_ms: 100
+  global_max_concurrent_calls: 1000
+  provider_max_concurrent_calls: 100
+  circuit:
+    failure_threshold: 5
+    rolling_window_ms: 30000
+    open_duration_ms: 30000
+    half_open_max_calls: 1
 ```
+
+`max_attempts` includes the first provider call. `same_route_retries` must be
+less than `max_attempts`; the connect timeout must be less than the total
+timeout; and the minimum attempt budget cannot exceed the total timeout.
+Zero-weight alias candidates are fallback-only.
+
+When `GENCHI_REDIS_URL` is unset outside production, limits and circuit state
+are process-local and suitable only for development or a single replica. In
+production Redis is mandatory. Admission, provider concurrency, and circuit
+operations fail closed when configured Redis coordination is unavailable, and
+Redis readiness is included in `/health/ready`.
 
 Custom provider base URLs are allowed only by operator configuration. In
 production they MUST use HTTPS unless an explicit private-network exception is
@@ -94,4 +116,3 @@ keys fail validation to catch spelling errors.
 - Diagnostic configuration output reports `<set>` or `<unset>`, never values.
 - Child processes are not used in the gateway data plane.
 - Secret rotation instructions are tested in release rehearsals.
-

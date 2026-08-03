@@ -61,6 +61,14 @@ routing:
   max_attempts: 2
   same_route_retries: 0
   minimum_attempt_budget_ms: 2000
+  retry_base_delay_ms: 100
+  global_max_concurrent_calls: 1000
+  provider_max_concurrent_calls: 100
+  circuit:
+    failure_threshold: 5
+    rolling_window_ms: 30000
+    open_duration_ms: 30000
+    half_open_max_calls: 1
 ```
 
 Retryable pre-commit failures include connection reset, connection timeout,
@@ -97,6 +105,15 @@ Limits are evaluated before route selection:
 
 Multi-replica exact limits require Redis. When Redis is required and
 unavailable, production mode fails closed with a 503 or 429 as configured.
+The reference implementation uses atomic Redis scripts and expiring,
+token-addressed concurrency leases. Development without Redis uses equivalent
+process-local coordination; its counts and circuit state are not shared across
+replicas.
+
+Admission failures map to `429` for rate or concurrency saturation and `503`
+when required coordination is unavailable. Responses may include a bounded
+`Retry-After` value; raw API key IDs are not used as Redis keys or telemetry
+labels.
 
 ## Route explanation
 
@@ -109,4 +126,3 @@ classification. It MUST NOT record message content or raw credentials.
 Startup fails when an alias has no candidates, references an unknown provider,
 uses negative weights, duplicates a route, or claims required capabilities that
 no candidate supports. Runtime configuration updates are applied atomically.
-
