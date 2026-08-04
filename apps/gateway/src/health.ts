@@ -45,9 +45,22 @@ export function registerHealthRoutes(
         },
       },
     },
-    async (_request, reply) => {
+    async (request, reply) => {
       reply.header('cache-control', 'no-store');
-      const result = await readinessProbe.check();
+      let result: Awaited<ReturnType<ReadinessProbe['check']>>;
+      try {
+        result = await readinessProbe.check();
+      } catch {
+        request.log.warn(
+          { event: 'health.readiness_probe_failed' },
+          'readiness probe failed',
+        );
+        reply.code(503);
+        return {
+          status: 'not_ready',
+          checks: { postgres: 'error' },
+        };
+      }
       if (!result.ready) {
         reply.code(503);
         return {

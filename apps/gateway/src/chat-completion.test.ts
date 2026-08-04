@@ -117,6 +117,7 @@ describe('POST /v1/chat/completions', () => {
   });
 
   it('returns the canonical request deadline error', async () => {
+    let serviceCalled = false;
     const app = await buildGateway({
       config,
       logger,
@@ -126,7 +127,10 @@ describe('POST /v1/chat/completions', () => {
         executeStream: () => {
           throw new Error('streaming is not used by this test');
         },
-        execute: () => new Promise(() => undefined),
+        execute: () => {
+          serviceCalled = true;
+          return Promise.reject(new Error('expired request must not execute'));
+        },
       },
     });
 
@@ -142,6 +146,41 @@ describe('POST /v1/chat/completions', () => {
       error: { type: 'timeout_error', code: 'request_deadline_exceeded' },
       genchi: { retryable: true },
     });
+    expect(serviceCalled).toBe(false);
+    await app.close();
+  });
+
+  it('does not open a provider stream after the request deadline', async () => {
+    let serviceCalled = false;
+    const app = await buildGateway({
+      config,
+      logger,
+      readinessProbe,
+      requestTimeoutSignalFactory: () => AbortSignal.abort(),
+      chatCompletionService: {
+        execute: () => {
+          throw new Error('non-streaming is not used by this test');
+        },
+        executeStream: () => {
+          serviceCalled = true;
+          return Promise.reject(new Error('expired stream must not execute'));
+        },
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/chat/completions',
+      headers: { authorization: 'Bearer fake-genchi-key' },
+      payload: { ...validBody, stream: true },
+    });
+
+    expect(response.statusCode).toBe(408);
+    expect(response.json()).toMatchObject({
+      error: { type: 'timeout_error', code: 'request_deadline_exceeded' },
+      genchi: { retryable: true },
+    });
+    expect(serviceCalled).toBe(false);
     await app.close();
   });
 

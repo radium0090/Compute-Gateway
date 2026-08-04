@@ -65,6 +65,30 @@ describe('health routes', () => {
     await app.close();
   });
 
+  it('converts unexpected readiness probe failures into a safe 503', async () => {
+    const app = await buildGateway({
+      config,
+      logger,
+      readinessProbe: {
+        check: () =>
+          Promise.reject(
+            new Error('postgresql://private-user:private-password@db/genchi'),
+          ),
+      },
+    });
+
+    const response = await app.inject({ method: 'GET', url: '/health/ready' });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({
+      status: 'not_ready',
+      checks: { postgres: 'error' },
+    });
+    expect(response.body).not.toContain('private-user');
+    expect(response.body).not.toContain('private-password');
+    await app.close();
+  });
+
   it('reports required Redis coordination independently of PostgreSQL', async () => {
     const app = await buildGateway({
       config,

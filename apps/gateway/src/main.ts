@@ -120,11 +120,10 @@ function readinessProbe(
 ): ReadinessProbe {
   return {
     check: async () => {
-      const database = await postgres.check();
-      const redis =
-        coordination.readiness === undefined
-          ? undefined
-          : await coordination.readiness.check();
+      const [database, redis] = await Promise.all([
+        postgres.check(),
+        coordination.readiness?.check(),
+      ]);
       return {
         ready: database.ready && (redis?.ready ?? true),
         checks: {

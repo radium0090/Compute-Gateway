@@ -42,7 +42,7 @@ export interface ChatCompletionRouteOptions {
 const deadlineExceeded = Symbol('request-deadline-exceeded');
 
 async function withinDeadline<Value>(
-  operation: Promise<Value>,
+  operation: () => Promise<Value>,
   timeoutSignal: AbortSignal,
 ): Promise<Value | typeof deadlineExceeded> {
   if (timeoutSignal.aborted) {
@@ -56,7 +56,7 @@ async function withinDeadline<Value>(
     timeoutSignal.addEventListener('abort', onAbort, { once: true });
   });
   try {
-    return await Promise.race([operation, timeout]);
+    return await Promise.race([operation(), timeout]);
   } finally {
     if (onAbort !== undefined) {
       timeoutSignal.removeEventListener('abort', onAbort);
@@ -208,12 +208,13 @@ async function sendStreamingCompletion(
   | { readonly streaming: true; readonly response: FastifyReply }
 > {
   const result = await withinDeadline(
-    options.service.executeStream({
-      credential,
-      requestId: request.id,
-      request: canonicalRequest,
-      signal,
-    }),
+    () =>
+      options.service.executeStream({
+        credential,
+        requestId: request.id,
+        request: canonicalRequest,
+        signal,
+      }),
     timeoutSignal,
   );
   if (result === deadlineExceeded) {
@@ -362,12 +363,13 @@ export function registerChatCompletionRoute(
           return await streamResult.response;
         }
         const result = await withinDeadline(
-          options.service.execute({
-            credential,
-            requestId: request.id,
-            request: canonicalRequest,
-            signal,
-          }),
+          () =>
+            options.service.execute({
+              credential,
+              requestId: request.id,
+              request: canonicalRequest,
+              signal,
+            }),
           timeoutSignal,
         );
         if (result === deadlineExceeded) {
