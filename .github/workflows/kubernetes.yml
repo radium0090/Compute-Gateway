@@ -58,6 +58,9 @@ jobs:
         run: |
           helm template genchi deploy/helm/genchi --include-crds \
             | kubectl apply --dry-run=server -f -
+          # Server-side dry-run validates a Namespace but does not persist it for
+          # namespaced resources that follow in the same multi-document manifest.
+          kubectl create namespace genchi
           kubectl apply --dry-run=server -f deploy/kubernetes/examples/genchi.yaml
           kubectl apply --dry-run=server -f deploy/kubernetes/ci/dependencies.yaml
       - name: Build and load release-candidate image
