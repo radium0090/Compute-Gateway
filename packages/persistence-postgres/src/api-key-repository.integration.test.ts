@@ -28,9 +28,7 @@ describeIntegration('PostgresApiKeyRepository integration', () => {
   const tenant = tenantId(randomUUID());
   const key: ApiKey = {
     id: apiKeyId(randomUUID()),
-    publicId: apiKeyPublicId(
-      `gch_${randomUUID().replaceAll('-', '').slice(0, 20)}`,
-    ),
+    publicId: apiKeyPublicId(randomUUID().replaceAll('-', '').slice(0, 24)),
     keyHash: apiKeyHash('a'.repeat(64)),
     tenantId: tenant,
     name: 'integration key',

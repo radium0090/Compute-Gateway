@@ -139,9 +139,12 @@ export class PostgresApiKeyRepository implements ApiKeyRepository {
   public async markLastUsed(id: ApiKeyId, usedAt: Date): Promise<void> {
     await this.pool.query(
       `UPDATE api_keys
-          SET last_used_at = $2
+          SET last_used_at = $2::timestamptz
         WHERE id = $1
-          AND (last_used_at IS NULL OR last_used_at < $2 - interval '1 minute')`,
+          AND (
+            last_used_at IS NULL
+            OR last_used_at < $2::timestamptz - interval '1 minute'
+          )`,
       [id, usedAt],
     );
   }

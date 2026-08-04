@@ -92,7 +92,7 @@ jobs:
             --set image.tag=rc \
             --set image.pullPolicy=Never \
             --set existingSecret=genchi-ci-secrets \
-            --set runtime.environment=test \
+            --set runtime.environment=staging \
             --set-string runtime.otlpEndpoint="" \
             --set-string podAnnotations.rc-generation=initial \
             --wait --timeout=5m
@@ -118,7 +118,7 @@ jobs:
             --set image.tag=rc \
             --set image.pullPolicy=Never \
             --set existingSecret=genchi-ci-secrets \
-            --set runtime.environment=test \
+            --set runtime.environment=staging \
             --set-string runtime.otlpEndpoint="" \
             --set-string podAnnotations.rc-generation=rollout \
             --wait --timeout=5m
