@@ -32,6 +32,7 @@ function localTarget(source: string, rawTarget: string): string | undefined {
 const files = [
   resolve(root, 'README.md'),
   resolve(root, 'CHANGELOG.md'),
+  resolve(root, 'CODE_OF_CONDUCT.md'),
   resolve(root, 'SECURITY.md'),
   ...(await markdownFiles(resolve(root, 'docs'))),
   ...(await markdownFiles(resolve(root, 'examples'))),

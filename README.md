@@ -134,6 +134,7 @@ for a locally running gateway.
 
 ### Project governance
 
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Contributing](docs/contributing.md)
 - [Coding standards](docs/coding-standards.md)
 - [Licensing](docs/licensing.md)

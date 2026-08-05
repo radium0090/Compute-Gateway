@@ -85,8 +85,9 @@ adding a Developer Certificate of Origin sign-off:
 Signed-off-by: Name <email@example.com>
 ```
 
-All participation follows the repository `CODE_OF_CONDUCT.md`. Be specific,
-respectful, and assume good intent while reviewing technical claims critically.
+All participation follows the repository
+[Code of Conduct](../CODE_OF_CONDUCT.md). Be specific, respectful, and assume
+good intent while reviewing technical claims critically.
 
 ## AI-assisted contributions
 
