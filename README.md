@@ -95,6 +95,9 @@ response = client.chat.completions.create(
 
 ## Documentation
 
+Runnable [curl, Node.js, and Python examples](examples/README.md) are included
+for a locally running gateway.
+
 ### Product and implementation
 
 - [Vision](docs/vision.md)
@@ -124,6 +127,7 @@ response = client.chat.completions.create(
 - [CI/CD](docs/ci-cd.md)
 - [GitHub Actions](docs/github-actions.md)
 - [Release-candidate runbook](docs/runbooks/release-candidate.md)
+- [v0.1.0 RC evidence template](docs/releases/0.1.0-rc.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
 - [Incident response](docs/runbooks/incident-response.md)
 - [Security reporting](SECURITY.md)
@@ -135,6 +139,7 @@ response = client.chat.completions.create(
 - [Licensing](docs/licensing.md)
 - [FAQ](docs/FAQ.md)
 - [Architecture decisions](docs/adr/README.md)
+- [Changelog](CHANGELOG.md)
 
 ## Development contract
 

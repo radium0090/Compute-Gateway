@@ -42,6 +42,7 @@ pnpm sdk:test
 pnpm sdk:test:openai-python
 pnpm performance:check
 pnpm docs:check
+pnpm examples:check
 pnpm operations:check
 pnpm build
 ```

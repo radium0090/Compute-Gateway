@@ -31,7 +31,12 @@ function localTarget(source: string, rawTarget: string): string | undefined {
 
 const files = [
   resolve(root, 'README.md'),
+  resolve(root, 'CHANGELOG.md'),
+  resolve(root, 'SECURITY.md'),
   ...(await markdownFiles(resolve(root, 'docs'))),
+  ...(await markdownFiles(resolve(root, 'examples'))),
+  resolve(root, 'sdk/typescript/README.md'),
+  resolve(root, 'sdk/python/README.md'),
 ];
 const broken: string[] = [];
 for (const file of files.sort()) {

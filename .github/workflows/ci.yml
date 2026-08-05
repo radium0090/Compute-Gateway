@@ -49,6 +49,7 @@ jobs:
           pnpm test:rc
           pnpm performance:check
           pnpm docs:check
+          pnpm examples:check
           pnpm operations:check
       - name: Validate development configuration
         run: node apps/gateway/dist/index.js --check-config

@@ -1,0 +1,25 @@
+# Changelog
+
+All notable changes to Genchi are documented in this file. The project follows
+Semantic Versioning and keeps release dates in UTC.
+
+## Unreleased
+
+### Added
+
+- OpenAI-compatible chat completions, streaming, and model listing.
+- OpenAI, Anthropic, and Gemini provider adapters with shared conformance tests.
+- Deterministic aliases, fallback, bounded retries, deadlines, concurrency
+  limits, and circuit state.
+- Hashed Genchi API keys, model permissions, and operator key commands.
+- PostgreSQL metadata persistence and optional Redis coordination.
+- OpenTelemetry metrics, traces, and structured redacted logging.
+- Docker Compose, hardened OCI image, Kubernetes manifests, and Helm chart.
+- Preview TypeScript and Python SDKs generated from the OpenAPI contract.
+- Repeatable release-candidate, security, compatibility, and performance gates.
+
+### Fixed
+
+- Request deadline, readiness, and client-disconnect handling.
+- PostgreSQL API-key round trips and last-used timestamp updates.
+- Non-root Kubernetes dependency startup and release-candidate validation.
