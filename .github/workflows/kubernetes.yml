@@ -70,7 +70,7 @@ jobs:
             --build-arg REVISION="$GITHUB_SHA" \
             --tag genchi:rc .
           kind load docker-image genchi:rc --name genchi-validation
-      - name: Start disposable dependencies
+      - name: Apply disposable dependencies
         run: |
           kubectl create namespace genchi-rc
           kubectl -n genchi-rc create secret generic genchi-ci-secrets \
@@ -82,8 +82,10 @@ jobs:
             --from-literal=anthropic-api-key=fake-anthropic \
             --from-literal=gemini-api-key=fake-gemini
           kubectl -n genchi-rc apply -f deploy/kubernetes/ci/dependencies.yaml
-          kubectl -n genchi-rc rollout status deployment/postgres --timeout=180s
-          kubectl -n genchi-rc rollout status deployment/redis --timeout=180s
+      - name: Wait for disposable PostgreSQL
+        run: kubectl -n genchi-rc rollout status deployment/postgres --timeout=180s
+      - name: Wait for disposable Redis
+        run: kubectl -n genchi-rc rollout status deployment/redis --timeout=180s
       - name: Install two ready replicas
         run: |
           helm upgrade --install genchi deploy/helm/genchi \
