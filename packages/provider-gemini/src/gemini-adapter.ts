@@ -46,6 +46,17 @@ const StreamResponseSchema = Type.Object({
   ),
 });
 
+const apiKeyFailureReasons = new Set([
+  'API_KEY_ANDROID_APP_BLOCKED',
+  'API_KEY_HTTP_REFERRER_BLOCKED',
+  'API_KEY_INVALID',
+  'API_KEY_IOS_APP_BLOCKED',
+  'API_KEY_IP_ADDRESS_BLOCKED',
+  'API_KEY_SERVICE_BLOCKED',
+]);
+
+const maxErrorResponseBytes = 16_384;
+
 export interface GeminiAdapterOptions {
   readonly id: string;
   readonly baseUrl: string;
@@ -102,8 +113,32 @@ function retryAfterSeconds(response: Response): number | undefined {
   return Number.isSafeInteger(seconds) ? seconds : undefined;
 }
 
-function statusError(response: Response): ProviderError {
-  if (response.status === 401 || response.status === 403) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function hasApiKeyFailure(value: unknown): boolean {
+  if (!isRecord(value) || !isRecord(value.error)) return false;
+  const details = value.error.details;
+  if (!Array.isArray(details)) return false;
+  return details.some((detail: unknown) => {
+    if (!isRecord(detail)) return false;
+    const reason = detail.reason;
+    return (
+      detail['@type'] === 'type.googleapis.com/google.rpc.ErrorInfo' &&
+      typeof reason === 'string' &&
+      apiKeyFailureReasons.has(reason)
+    );
+  });
+}
+
+async function statusError(response: Response): Promise<ProviderError> {
+  const apiKeyFailure =
+    response.status === 400
+      ? hasApiKeyFailure(await readJsonBounded(response, maxErrorResponseBytes))
+      : false;
+  if (response.status !== 400) await cancelResponse(response);
+  if (response.status === 401 || response.status === 403 || apiKeyFailure) {
     return {
       class: 'authentication',
       code: 'provider_authentication_failed',
@@ -454,8 +489,7 @@ export class GeminiAdapter implements ProviderAdapter {
       };
     }
     if (!response.ok) {
-      await cancelResponse(response);
-      return { ok: false, error: statusError(response) };
+      return { ok: false, error: await statusError(response) };
     }
     const body = await readJsonBounded(response, this.maxResponseBytes);
     if (body === invalidBody || !Value.Check(ResponseSchema, body)) {
@@ -536,8 +570,7 @@ export class GeminiAdapter implements ProviderAdapter {
       };
     }
     if (!response.ok) {
-      await cancelResponse(response);
-      return { ok: false, error: statusError(response) };
+      return { ok: false, error: await statusError(response) };
     }
     if (
       response.body === null ||
