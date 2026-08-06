@@ -279,6 +279,97 @@ describe('GeminiAdapter provider-specific rules', () => {
     });
   });
 
+  it('normalizes an empty MAX_TOKENS candidate for completion and streaming', async () => {
+    const responseBody = {
+      candidates: [{ content: {}, finishReason: 'MAX_TOKENS' }],
+      usageMetadata: {
+        promptTokenCount: 3,
+        totalTokenCount: 11,
+      },
+    };
+    const adapter = new GeminiAdapter({
+      id: 'gemini-primary',
+      baseUrl: 'https://provider.example/v1beta',
+      apiKey: 'fake-gemini-secret',
+      models: { 'gemini-3.5-flash': capabilities },
+      fetchImplementation: (input) =>
+        Promise.resolve(
+          typeof input === 'string' && input.includes('streamGenerateContent')
+            ? new Response(`data: ${JSON.stringify(responseBody)}\n\n`, {
+                headers: { 'content-type': 'text/event-stream' },
+              })
+            : new Response(JSON.stringify(responseBody), {
+                headers: { 'content-type': 'application/json' },
+              }),
+        ),
+    });
+    const context = {
+      requestId: 'req_empty_length_test',
+      providerModel: 'gemini-3.5-flash',
+      signal: new AbortController().signal,
+    };
+    const request = {
+      model: 'genchi/fast',
+      messages: [{ role: 'user' as const, content: 'hi' }],
+      maxTokens: 8,
+    };
+
+    await expect(
+      adapter.createChatCompletion(request, context),
+    ).resolves.toEqual({
+      ok: true,
+      response: {
+        content: '',
+        finishReason: 'length',
+        usage: { promptTokens: 3, completionTokens: 0, totalTokens: 11 },
+      },
+    });
+
+    const streamed = await adapter.streamChatCompletion(request, context);
+    expect(streamed.ok).toBe(true);
+    if (!streamed.ok) throw new Error('expected stream');
+    const chunks = [];
+    for await (const chunk of streamed.stream) chunks.push(chunk);
+    expect(chunks).toEqual([
+      {
+        choice: { delta: { role: 'assistant' }, finishReason: 'length' },
+        usage: { promptTokens: 3, completionTokens: 0, totalTokens: 11 },
+      },
+    ]);
+  });
+
+  it('rejects missing content without a terminal explanation', async () => {
+    const adapter = new GeminiAdapter({
+      id: 'gemini-primary',
+      baseUrl: 'https://provider.example/v1beta',
+      apiKey: 'fake-gemini-secret',
+      models: { 'gemini-test': capabilities },
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              candidates: [{ content: {} }],
+              usageMetadata: { promptTokenCount: 2, totalTokenCount: 2 },
+            }),
+          ),
+        ),
+    });
+
+    await expect(
+      adapter.createChatCompletion(
+        { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+        {
+          requestId: 'req_missing_content_test',
+          providerModel: 'gemini-test',
+          signal: new AbortController().signal,
+        },
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { class: 'protocol', code: 'provider_invalid_response' },
+    });
+  });
+
   it('bounds successful response bodies', async () => {
     const adapter = new GeminiAdapter({
       id: 'gemini-primary',
