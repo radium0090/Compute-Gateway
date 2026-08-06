@@ -111,6 +111,53 @@ defineProviderAdapterConformance({
 });
 
 describe('GeminiAdapter provider-specific rules', () => {
+  it('classifies allowlisted Google API key reasons without exposing the body', async () => {
+    const adapter = new GeminiAdapter({
+      id: 'gemini-primary',
+      baseUrl: 'https://provider.example/v1beta',
+      apiKey: 'fake-gemini-secret',
+      models: { 'gemini-test': capabilities },
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: {
+                message: 'raw secret-bearing upstream body',
+                details: [
+                  {
+                    '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+                    reason: 'API_KEY_INVALID',
+                    metadata: { credential: 'raw-secret-value' },
+                  },
+                ],
+              },
+            }),
+            { status: 400 },
+          ),
+        ),
+    });
+
+    const result = await adapter.createChatCompletion(
+      { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+      {
+        requestId: 'req_auth_test',
+        providerModel: 'gemini-test',
+        signal: new AbortController().signal,
+      },
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        class: 'authentication',
+        code: 'provider_authentication_failed',
+        retryable: false,
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain('raw-secret-value');
+    expect(JSON.stringify(result)).not.toContain('secret-bearing');
+  });
+
   it('normalizes prompt safety blocks without inventing content', async () => {
     const adapter = new GeminiAdapter({
       id: 'gemini-primary',
