@@ -32,7 +32,7 @@ credential name; the value is never included in route YAML.
 | `GENCHI_LOG_LEVEL` | `info` | `debug/info/warn/error` |
 | `GENCHI_REQUEST_BODY_LIMIT_BYTES` | `2097152` | positive integer |
 | `GENCHI_TOTAL_TIMEOUT_MS` | `60000` | 1000..300000 |
-| `GENCHI_CONNECT_TIMEOUT_MS` | `5000` | less than total timeout |
+| `GENCHI_CONNECT_TIMEOUT_MS` | `30000` | less than total timeout |
 | `GENCHI_SHUTDOWN_GRACE_MS` | `30000` | positive integer |
 | `GENCHI_TRUST_PROXY` | `false` | development only; must remain false in production for `0.1` |
 | `GENCHI_METRICS_ENABLED` | `true` | boolean |
@@ -66,7 +66,7 @@ aliases:
 routing:
   max_attempts: 2
   total_timeout_ms: 60000
-  connect_timeout_ms: 5000
+  connect_timeout_ms: 30000
   same_route_retries: 0
   minimum_attempt_budget_ms: 2000
   retry_base_delay_ms: 100
@@ -78,6 +78,11 @@ routing:
     open_duration_ms: 30000
     half_open_max_calls: 1
 ```
+
+The 30-second default accommodates providers whose streaming endpoint can take
+longer to return its first response headers. Operators with low-latency routes
+can reduce it through the environment or route policy while keeping it below
+the total timeout.
 
 `max_attempts` includes the first provider call. `same_route_retries` must be
 less than `max_attempts`; the connect timeout must be less than the total

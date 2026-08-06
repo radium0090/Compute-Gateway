@@ -131,7 +131,7 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
       2_097_152,
     ),
     totalTimeoutMs: parseInteger(source.GENCHI_TOTAL_TIMEOUT_MS, 60_000),
-    connectTimeoutMs: parseInteger(source.GENCHI_CONNECT_TIMEOUT_MS, 5_000),
+    connectTimeoutMs: parseInteger(source.GENCHI_CONNECT_TIMEOUT_MS, 30_000),
     shutdownGraceMs: parseInteger(source.GENCHI_SHUTDOWN_GRACE_MS, 30_000),
     trustProxy: parseBoolean(source.GENCHI_TRUST_PROXY, false),
     metricsEnabled: parseBoolean(source.GENCHI_METRICS_ENABLED, true),

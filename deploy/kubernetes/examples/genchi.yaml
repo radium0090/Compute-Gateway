@@ -38,7 +38,7 @@ data:
     routing:
       max_attempts: 2
       total_timeout_ms: 60000
-      connect_timeout_ms: 5000
+      connect_timeout_ms: 30000
       same_route_retries: 0
       minimum_attempt_budget_ms: 2000
       retry_base_delay_ms: 100
@@ -100,7 +100,7 @@ spec:
             - { name: GENCHI_HOST, value: 0.0.0.0 }
             - { name: GENCHI_PORT, value: '8080' }
             - { name: GENCHI_TOTAL_TIMEOUT_MS, value: '60000' }
-            - { name: GENCHI_CONNECT_TIMEOUT_MS, value: '5000' }
+            - { name: GENCHI_CONNECT_TIMEOUT_MS, value: '30000' }
             - { name: GENCHI_SHUTDOWN_GRACE_MS, value: '30000' }
             - { name: GENCHI_METRICS_ENABLED, value: 'true' }
             - name: GENCHI_DATABASE_URL

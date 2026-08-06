@@ -33,7 +33,7 @@ runtime:
   logLevel: info
   requestBodyLimitBytes: 2097152
   totalTimeoutMs: 60000
-  connectTimeoutMs: 5000
+  connectTimeoutMs: 30000
   shutdownGraceMs: 30000
   trustProxy: false
   metricsEnabled: true
@@ -78,7 +78,7 @@ policy:
   routing:
     max_attempts: 2
     total_timeout_ms: 60000
-    connect_timeout_ms: 5000
+    connect_timeout_ms: 30000
     same_route_retries: 0
     minimum_attempt_budget_ms: 2000
     retry_base_delay_ms: 100
