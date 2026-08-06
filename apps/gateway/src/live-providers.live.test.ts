@@ -15,6 +15,7 @@ import { GeminiAdapter } from '@genchi/provider-gemini';
 import { OpenAiAdapter } from '@genchi/provider-openai';
 
 import { buildGateway } from './app.js';
+import { diagnoseGeminiRequest } from './live-provider-diagnostics.js';
 
 const live =
   process.env.GENCHI_LIVE_ENABLED === 'true' ? describe : describe.skip;
@@ -173,7 +174,20 @@ live('live provider compatibility through the OpenAI Node SDK', () => {
           messages: [{ role: 'user' as const, content: 'Reply with OK.' }],
           max_tokens: 8,
         };
-        const completion = await client.chat.completions.create(request);
+        const completion = await client.chat.completions
+          .create(request)
+          .catch(async (error: unknown) => {
+            if (providerCase.name !== 'gemini') throw error;
+            const probes = await diagnoseGeminiRequest({
+              apiKey: required('GEMINI_API_KEY'),
+              configuredModel: model,
+            });
+            throw new Error(
+              `Gemini safe probe statuses: ${probes
+                .map((probe) => `${probe.name}=${String(probe.status)}`)
+                .join(', ')}`,
+            );
+          });
         expect(completion.choices[0]).toBeDefined();
 
         const stream = await client.chat.completions.create({
