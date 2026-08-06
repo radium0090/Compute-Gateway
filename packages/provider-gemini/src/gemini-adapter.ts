@@ -21,8 +21,8 @@ const UsageSchema = Type.Object({
 });
 
 const ContentSchema = Type.Object({
-  role: Type.Literal('model'),
-  parts: Type.Array(Type.Object({ text: Type.String() })),
+  role: Type.Optional(Type.Literal('model')),
+  parts: Type.Optional(Type.Array(Type.Object({ text: Type.String() }))),
 });
 
 const CandidateSchema = Type.Object({
@@ -291,12 +291,15 @@ function finishReason(value: string | undefined): CanonicalFinishReason {
 }
 
 function contentText(candidate: typeof CandidateSchema.static): string | null {
-  if (candidate.content === undefined) {
-    return finishReason(candidate.finishReason) === 'content_filter'
+  const parts = candidate.content?.parts;
+  if (parts === undefined || parts.length === 0) {
+    const normalizedFinish = finishReason(candidate.finishReason);
+    return normalizedFinish === 'content_filter' ||
+      normalizedFinish === 'length'
       ? ''
       : null;
   }
-  return candidate.content.parts.map((part) => part.text).join('');
+  return parts.map((part) => part.text).join('');
 }
 
 function normalizedUsage(usage: typeof UsageSchema.static) {
