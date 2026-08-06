@@ -33,9 +33,9 @@ Logs are JSON in production with fields such as:
 }
 ```
 
-Tenant/key identifiers are internal IDs, not secrets. Prompt, response, tool
-arguments, authorization, cookies, provider keys, database URLs, and raw end-
-user IDs are forbidden log fields. Debug level does not relax this rule.
+Tenant/key identifiers are internal IDs, not secrets. Prompt and response
+content, authorization, cookies, provider keys, database URLs, and raw end-user
+IDs are forbidden log fields. Debug level does not relax this rule.
 
 ## Metrics
 
@@ -43,14 +43,13 @@ Metric names use a `genchi_` prefix. Recommended baseline:
 
 - `genchi_http_requests_total{route,method,status_class}`
 - `genchi_http_request_duration_seconds{route}`
-- `genchi_active_requests{route,streaming}`
+- `genchi_active_requests{route}`
 - `genchi_provider_attempts_total{provider,model,outcome}`
 - `genchi_provider_duration_seconds{provider,model,outcome}`
 - `genchi_routing_decisions_total{alias,provider,reason}`
 - `genchi_fallbacks_total{from_provider,to_provider,reason}`
-- `genchi_rate_limit_rejections_total{scope}`
+- `genchi_admission_rejections_total{scope,reason}`
 - `genchi_circuit_state{provider,model,state}`
-- `genchi_usage_events_dropped_total{reason}`
 - `genchi_build_info{version,commit}`
 
 Do not label metrics with request, tenant, key, user, or provider request IDs.
@@ -80,12 +79,10 @@ the platform secret system.
 
 ## Traces
 
-One server span encloses child spans for auth, policy, routing, each provider
-attempt, and usage recording. Attributes follow OpenTelemetry semantic
-conventions where applicable. Span events record retry/fallback reason codes,
-not error bodies. Trace sampling is head-based by default with optional
-tail-based sampling at the Collector for failures; sampled traces still exclude
-content.
+OpenTelemetry HTTP and Fastify instrumentation creates inbound server and
+outbound provider HTTP spans. Routing, fallback, admission, and circuit details
+are currently emitted through bounded metrics and structured log events rather
+than custom child spans. Sampled traces exclude request and response content.
 
 ## Service objectives
 
@@ -95,7 +92,7 @@ Initial SLOs for the gateway layer, excluding model correctness:
   provider route;
 - p95 added gateway latency under 50 ms for non-streaming requests;
 - 99.9% of accepted streams terminate or are cancelled without leaked work;
-- key revocation visible within 30 seconds.
+- key revocation enforced on the next database-backed authentication attempt.
 
 Provider availability and end-to-end latency are reported separately so a
 provider incident is visible rather than hidden in gateway aggregates.
@@ -103,12 +100,13 @@ provider incident is visible rather than hidden in gateway aggregates.
 ## Alerts
 
 Alert on sustained gateway 5xx, absence of healthy routes for a public alias,
-readiness loss, high event-loop lag, connection-pool exhaustion, unexpected
-fallback surge, dropped usage events, Redis/database errors, and SLO burn rate.
-Avoid paging on a single transient provider failure.
+readiness loss, connection-pool exhaustion, unexpected fallback surge,
+Redis/database errors, and SLO burn rate. Avoid paging on a single transient
+provider failure.
 
 ## Dashboards
 
-The reference dashboard shows traffic, success/error classification, gateway
-overhead, provider latency and errors, route distribution, fallback rate,
-active streams, circuit state, saturation, and deployment version markers.
+A production dashboard should show traffic, success/error classification,
+gateway overhead, provider latency and errors, route distribution, fallback
+rate, active requests, circuit state, saturation, and deployment version
+markers. A dashboard bundle is not included in `0.1`.

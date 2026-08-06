@@ -41,8 +41,8 @@ failure ends that stream; output from a second model is never spliced in.
 ## Does Genchi store prompts or completions?
 
 Not in the MVP. Content is processed in memory and excluded from normal logs,
-traces, metrics, usage events, and audit events. Providers may have their own
-retention, so operators must review provider terms and controls.
+traces, and metrics. Providers may have their own retention, so operators must
+review provider terms and controls.
 
 ## How are API keys stored?
 
@@ -59,7 +59,8 @@ multiple replicas.
 ## Why PostgreSQL if the gateway is stateless?
 
 Gateway request execution is stateless, but durable API key metadata, policy,
-aliases, usage metadata, audits, and schema versions need consistent storage.
+tenant boundaries, and schema versions need consistent storage. Provider and
+alias policy remains in versioned YAML for `0.1`.
 
 ## Does Genchi guarantee lower cost or better answers?
 
@@ -85,6 +86,5 @@ service may provide managed operations and commercial features.
 
 ## What is the license?
 
-The intended license is Apache-2.0. The first public release must include the
-official `LICENSE` and `NOTICE`; see [licensing.md](licensing.md).
-
+The project is licensed under Apache-2.0 and includes `LICENSE` and `NOTICE`;
+see [licensing.md](licensing.md).

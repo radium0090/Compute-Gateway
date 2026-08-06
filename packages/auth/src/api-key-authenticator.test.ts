@@ -26,7 +26,12 @@ const pepper = 'test-only-pepper-with-at-least-32-characters';
 const now = new Date('2026-08-03T00:00:00.000Z');
 
 class InMemoryApiKeyRepository implements ApiKeyRepository {
-  public constructor(private readonly record: ApiKey | null) {}
+  public lastUsed: { readonly id: string; readonly usedAt: Date } | undefined;
+
+  public constructor(
+    private readonly record: ApiKey | null,
+    private readonly rejectLastUsed = false,
+  ) {}
 
   public findByPublicId(): Promise<ApiKey | null> {
     return Promise.resolve(this.record);
@@ -40,7 +45,11 @@ class InMemoryApiKeyRepository implements ApiKeyRepository {
     return Promise.resolve(true);
   }
 
-  public markLastUsed(): Promise<void> {
+  public markLastUsed(id: string, usedAt: Date): Promise<void> {
+    this.lastUsed = { id, usedAt };
+    if (this.rejectLastUsed) {
+      return Promise.reject(new Error('usage metadata unavailable'));
+    }
     return Promise.resolve();
   }
 }
@@ -104,8 +113,9 @@ describe('API key provisioning', () => {
 describe('ApiKeyAuthenticator', () => {
   it('authenticates a valid active key', async () => {
     const provisioned = provision();
+    const repository = new InMemoryApiKeyRepository(provisioned.apiKey);
     const authenticator = new ApiKeyAuthenticator(
-      new InMemoryApiKeyRepository(provisioned.apiKey),
+      repository,
       pepper,
       'test',
       () => now,
@@ -117,6 +127,24 @@ describe('ApiKeyAuthenticator', () => {
       authenticated: true,
       apiKey: provisioned.apiKey,
     });
+    expect(repository.lastUsed).toEqual({
+      id: provisioned.apiKey.id,
+      usedAt: now,
+    });
+  });
+
+  it('does not fail authentication when last-used metadata cannot be updated', async () => {
+    const provisioned = provision();
+    const authenticator = new ApiKeyAuthenticator(
+      new InMemoryApiKeyRepository(provisioned.apiKey, true),
+      pepper,
+      'test',
+      () => now,
+    );
+
+    await expect(
+      authenticator.authenticate(provisioned.credential),
+    ).resolves.toMatchObject({ authenticated: true });
   });
 
   it.each([

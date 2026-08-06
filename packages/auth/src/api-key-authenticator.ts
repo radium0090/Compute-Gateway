@@ -139,6 +139,7 @@ export class ApiKeyAuthenticator {
   ) {}
 
   public async authenticate(credential: string): Promise<AuthenticationResult> {
+    const usedAt = this.clock();
     const parsed = parseApiKeyCredential(credential);
     const record =
       parsed === null
@@ -163,11 +164,15 @@ export class ApiKeyAuthenticator {
       parsed.environment !== this.environment ||
       record.environment !== this.environment ||
       record.status !== 'active' ||
-      (record.expiresAt !== null && record.expiresAt <= this.clock())
+      (record.expiresAt !== null && record.expiresAt <= usedAt)
     ) {
       return { authenticated: false };
     }
 
+    void this.repository.markLastUsed(record.id, usedAt).catch(() => {
+      // Authentication remains available when coarse usage metadata cannot be
+      // updated. The repository deliberately stores no request content.
+    });
     return { authenticated: true, apiKey: record };
   }
 }

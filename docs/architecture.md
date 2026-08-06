@@ -14,17 +14,17 @@ Client -> Load balancer -> Genchi Gateway replicas -> Provider APIs
                           +----------> OpenTelemetry Collector
 ```
 
-The gateway data plane is stateless. PostgreSQL stores durable metadata and
-policy. Redis coordinates distributed rate limits and short-lived circuit
-state when more than one replica is used. Provider credentials come from
-environment variables or an external secret manager, never from PostgreSQL in
-the MVP.
+The gateway data plane is stateless. PostgreSQL stores tenants, API keys, and
+key policy; provider and alias policy comes from versioned YAML. Redis
+coordinates distributed rate limits and short-lived circuit state when more
+than one replica is used. Provider credentials come from environment variables
+or an external secret manager, never from PostgreSQL in the MVP.
 
 ## Runtime modules
 
 | Module | Responsibility |
 | --- | --- |
-| HTTP edge | TLS termination integration, request IDs, body limits, CORS, auth |
+| HTTP edge | TLS termination integration, request IDs, body limits, auth |
 | API service | OpenAI-compatible validation and response serialization |
 | Policy service | tenant/key permissions, model aliases, quotas |
 | Router | candidate resolution, health filtering, selection, fallback budget |
@@ -45,8 +45,8 @@ the MVP.
 6. Resilience may retry or fall back only before downstream response commitment.
 7. The adapter normalizes usage, finish reasons, responses, or errors.
 8. Telemetry records route metadata and timings without prompt content.
-9. A compact usage event is written asynchronously; failure to write it does
-   not corrupt an otherwise valid client response.
+9. Successful authentication schedules a coarse `last_used_at` update; failure
+   to write that metadata does not corrupt an otherwise valid client response.
 
 ## Dependency direction
 
@@ -64,17 +64,16 @@ OpenTelemetry types. Adapters implement ports defined in the domain package.
 
 ```ts
 interface ProviderAdapter {
-  readonly id: ProviderId;
-  capabilities(): ProviderCapabilities;
-  listConfiguredModels(ctx: RequestContext): Promise<ProviderModel[]>;
+  readonly id: string;
+  capabilities(model: string): ProviderCapabilities | null;
   createChatCompletion(
     request: CanonicalChatRequest,
     ctx: ProviderCallContext,
-  ): Promise<CanonicalChatResponse>;
+  ): Promise<ProviderCallResult>;
   streamChatCompletion(
     request: CanonicalChatRequest,
     ctx: ProviderCallContext,
-  ): AsyncIterable<CanonicalChatChunk>;
+  ): Promise<ProviderStreamCallResult>;
 }
 ```
 
@@ -95,10 +94,10 @@ before provider invocation rather than silently ignored.
 
 ## Consistency
 
-Policy and key revocation use bounded-staleness caches. Revocation MUST become
-effective within `AUTH_CACHE_TTL_SECONDS` (default 30 seconds). Alias changes
-MUST become visible within `CONFIG_CACHE_TTL_SECONDS` (default 15 seconds).
-Database writes are strongly consistent; data-plane reads may use these caches.
+API key state is read from PostgreSQL during authentication, so revocation is
+effective on the next request after the database commit. Provider and alias
+policy is loaded from the versioned YAML file before the listener opens;
+operators apply a policy change with a readiness-gated process restart.
 
 ## Technology baseline
 
@@ -106,7 +105,7 @@ Database writes are strongly consistent; data-plane reads may use these caches.
 - Fastify with JSON Schema/TypeBox validation
 - PostgreSQL 16, Redis 7 (optional locally, required for multi-replica limits)
 - OpenTelemetry SDK and Collector
-- Vitest, Testcontainers, and provider mock servers
+- Vitest, ephemeral CI service containers, and provider fixtures
 - OCI images built from a pinned, minimal non-root runtime image
 
 See the [ADRs](adr/README.md) for the rationale behind binding decisions.

@@ -86,7 +86,8 @@ Helm NOTES or diagnostic output.
 
 Ingress enforces TLS and request body limits at least as strict as the gateway.
 Streaming routes disable response buffering and use timeouts longer than the
-gateway total deadline. Only trusted proxy CIDRs can set forwarding headers.
+gateway total deadline. The `0.1` gateway ignores forwarding headers in
+production; an ingress must not rely on them for gateway authorization.
 An enabled network policy must allow DNS, database, Redis, telemetry collector,
 and configured provider endpoints. Operators account for provider IP/domain
 variability.

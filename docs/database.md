@@ -11,29 +11,16 @@ content, provider raw responses, and full API keys are not stored in the MVP.
 | --- | --- | --- |
 | `tenants` | security and policy boundary | `id`, `name`, `status`, timestamps |
 | `api_keys` | client credentials | `id`, `public_id`, `key_hash`, `tenant_id`, policy, status, expiry |
-| `model_aliases` | public alias versions | `id`, `name`, `config_version`, `enabled` |
-| `routes` | ordered physical candidates | alias, provider ref, model, weight, capabilities |
-| `usage_events` | metadata-only request accounting | request, tenant/key IDs, tokens, route, latency, status |
-| `audit_events` | security/control changes | actor, action, target, result, metadata |
 | `schema_migrations` | migration history | version, checksum, applied time |
 
-Identifiers use UUIDv7 or an equivalent time-sortable 128-bit identifier.
-Timestamps use `timestamptz` in UTC. User-visible IDs include typed prefixes but
-database primary keys remain typed values, not overloaded strings.
+Database identifiers use UUIDs; the current operator command generates random
+UUIDv4 API-key IDs and accepts an operator-supplied tenant UUID. Timestamps use
+`timestamptz` in UTC. User-visible credentials include typed prefixes, while
+database primary keys remain UUID values.
 
-## Usage event policy
-
-Usage events contain:
-
-- request ID and timestamps;
-- tenant and API key IDs;
-- requested alias, selected provider/model, attempt count;
-- normalized token counts and whether counts are estimated;
-- status/error class and latency buckets;
-- no prompt, response, tool arguments, headers, raw user ID, or credentials.
-
-Default retention is 30 days and is configurable. Aggregates may outlive raw
-events if they cannot be tied to content or an end user.
+Provider aliases and routes are held in the versioned YAML policy for `0.1`.
+Durable usage and audit-event tables are not part of the initial migration;
+their addition requires a later migration with explicit retention rules.
 
 ## Migrations
 
@@ -48,11 +35,9 @@ events if they cannot be tied to content or an end user.
 
 ## Transactions and access
 
-Repositories expose task-oriented operations. Handlers do not execute SQL.
-Key creation, route version publication, and audit-event creation are
-transactional. Usage events are buffered and inserted asynchronously in bounded
-batches; overload drops accounting events with an alert rather than retaining
-request content or exhausting gateway memory.
+Repositories expose task-oriented operations, and HTTP handlers do not execute
+SQL. API key creation and revocation use parameterized statements. Successful
+authentication updates `last_used_at` no more than once per minute per key.
 
 ## Connections
 
@@ -64,11 +49,7 @@ The migration role is separate.
 ## Indexing baseline
 
 - unique index on `api_keys.public_id`;
-- indexes for active keys by tenant and expiration;
-- unique alias name plus configuration version;
-- usage event indexes on timestamp and tenant, with time partitioning when
-  volume justifies it;
-- audit event index on timestamp and target public ID.
+- partial index for active keys by tenant and expiration.
 
 Indexes are justified with measured query plans; low-cardinality standalone
 indexes are avoided.
@@ -79,4 +60,3 @@ Production operators enable encrypted automated backups and point-in-time
 recovery. Restore tests occur at least quarterly. The initial targets are RPO
 15 minutes and RTO 60 minutes for managed deployments; self-hosted operators
 set their own targets. Backup data follows the same retention and access rules.
-

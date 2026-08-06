@@ -69,7 +69,7 @@ describe('createRoutingObserver', () => {
         'genchi_provider_duration_seconds',
         'genchi_routing_decisions_total',
         'genchi_fallbacks_total',
-        'genchi_rate_limit_rejections_total',
+        'genchi_admission_rejections_total',
         'genchi_circuit_state',
       ]),
     );

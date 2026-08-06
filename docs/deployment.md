@@ -27,7 +27,7 @@ contain no shell, source map with secrets, build tools, or provider keys.
 Deploy by digest in production:
 
 ```text
-ghcr.io/<owner>/genchi:v0.1.0@sha256:<digest>
+ghcr.io/radium0090/compute-gateway:v0.1.0@sha256:<digest>
 ```
 
 The `release.yml` workflow accepts an annotated signed `v*.*.*` tag whose

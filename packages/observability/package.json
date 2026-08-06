@@ -11,7 +11,8 @@
   },
   "files": [
     "dist",
-    "!dist/**/*.test.*"
+    "!dist/**/*.test.*",
+    "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
     "@fastify/otel": "0.20.1",

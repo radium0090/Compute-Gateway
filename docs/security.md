@@ -12,9 +12,9 @@ the gateway.
 Untrusted client | ingress | Genchi | PostgreSQL/Redis | external providers
 ```
 
-Client input, forwarded headers, model names, tool schemas, and provider
-responses are untrusted. Provider APIs are external data processors and may
-have different retention policies.
+Client input, forwarded headers, model names, and provider responses are
+untrusted. Provider APIs are external data processors and may have different
+retention policies.
 
 ## Threat baseline
 
@@ -28,15 +28,16 @@ have different retention policies.
 | denial of service | body/token limits, timeouts, concurrency/rate limits, backpressure |
 | dependency compromise | lockfile, review, scanning, SBOM, signed artifacts |
 | malicious provider payload | schema validation, size limits, safe parsing, no evaluation |
-| forwarded-header spoofing | explicit trusted proxy list |
+| forwarded-header spoofing | forwarded-header trust disabled in production |
 | timing/key enumeration | constant-time verification and uniform auth failures |
 
 ## Data handling
 
-Message content and tool arguments exist in memory only for request execution
-and are not persisted by default. Normal logs, traces, metrics, usage events,
-and audit events exclude content. Crash dumps and heap snapshots are disabled
-in production unless a controlled incident procedure protects and deletes them.
+Message content exists in memory only for request execution and is not persisted
+by default. Normal logs, traces, and metrics exclude content. Future usage,
+audit, and tool-call support must preserve this rule. Crash dumps and heap
+snapshots are disabled in production unless a controlled incident procedure
+protects and deletes them.
 
 Operators MUST document provider-side data processing and configure provider
 retention controls separately. Self-hosting Genchi does not eliminate provider
@@ -45,7 +46,7 @@ data transfer.
 ## Input and output safety
 
 - Validate request and provider response structures and maximum sizes.
-- Bound message count, string length, tool/schema depth, and SSE frame size.
+- Bound message count, string length, and SSE frame size.
 - Avoid dynamic code evaluation and shell execution.
 - Serialize JSON with standard libraries.
 - Treat model output as untrusted; Genchi does not claim to sanitize it for an
@@ -81,4 +82,3 @@ Before v1.0, complete threat-model review, authz matrix tests, secret scanning,
 fuzz/property tests for parsers and routing, dependency/image scans, external
 penetration testing or equivalent independent review, and an incident-response
 exercise.
-

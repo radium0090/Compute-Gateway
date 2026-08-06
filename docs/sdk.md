@@ -69,10 +69,9 @@ for await (const event of stream) {
 
 ## Generation and handwritten code
 
-OpenAPI generates transport types, serializers, and low-level operations.
-Handwritten layers provide configuration, streaming ergonomics, errors,
-pagination conventions, and documentation. Generated code is reproducible and
-MUST NOT be manually edited.
+OpenAPI generates the tracked TypeScript and Python model types. Handwritten
+layers provide transport, configuration, streaming ergonomics, errors, and
+documentation. Generated code is reproducible and MUST NOT be manually edited.
 
 The release pipeline fails when generation changes tracked output.
 
@@ -83,7 +82,7 @@ Constructor arguments override environment variables:
 | Setting | Environment | Default |
 | --- | --- | --- |
 | API key | `GENCHI_API_KEY` | required |
-| Base URL | `GENCHI_BASE_URL` | `https://api.genchi.ai/v1` for future hosted SDK builds |
+| Base URL | `GENCHI_BASE_URL` | `http://localhost:8080/v1` |
 | Timeout | `GENCHI_TIMEOUT_SECONDS` | 60 |
 | Max network retries | `GENCHI_MAX_RETRIES` | 1 for connection/429/5xx only |
 
@@ -100,8 +99,8 @@ or depend on provider SDK error classes.
 ## Versioning
 
 SDKs follow Semantic Versioning independently from the gateway. A supported
-gateway declares the OpenAPI contract version it implements. CI tests the
-oldest and newest supported SDK minor versions against the gateway release.
+gateway declares the OpenAPI contract version it implements. The preview CI
+tests the tracked SDK version against the current gateway contract.
 
 ## Contributor checks
 

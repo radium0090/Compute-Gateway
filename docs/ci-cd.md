@@ -57,8 +57,9 @@ review, resolved discussions, and CODEOWNERS approval for sensitive paths.
 1. Maintainer opens a release pull request with version and changelog.
 2. CI runs the full suite and compatibility matrix.
 3. A signed annotated tag triggers artifact build once.
-4. The workflow publishes OCI images, chart, SDK packages, checksums, SBOM,
-   provenance, OpenAPI artifact, and GitHub Release notes.
+4. The workflow publishes the OCI image, chart, checksums, SBOM, provenance,
+   OpenAPI artifact, and GitHub Release notes. SDK publication remains disabled
+   until npm and PyPI ownership is verified.
 5. A clean environment installs only published artifacts and runs smoke tests.
 6. Maintainer promotes the release from pre-release after verification.
 

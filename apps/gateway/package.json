@@ -8,7 +8,8 @@
   },
   "files": [
     "dist",
-    "!dist/**/*.test.*"
+    "!dist/**/*.test.*",
+    "!dist/**/*.tsbuildinfo"
   ],
   "scripts": {
     "dev": "node --env-file-if-exists=../../.env --import tsx src/index.ts",

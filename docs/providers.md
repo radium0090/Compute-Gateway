@@ -14,7 +14,6 @@ permissions, or global retry policy.
 Required adapter behavior:
 
 - non-streaming and streaming chat completion;
-- tool call and structured response mapping when declared supported;
 - cancellation via `AbortSignal`;
 - provider deadline and connection timeout;
 - usage and finish-reason normalization;
@@ -44,7 +43,7 @@ model to the public API.
 
 ## Translation rules
 
-- Preserve message and tool-call order.
+- Preserve message order.
 - Map system instructions using the native system channel where available.
 - Reject a role or content type that cannot be represented safely.
 - Never drop an unsupported parameter without an explicit compatibility rule.
@@ -75,7 +74,7 @@ that is disabled by default; they never enter normal logs or client errors.
 Every adapter ships fixtures and passes the same tests:
 
 1. canonical request translation;
-2. text and tool-call response normalization;
+2. text response normalization;
 3. SSE/chunk ordering and terminal chunk behavior;
 4. cancellation and timeout propagation;
 5. error classification for representative status codes;
@@ -111,6 +110,5 @@ error handling.
   metadata and does not send it upstream.
 - Anthropic temperatures above `1` are rejected because the native API cannot
   represent them without changing their meaning.
-- Tool calls and structured outputs are not declared for these adapters in the
-  multi-provider milestone. They remain later work even where a provider has a
-  native feature.
+- Tool calls and structured outputs remain later work even where a provider has
+  a native feature; the public `0.1` schema rejects those request fields.

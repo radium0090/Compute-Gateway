@@ -15,9 +15,9 @@ Application -> Genchi Gateway -> OpenAI | Anthropic | Gemini | future providers
 Genchi is in release-candidate validation for the MVP. The gateway,
 provider/routing core, operations baseline, SDK previews, contract gates, and
 repeatable performance checks are implemented. Real-provider smoke and final
-release approval remain protected operator-run gates. The documents in this repository are
-normative for the first release unless an accepted Architecture Decision Record
-(ADR) supersedes them.
+release approval remain protected operator-run gates. The documents in this
+repository are normative for the first release unless an accepted Architecture
+Decision Record (ADR) supersedes them.
 
 ## MVP capabilities
 
@@ -31,19 +31,20 @@ normative for the first release unless an accepted Architecture Decision Record
 - Docker Compose for local use and Kubernetes manifests/Helm for production
 - TypeScript and Python SDKs generated from the public contract
 
-Non-goals for the MVP include a hosted billing system, a marketplace, GPU
-scheduling, multimodal generation, an admin dashboard, and autonomous
-quality-based model selection.
+Non-goals for the MVP include tool calling and structured outputs, a hosted
+billing system, a marketplace, GPU scheduling, multimodal generation, an admin
+dashboard, and autonomous quality-based model selection.
 
 ## Five-minute local start
 
-Prerequisites: Node.js 24, pnpm 9+, Docker 26+, and at least one provider API
-key.
+Prerequisites: Docker 26+ with Docker Compose, `curl`, and an OpenAI API key for
+the exact request below. To use a different provider, update its key and select
+its documented alias in the request.
 
 ```bash
 cp .env.example .env
-# Set GENCHI_MASTER_KEY and one provider key in .env
-docker compose up --build
+# Replace GENCHI_MASTER_KEY, GENCHI_KEY_HASH_PEPPER, and OPENAI_API_KEY in .env
+docker compose up --build --wait
 curl http://localhost:8080/health/ready
 ```
 
@@ -52,12 +53,15 @@ Bootstrap a development tenant and create a client key after migrations finish:
 ```bash
 docker compose exec postgres psql -U genchi -d genchi -c \
   "INSERT INTO tenants (id, name, status) VALUES ('123e4567-e89b-42d3-a456-426614174000', 'local', 'active') ON CONFLICT DO NOTHING"
-docker compose run --rm gateway keys create \
+GENCHI_API_KEY="$(docker compose run --rm gateway keys create \
   --tenant-id 123e4567-e89b-42d3-a456-426614174000 \
-  --name local-app --environment dev --models 'genchi/*' --allow-streaming
+  --name local-app --environment dev --models 'genchi/*' --allow-streaming)"
+export GENCHI_API_KEY
+test -n "$GENCHI_API_KEY"
 ```
 
-The second command displays the new `GENCHI_API_KEY` once. Keep it out of shell
+The key command emits the new credential once; command substitution keeps it
+out of the terminal and stores it in the current shell. Keep it out of shell
 history, source control, logs, and URLs.
 
 Compose supplies PostgreSQL and Redis. Outside production, running the gateway
@@ -80,10 +84,12 @@ curl http://localhost:8080/v1/chat/completions \
 Genchi accepts the OpenAI client by changing its base URL:
 
 ```python
+import os
+
 from openai import OpenAI
 
 client = OpenAI(
-    api_key="genchi_local_key",
+    api_key=os.environ["GENCHI_API_KEY"],
     base_url="http://localhost:8080/v1",
 )
 
@@ -164,5 +170,5 @@ design exploration, and pull requests for reviewed changes. Please read
 
 ## License
 
-The intended project license is Apache License 2.0. See
-[licensing.md](docs/licensing.md) for release requirements and dependency rules.
+The project is licensed under Apache License 2.0. See
+[licensing.md](docs/licensing.md) for dependency and contribution rules.

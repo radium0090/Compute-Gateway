@@ -38,18 +38,17 @@ Authorization: Bearer gch_prod_...
 
 Missing or invalid credentials return the same 401 shape to prevent key
 enumeration. Disabled, revoked, expired, or wrong-environment keys are invalid.
-Successful verification may be cached for at most 30 seconds. Cache keys are
-hashes, not raw credentials.
+Successful verification updates `last_used_at` at coarse resolution without
+blocking authentication when that metadata-only update fails.
 
 ## Authorization
 
 Authorization is deny-by-default. A key policy can allow:
 
 - public aliases or qualified models;
-- streaming and tool use;
+- streaming;
 - requests per minute and concurrent requests;
-- maximum request/output tokens where enforceable;
-- allowed network origin metadata for trusted edge deployments.
+- maximum request/output tokens where enforceable.
 
 Authentication success does not imply access to every configured model.
 `GET /v1/models` returns only authorized models.
@@ -85,8 +84,8 @@ master key from normal gateway pods after bootstrap. The CLI never accepts a
 plaintext credential for storage.
 
 The CLI prints a new key exactly once. Rotation means create, deploy to client,
-verify traffic, then revoke the old key. Emergency revocation may flush the
-authentication cache through an authenticated operator mechanism or restart.
+verify traffic, then revoke the old key. Revocation is enforced by the next
+database-backed authentication attempt.
 
 ## Network controls
 
@@ -95,9 +94,9 @@ the gateway where the network is not trusted. `/metrics` and future operator
 endpoints MUST be private or separately authenticated. Forwarded headers are
 trusted only from configured proxies.
 
-## Audit events
+## Audit integration
 
-Create, revoke, expire, policy change, repeated authentication failure, and
-provider credential configuration change produce metadata-only audit events.
-Events include actor, action, target public ID, timestamp, result, and request
-ID. They do not include secrets or prompt content.
+The `0.1` gateway emits content-free structured request and routing telemetry.
+Durable operator audit events are planned for the hardening phase; production
+operators should record short-lived key jobs and configuration changes in their
+deployment audit system meanwhile.

@@ -1,11 +1,10 @@
 # Licensing
 
-## Intended project license
+## Project license
 
-Genchi source code and documentation are intended to be released under the
-Apache License, Version 2.0. Before the first public release, place the complete
-official license text in root `LICENSE` and an appropriate `NOTICE` file in the
-repository. This document is operational guidance, not legal advice or a
+Genchi source code and documentation are licensed under the Apache License,
+Version 2.0. The complete terms and project notice are in the root `LICENSE` and
+`NOTICE` files. This document is operational guidance, not legal advice or a
 substitute for those files.
 
 ## Source headers
@@ -34,9 +33,9 @@ ISC, and compatible public-domain dedications are generally acceptable after
 automated and human review. Copyleft, source-available, non-commercial,
 field-of-use, and custom licenses require explicit legal/maintainer approval.
 
-CI generates a dependency license report and fails on unknown or denied
-licenses. Container base images, generated SDK dependencies, example code, and
-bundled assets are included in review.
+CI scans dependency licenses and fails on detected license issues at the
+configured severity. Container base images, generated SDK dependencies, example
+code, and bundled assets are included in release review.
 
 ## Provider names and SDKs
 
@@ -60,4 +59,3 @@ interoperability explanations.
 - Confirm contributor sign-offs.
 - Record any approved exception with scope, rationale, and owner.
 - Consult qualified counsel before changing license or adding commercial terms.
-

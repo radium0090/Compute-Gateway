@@ -76,6 +76,6 @@ variables use `GENCHI_UPPER_SNAKE_CASE`. Test files live next to source as
 
 ## Build graph
 
-Packages declare explicit workspace dependencies. CI builds affected packages
-but release validation always builds and tests the complete graph. Circular
-workspace dependencies are forbidden and checked automatically.
+Packages declare explicit workspace dependencies. CI and release validation
+build and test the complete graph. Circular workspace dependencies are
+forbidden; TypeScript project-reference builds fail when the graph is invalid.

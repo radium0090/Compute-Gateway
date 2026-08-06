@@ -34,8 +34,7 @@ The root `docker-compose.yml` is a development/evaluation experience. It starts:
 - `gateway` on port 8080;
 - PostgreSQL 16 with a named volume;
 - Redis 7.4 (the reference Compose file pins 7.4.9);
-- OpenTelemetry Collector;
-- optional observability profiles, not required for a first request.
+- OpenTelemetry Collector.
 
 ```bash
 cp .env.example .env
@@ -44,9 +43,21 @@ docker compose logs -f gateway
 docker compose down
 ```
 
+Run the isolated fresh-clone smoke after copying `.env`:
+
+```bash
+sh scripts/smoke-compose.sh
+```
+
+It starts a dedicated Compose project, applies migrations, creates a disposable
+tenant and client key, authenticates a model-list request, and then removes only
+that project's containers and volume. Dedicated high ports let it coexist with
+the normal stack. It does not call a real model provider.
+
 The Compose file uses health checks and dependency health conditions. Its
 Collector validates the mounted pipeline before becoming healthy. Compose does
-not contain real secrets, and database ports bind to loopback by default.
+not contain real secrets, and all published development ports bind to loopback
+by default.
 
 ## Runtime hardening
 

@@ -16,7 +16,7 @@ decisions are documented.
 
 - OpenAI-compatible chat completions and model list;
 - OpenAI, Anthropic, Gemini adapters;
-- streaming, tools, canonical errors and usage;
+- streaming, canonical errors, and normalized usage;
 - API keys, model permissions, limits;
 - deterministic aliases, fallback, circuit state;
 - PostgreSQL/Redis and OpenTelemetry;
@@ -64,4 +64,3 @@ alone does not outweigh unsafe or contract-breaking design.
 
 The roadmap does not promise provider uptime, equal output across models,
 automatic cost savings, model correctness, or availability of a hosted service.
-

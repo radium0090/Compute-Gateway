@@ -34,9 +34,7 @@ credential name; the value is never included in route YAML.
 | `GENCHI_TOTAL_TIMEOUT_MS` | `60000` | 1000..300000 |
 | `GENCHI_CONNECT_TIMEOUT_MS` | `5000` | less than total timeout |
 | `GENCHI_SHUTDOWN_GRACE_MS` | `30000` | positive integer |
-| `AUTH_CACHE_TTL_SECONDS` | `30` | 0..60 |
-| `CONFIG_CACHE_TTL_SECONDS` | `15` | 0..60 |
-| `GENCHI_TRUST_PROXY` | `false` | explicit proxy CIDRs in production |
+| `GENCHI_TRUST_PROXY` | `false` | development only; must remain false in production for `0.1` |
 | `GENCHI_METRICS_ENABLED` | `true` | boolean |
 | `GENCHI_SERVICE_VERSION` | `0.0.0` | build/release identifier, maximum 64 characters |
 | `GENCHI_COMMIT_SHA` | `unknown` | `unknown` or a 7..64 character lowercase Git SHA |
@@ -56,7 +54,7 @@ providers:
     base_url: https://api.openai.com/v1
     models:
       gpt-5-mini:
-        capabilities: [chat, streaming, tools, json_schema]
+        capabilities: [chat, streaming]
 
 aliases:
   genchi/fast:
@@ -111,9 +109,9 @@ rolling restart so configuration changes apply atomically per replica.
 3. YAML policy;
 4. safe development defaults.
 
-Production mode has no default database URL, key pepper, provider credential,
-or trusted proxy. Unknown environment variables are ignored, but unknown YAML
-keys fail validation to catch spelling errors.
+Production mode has no default database URL, key pepper, or provider
+credential, and rejects forwarded-header trust. Unknown environment variables
+are ignored, but unknown YAML keys fail validation to catch spelling errors.
 
 ## Secret handling
 

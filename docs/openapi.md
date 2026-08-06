@@ -8,15 +8,15 @@ is committed so users can inspect and generate clients without building Genchi.
 
 The generated document uses OpenAPI 3.1 and JSON Schema 2020-12.
 
-## Required metadata
+## Contract guarantees
 
-- title, description, Apache-2.0 license, and contact links;
+- title, description, and Apache-2.0 license identifier;
 - semantic API document version;
 - server variables rather than hard-coded production hosts;
 - bearer authentication scheme;
 - operation IDs stable across non-breaking releases;
-- examples for success, streaming description, and every error family;
-- `x-genchi-stability` on experimental operations or fields.
+- explicit security declarations, response descriptions, and named schemas;
+- an SSE media type and description for streaming responses.
 
 ## Generation workflow
 
@@ -28,8 +28,8 @@ pnpm sdk:generate
 ```
 
 CI regenerates the contract and fails on a dirty working tree. A linter enforces
-consistent operation IDs, descriptions, error responses, schema names, and
-security declarations.
+unique operation IDs, summaries, response descriptions, required schema names,
+resolvable local references, and explicit security declarations.
 
 ## Compatibility policy
 
@@ -85,4 +85,3 @@ paths:
 ```
 
 This outline is illustrative; the generated, linted artifact is authoritative.
-

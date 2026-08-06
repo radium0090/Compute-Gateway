@@ -13,7 +13,7 @@ export function createRoutingObserver(
   });
   const decisions = meter.createCounter('genchi_routing_decisions_total');
   const fallbacks = meter.createCounter('genchi_fallbacks_total');
-  const rejections = meter.createCounter('genchi_rate_limit_rejections_total');
+  const rejections = meter.createCounter('genchi_admission_rejections_total');
   const circuitStates = new Map<
     string,
     {

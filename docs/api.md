@@ -48,27 +48,19 @@ Supported MVP fields:
 | Field | Rule |
 | --- | --- |
 | `model` | required stable alias or allowed provider-qualified model |
-| `messages` | required, 1..1024 items; system/user/assistant/tool roles |
+| `messages` | required, 1..1024 items; system/user/assistant roles |
 | `temperature` | optional, 0..2; capability-validated per candidate |
 | `top_p` | optional, 0..1 |
 | `max_tokens` | optional positive integer; mapped to provider output limit |
 | `stop` | optional string or up to four strings |
 | `stream` | optional boolean, default false |
-| `tools` / `tool_choice` | optional; route must declare tool support |
-| `response_format` | optional; route must declare requested format support |
-| `user` | optional opaque identifier; hashed before telemetry |
+| `n` | optional; only the value `1` is accepted |
+| `user` | optional opaque identifier; not emitted in normal telemetry |
 
-`n` supports only `1`. `logprobs`, `seed`, audio, modalities, prediction, and
-provider beta fields are out of scope unless added through a versioned contract.
-
-Provider-specific options MAY be sent under:
-
-```json
-{"genchi": {"provider_options": {"openai": {}}}}
-```
-
-Provider options are disabled by default, must be allowlisted, and make the
-request non-portable. Unknown keys return `invalid_request_error`.
+Tool calls, `response_format`, `logprobs`, `seed`, audio, modalities,
+prediction, provider-specific options, and provider beta fields are outside the
+`0.1` contract. Unknown fields return `invalid_request_error` instead of being
+silently discarded.
 
 ### Response
 
@@ -177,4 +169,3 @@ When `Retry-After` is known it is returned in seconds.
 Breaking wire changes require a new URL version. Additive optional fields and
 new error codes may ship within `/v1`. Alias target changes are operational
 configuration changes, but alias capability reductions require release notes.
-

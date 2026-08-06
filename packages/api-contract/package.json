@@ -11,7 +11,8 @@
   },
   "files": [
     "dist",
-    "!dist/**/*.test.*"
+    "!dist/**/*.test.*",
+    "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
     "@sinclair/typebox": "0.34.52"

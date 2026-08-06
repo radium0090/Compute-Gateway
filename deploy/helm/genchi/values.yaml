@@ -35,8 +35,6 @@ runtime:
   totalTimeoutMs: 60000
   connectTimeoutMs: 5000
   shutdownGraceMs: 30000
-  authCacheTtlSeconds: 30
-  configCacheTtlSeconds: 15
   trustProxy: false
   metricsEnabled: true
   otlpEndpoint: http://otel-collector.observability.svc.cluster.local:4318

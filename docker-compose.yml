@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: genchi
       POSTGRES_PASSWORD: genchi_dev_only
     ports:
-      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:${GENCHI_COMPOSE_POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -23,7 +23,7 @@ services:
     image: redis:7.4.9-alpine
     command: ['redis-server', '--save', '', '--appendonly', 'no']
     ports:
-      - '127.0.0.1:6379:6379'
+      - '127.0.0.1:${GENCHI_COMPOSE_REDIS_PORT:-6379}:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -55,6 +55,7 @@ services:
       - /tmp
 
   migrate:
+    image: ${GENCHI_IMAGE:-genchi:dev}
     build:
       context: .
       target: runtime
@@ -74,6 +75,7 @@ services:
       - no-new-privileges:true
 
   gateway:
+    image: ${GENCHI_IMAGE:-genchi:dev}
     build:
       context: .
       target: runtime
@@ -81,7 +83,7 @@ services:
     volumes:
       - ./deploy/compose/genchi.yaml:/etc/genchi/config.yaml:ro
     ports:
-      - '8080:8080'
+      - '127.0.0.1:${GENCHI_COMPOSE_HTTP_PORT:-8080}:8080'
     depends_on:
       migrate:
         condition: service_completed_successfully

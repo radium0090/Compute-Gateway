@@ -127,10 +127,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
   value: {{ .Values.runtime.connectTimeoutMs | quote }}
 - name: GENCHI_SHUTDOWN_GRACE_MS
   value: {{ .Values.runtime.shutdownGraceMs | quote }}
-- name: AUTH_CACHE_TTL_SECONDS
-  value: {{ .Values.runtime.authCacheTtlSeconds | quote }}
-- name: CONFIG_CACHE_TTL_SECONDS
-  value: {{ .Values.runtime.configCacheTtlSeconds | quote }}
 - name: GENCHI_TRUST_PROXY
   value: {{ .Values.runtime.trustProxy | quote }}
 - name: GENCHI_METRICS_ENABLED

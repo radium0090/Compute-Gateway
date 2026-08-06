@@ -22,7 +22,6 @@ export function registerRequestTelemetry(app: FastifyInstance): void {
   app.addHook('onRequest', (request) => {
     activeRequests.add(1, {
       route: request.routeOptions.url ?? 'unmatched',
-      streaming: false,
     });
     return Promise.resolve();
   });
@@ -33,7 +32,7 @@ export function registerRequestTelemetry(app: FastifyInstance): void {
     const durationSeconds = reply.elapsedTime / 1_000;
     const labels = { route, method: request.method, status_class: statusClass };
 
-    activeRequests.add(-1, { route, streaming: false });
+    activeRequests.add(-1, { route });
     requestCount.add(1, labels);
     requestDuration.record(durationSeconds, { route });
 

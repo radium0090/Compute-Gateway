@@ -24,7 +24,7 @@ aliases:
       - provider: gemini
         model: gemini-2.5-flash
         weight: 0
-    required_capabilities: [chat, streaming, tools]
+    required_capabilities: [chat, streaming]
 ```
 
 A zero-weight candidate is fallback-only. Model names are examples and MUST be
