@@ -230,7 +230,7 @@ function requestBody(
     ...(request.topP === undefined ? {} : { top_p: request.topP }),
     ...(request.maxTokens === undefined
       ? {}
-      : { max_tokens: request.maxTokens }),
+      : { max_completion_tokens: request.maxTokens }),
     ...(request.stop === undefined ? {} : { stop: request.stop }),
     ...(request.user === undefined ? {} : { user: request.user }),
     n: 1,

@@ -87,7 +87,7 @@ defineProviderAdapterConformance({
       messages: [{ role: 'user', content: 'private prompt text' }],
       temperature: 0.2,
       top_p: 0.8,
-      max_tokens: 32,
+      max_completion_tokens: 32,
       stop: 'END',
       user: 'opaque-user',
       n: 1,
