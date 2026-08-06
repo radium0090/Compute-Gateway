@@ -25,6 +25,7 @@ describe('loadConfig', () => {
     expect(config.port).toBe(9090);
     expect(config.metricsEnabled).toBe(false);
     expect(config.totalTimeoutMs).toBe(60_000);
+    expect(config.connectTimeoutMs).toBe(30_000);
     expect(config.configFile).toBe('/etc/genchi/config.yaml');
     expect(config.serviceVersion).toBe('v0.1.0');
     expect(config.commitSha).toBe('abcdef1234567');

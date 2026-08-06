@@ -57,7 +57,7 @@ candidate. Default budgets:
 ```yaml
 routing:
   total_timeout_ms: 60000
-  connect_timeout_ms: 5000
+  connect_timeout_ms: 30000
   max_attempts: 2
   same_route_retries: 0
   minimum_attempt_budget_ms: 2000

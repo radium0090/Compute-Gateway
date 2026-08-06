@@ -86,7 +86,7 @@ function service(adapter: ProviderAdapter, provider: string, model: string) {
         requestId: input.requestId,
         providerModel: model,
         signal: input.signal,
-        connectTimeoutMs: 10_000,
+        connectTimeoutMs: 30_000,
       });
       return result.ok
         ? { ok: true, response: result.response, route, attempts: 1 }
@@ -99,7 +99,7 @@ function service(adapter: ProviderAdapter, provider: string, model: string) {
         requestId: input.requestId,
         providerModel: model,
         signal: input.signal,
-        connectTimeoutMs: 10_000,
+        connectTimeoutMs: 30_000,
       });
       return result.ok
         ? { ok: true, stream: result.stream, route, attempts: 1 }
