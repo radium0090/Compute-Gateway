@@ -18,7 +18,7 @@ const firstStreamEvent =
 
 defineProviderAdapterConformance({
   name: 'GeminiAdapter',
-  model: 'gemini-test',
+  model: 'gemini-2.5-flash',
   request: {
     model: 'genchi/fast',
     messages: [
@@ -37,7 +37,7 @@ defineProviderAdapterConformance({
       id: 'gemini-primary',
       baseUrl: 'https://provider.example/v1beta/',
       apiKey: 'fake-gemini-secret',
-      models: { 'gemini-test': capabilities },
+      models: { 'gemini-2.5-flash': capabilities },
       fetchImplementation,
     }),
   successResponse: () =>
@@ -87,8 +87,8 @@ defineProviderAdapterConformance({
   assertRequest: (captured, streaming) => {
     expect(captured.url).toBe(
       streaming
-        ? 'https://provider.example/v1beta/models/gemini-test:streamGenerateContent?alt=sse'
-        : 'https://provider.example/v1beta/models/gemini-test:generateContent',
+        ? 'https://provider.example/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse'
+        : 'https://provider.example/v1beta/models/gemini-2.5-flash:generateContent',
     );
     expect(captured.headers.get('x-goog-api-key')).toBe('fake-gemini-secret');
     expect(captured.body).toMatchObject({
@@ -103,6 +103,7 @@ defineProviderAdapterConformance({
         temperature: 0.2,
         topP: 0.8,
         maxOutputTokens: 32,
+        thinkingConfig: { thinkingBudget: 0 },
         stopSequences: ['END'],
       },
     });

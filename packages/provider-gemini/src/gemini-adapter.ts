@@ -244,6 +244,7 @@ function normalizedUsage(usage: typeof UsageSchema.static) {
 
 function buildRequestBody(
   request: CanonicalChatRequest,
+  providerModel: string,
 ): { readonly ok: true; readonly body: string } | { readonly ok: false } {
   const system: string[] = [];
   const contents: {
@@ -264,6 +265,12 @@ function buildRequestBody(
     }
   }
   if (contents.length === 0) return { ok: false };
+  // Gemini 2.5 Flash counts its default dynamic thinking against
+  // maxOutputTokens. Disable thinking when the caller supplies a strict cap so
+  // the canonical completion budget remains available for visible output.
+  const disableThinkingForBoundedFlash =
+    request.maxTokens !== undefined &&
+    /^gemini-2\.5-flash(?:$|-)/.test(providerModel);
   const generationConfig = {
     candidateCount: 1,
     ...(request.temperature === undefined
@@ -273,6 +280,9 @@ function buildRequestBody(
     ...(request.maxTokens === undefined
       ? {}
       : { maxOutputTokens: request.maxTokens }),
+    ...(disableThinkingForBoundedFlash
+      ? { thinkingConfig: { thinkingBudget: 0 } }
+      : {}),
     ...(request.stop === undefined
       ? {}
       : {
@@ -410,7 +420,7 @@ export class GeminiAdapter implements ProviderAdapter {
         error: requestError('provider_model_not_configured'),
       };
     }
-    const translated = buildRequestBody(request);
+    const translated = buildRequestBody(request, context.providerModel);
     if (!translated.ok) {
       return {
         ok: false,
@@ -492,7 +502,7 @@ export class GeminiAdapter implements ProviderAdapter {
         error: requestError('provider_streaming_not_configured'),
       };
     }
-    const translated = buildRequestBody(request);
+    const translated = buildRequestBody(request, context.providerModel);
     if (!translated.ok) {
       return {
         ok: false,
