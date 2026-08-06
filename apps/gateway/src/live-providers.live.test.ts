@@ -15,7 +15,10 @@ import { GeminiAdapter } from '@genchi/provider-gemini';
 import { OpenAiAdapter } from '@genchi/provider-openai';
 
 import { buildGateway } from './app.js';
-import { diagnoseGeminiRequest } from './live-provider-diagnostics.js';
+import {
+  diagnoseGeminiRequest,
+  safeGatewayFailureSummary,
+} from './live-provider-diagnostics.js';
 
 const live =
   process.env.GENCHI_LIVE_ENABLED === 'true' ? describe : describe.skip;
@@ -183,8 +186,13 @@ live('live provider compatibility through the OpenAI Node SDK', () => {
               configuredModel: model,
             });
             throw new Error(
-              `Gemini safe probe statuses: ${probes
-                .map((probe) => `${probe.name}=${String(probe.status)}`)
+              `Gemini gateway failure ${safeGatewayFailureSummary(error)}; safe probes: ${probes
+                .map(
+                  (probe) =>
+                    `${probe.name}=${String(probe.status)}${
+                      probe.shape === undefined ? '' : `[${probe.shape}]`
+                    }`,
+                )
                 .join(', ')}`,
             );
           });

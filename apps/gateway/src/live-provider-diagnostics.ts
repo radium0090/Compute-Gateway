@@ -1,6 +1,7 @@
 export interface GeminiProbeResult {
   readonly name: string;
   readonly status: number | 'network_error';
+  readonly shape?: string;
 }
 
 export interface GeminiProbeOptions {
@@ -12,20 +13,97 @@ export interface GeminiProbeOptions {
 const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 const aliasModel = 'gemini-flash-latest';
 const prompt = 'Reply with OK.';
+const maxShapeResponseBytes = 16_384;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+async function readJsonBounded(response: Response): Promise<unknown> {
+  if (response.body === null) return null;
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    for (;;) {
+      const read = await reader.read();
+      if (read.done) break;
+      const value: unknown = read.value;
+      if (!(value instanceof Uint8Array)) return null;
+      length += value.byteLength;
+      if (length > maxShapeResponseBytes) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+  } catch {
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function responseShape(value: unknown): string {
+  if (!isRecord(value)) return 'object=false';
+  const candidates: readonly unknown[] = Array.isArray(value.candidates)
+    ? (value.candidates as unknown[])
+    : [];
+  const candidate = candidates[0];
+  const content =
+    isRecord(candidate) && isRecord(candidate.content)
+      ? candidate.content
+      : null;
+  const parts =
+    content !== null && Array.isArray(content.parts) ? content.parts : [];
+  const textParts = parts.filter(
+    (part: unknown) => isRecord(part) && typeof part.text === 'string',
+  ).length;
+  const role =
+    content?.role === undefined
+      ? 'missing'
+      : content.role === 'model'
+        ? 'model'
+        : 'other';
+  return [
+    `candidates=${String(candidates.length)}`,
+    `content=${String(content !== null)}`,
+    `role=${role}`,
+    `parts=${String(parts.length)}`,
+    `textParts=${String(textParts)}`,
+    `usage=${String(isRecord(value.usageMetadata))}`,
+  ].join(';');
+}
 
 async function probe(
   implementation: typeof fetch,
   name: string,
   input: string,
   init: RequestInit,
+  inspectShape = false,
 ): Promise<GeminiProbeResult> {
   try {
     const response = await implementation(input, init);
     const status = response.status;
-    try {
-      await response.body?.cancel();
-    } catch {
-      // Probe cleanup is best-effort and never reads the upstream body.
+    if (inspectShape && status === 200) {
+      return {
+        name,
+        status,
+        shape: responseShape(await readJsonBounded(response)),
+      };
+    } else {
+      try {
+        await response.body?.cancel();
+      } catch {
+        // Probe cleanup is best-effort.
+      }
     }
     return { name, status };
   } catch {
@@ -103,6 +181,7 @@ export async function diagnoseGeminiRequest(
       name,
       modelUrl(options.configuredModel, 'generateContent'),
       { method: 'POST', headers: postHeaders, body: JSON.stringify(body) },
+      name === 'max-output-tokens',
     );
     results.push(result);
     if (result.status !== 200) break;
@@ -123,4 +202,18 @@ export async function diagnoseGeminiRequest(
     );
   }
   return results;
+}
+
+/** Returns only allowlisted gateway status metadata from an unknown failure. */
+export function safeGatewayFailureSummary(error: unknown): string {
+  if (!isRecord(error)) return 'status=unknown;code=unknown';
+  const status =
+    typeof error.status === 'number' && Number.isInteger(error.status)
+      ? String(error.status)
+      : 'unknown';
+  const code =
+    typeof error.code === 'string' && /^[a-z0-9_]{1,64}$/.test(error.code)
+      ? error.code
+      : 'unknown';
+  return `status=${status};code=${code}`;
 }
