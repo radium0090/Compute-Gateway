@@ -49,7 +49,7 @@
     "openai": "7.3.0",
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.6",
-    "tsx": "4.20.6",
+    "tsx": "4.23.5",
     "typescript": "5.9.3",
     "typescript-eslint": "8.65.0",
     "vitest": "4.1.10",
