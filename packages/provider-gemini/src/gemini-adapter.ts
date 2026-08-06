@@ -55,6 +55,11 @@ const apiKeyFailureReasons = new Set([
   'API_KEY_SERVICE_BLOCKED',
 ]);
 
+const apiKeyFailureMessages = new Set([
+  'API key not valid. Please pass a valid API key.',
+  'Your API key was reported as leaked. Please use another API key.',
+]);
+
 const maxErrorResponseBytes = 16_384;
 
 export interface GeminiAdapterOptions {
@@ -117,31 +122,56 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function hasApiKeyFailure(value: unknown): boolean {
-  if (!isRecord(value) || !isRecord(value.error)) return false;
+type GoogleErrorKind = 'authentication' | 'precondition' | null;
+
+function googleErrorKind(value: unknown): GoogleErrorKind {
+  if (!isRecord(value) || !isRecord(value.error)) return null;
+  const message = value.error.message;
+  if (
+    typeof message === 'string' &&
+    apiKeyFailureMessages.has(message.trim())
+  ) {
+    return 'authentication';
+  }
   const details = value.error.details;
-  if (!Array.isArray(details)) return false;
-  return details.some((detail: unknown) => {
-    if (!isRecord(detail)) return false;
-    const reason = detail.reason;
-    return (
-      detail['@type'] === 'type.googleapis.com/google.rpc.ErrorInfo' &&
-      typeof reason === 'string' &&
-      apiKeyFailureReasons.has(reason)
-    );
-  });
+  if (
+    Array.isArray(details) &&
+    details.some((detail: unknown) => {
+      if (!isRecord(detail)) return false;
+      const reason = detail.reason;
+      return (
+        detail['@type'] === 'type.googleapis.com/google.rpc.ErrorInfo' &&
+        typeof reason === 'string' &&
+        apiKeyFailureReasons.has(reason)
+      );
+    })
+  ) {
+    return 'authentication';
+  }
+  return value.error.status === 'FAILED_PRECONDITION' ? 'precondition' : null;
 }
 
 async function statusError(response: Response): Promise<ProviderError> {
-  const apiKeyFailure =
+  const googleError =
     response.status === 400
-      ? hasApiKeyFailure(await readJsonBounded(response, maxErrorResponseBytes))
-      : false;
+      ? googleErrorKind(await readJsonBounded(response, maxErrorResponseBytes))
+      : null;
   if (response.status !== 400) await cancelResponse(response);
-  if (response.status === 401 || response.status === 403 || apiKeyFailure) {
+  if (
+    response.status === 401 ||
+    response.status === 403 ||
+    googleError === 'authentication'
+  ) {
     return {
       class: 'authentication',
       code: 'provider_authentication_failed',
+      retryable: false,
+    };
+  }
+  if (googleError === 'precondition') {
+    return {
+      class: 'authentication',
+      code: 'provider_configuration_failed',
       retryable: false,
     };
   }

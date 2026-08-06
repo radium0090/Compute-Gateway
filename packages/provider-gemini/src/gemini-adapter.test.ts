@@ -158,6 +158,87 @@ describe('GeminiAdapter provider-specific rules', () => {
     expect(JSON.stringify(result)).not.toContain('secret-bearing');
   });
 
+  it('classifies a Google account precondition without exposing the body', async () => {
+    const adapter = new GeminiAdapter({
+      id: 'gemini-primary',
+      baseUrl: 'https://provider.example/v1beta',
+      apiKey: 'fake-gemini-secret',
+      models: { 'gemini-test': capabilities },
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: {
+                status: 'FAILED_PRECONDITION',
+                message: 'raw account and billing details',
+              },
+            }),
+            { status: 400 },
+          ),
+        ),
+    });
+
+    const result = await adapter.createChatCompletion(
+      { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+      {
+        requestId: 'req_precondition_test',
+        providerModel: 'gemini-test',
+        signal: new AbortController().signal,
+      },
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        class: 'authentication',
+        code: 'provider_configuration_failed',
+        retryable: false,
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain('billing details');
+  });
+
+  it("classifies Google's fixed leaked-key message without exposing it", async () => {
+    const adapter = new GeminiAdapter({
+      id: 'gemini-primary',
+      baseUrl: 'https://provider.example/v1beta',
+      apiKey: 'fake-gemini-secret',
+      models: { 'gemini-test': capabilities },
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: {
+                status: 'PERMISSION_DENIED',
+                message:
+                  'Your API key was reported as leaked. Please use another API key.',
+              },
+            }),
+            { status: 400 },
+          ),
+        ),
+    });
+
+    const result = await adapter.createChatCompletion(
+      { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+      {
+        requestId: 'req_leaked_key_test',
+        providerModel: 'gemini-test',
+        signal: new AbortController().signal,
+      },
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        class: 'authentication',
+        code: 'provider_authentication_failed',
+        retryable: false,
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain('reported as leaked');
+  });
+
   it('normalizes prompt safety blocks without inventing content', async () => {
     const adapter = new GeminiAdapter({
       id: 'gemini-primary',
