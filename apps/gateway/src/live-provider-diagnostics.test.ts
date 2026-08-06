@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { diagnoseGeminiRequest } from './live-provider-diagnostics.js';
+import {
+  diagnoseGeminiRequest,
+  safeGatewayFailureSummary,
+} from './live-provider-diagnostics.js';
 
 describe('Gemini live provider diagnostics', () => {
   it('returns only staged HTTP statuses and stops after the rejected field', async () => {
@@ -16,8 +19,27 @@ describe('Gemini live provider diagnostics', () => {
         const rejected =
           typeof init?.body === 'string' &&
           init.body.includes('thinkingConfig');
+        const exactRequest =
+          typeof init?.body === 'string' &&
+          init.body.includes('maxOutputTokens') &&
+          !rejected;
         return Promise.resolve(
-          new Response('{}', { status: rejected ? 400 : 200 }),
+          new Response(
+            exactRequest
+              ? JSON.stringify({
+                  candidates: [
+                    {
+                      content: {
+                        role: 'model',
+                        parts: [{ text: 'raw model output' }],
+                      },
+                    },
+                  ],
+                  usageMetadata: { promptTokenCount: 3, totalTokenCount: 4 },
+                })
+              : '{}',
+            { status: rejected ? 400 : 200 },
+          ),
         );
       },
     });
@@ -27,13 +49,33 @@ describe('Gemini live provider diagnostics', () => {
       { name: 'minimal', status: 200 },
       { name: 'role', status: 200 },
       { name: 'candidate-count', status: 200 },
-      { name: 'max-output-tokens', status: 200 },
+      {
+        name: 'max-output-tokens',
+        status: 200,
+        shape:
+          'candidates=1;content=true;role=model;parts=1;textParts=1;usage=true',
+      },
       { name: 'thinking-budget', status: 400 },
       { name: 'latest-alias-minimal', status: 200 },
     ]);
     expect(capturedBodies).toHaveLength(6);
     expect(JSON.stringify(result)).not.toContain(secret);
     expect(JSON.stringify(result)).not.toContain(promptTextForAssertion);
+    expect(JSON.stringify(result)).not.toContain('raw model output');
+  });
+
+  it('returns only allowlisted gateway failure metadata', () => {
+    expect(
+      safeGatewayFailureSummary({
+        status: 502,
+        code: 'provider_invalid_response',
+        message: 'raw provider output',
+        headers: { authorization: 'raw-secret' },
+      }),
+    ).toBe('status=502;code=provider_invalid_response');
+    expect(
+      safeGatewayFailureSummary({ status: 'bad', code: 'NOT SAFE!' }),
+    ).toBe('status=unknown;code=unknown');
   });
 
   it('normalizes transport failures without exposing error details', async () => {
