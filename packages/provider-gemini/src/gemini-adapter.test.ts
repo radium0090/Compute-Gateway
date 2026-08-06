@@ -91,6 +91,7 @@ defineProviderAdapterConformance({
         : 'https://provider.example/v1beta/models/gemini-2.5-flash:generateContent',
     );
     expect(captured.headers.get('x-goog-api-key')).toBe('fake-gemini-secret');
+    expect(captured.headers.get('x-request-id')).toBeNull();
     expect(captured.body).toMatchObject({
       systemInstruction: { parts: [{ text: 'concise' }] },
       contents: [
