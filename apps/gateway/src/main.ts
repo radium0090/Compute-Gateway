@@ -171,6 +171,7 @@ function modelCapabilities(
   };
 }
 
+/** Builds the provider registry exclusively from validated policy and secrets. */
 export function buildProviderRegistry(
   policy: PolicyConfig,
   credentials: ReadonlyMap<string, string>,

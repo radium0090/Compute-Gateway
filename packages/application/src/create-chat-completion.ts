@@ -479,6 +479,8 @@ export class CreateChatCompletionService {
           let iterator: AsyncIterator<CanonicalChatChunk> | undefined;
           try {
             iterator = opened.stream[Symbol.asyncIterator]();
+            // Reading one chunk is the commitment boundary. Until it succeeds,
+            // a retry or fallback remains safe because no content is exposed.
             const first = await iterator.next();
             if (!first.done) {
               this.resilience.observer?.providerAttempt({
@@ -550,6 +552,8 @@ export class CreateChatCompletionService {
     resources: AttemptResources,
     requestLease: CoordinationLease,
   ): AsyncIterable<CanonicalChatChunk> {
+    // Provider and request leases deliberately outlive executeStream(). The
+    // consumer of this generator owns them until completion or cancellation.
     let completed = false;
     let outcome: 'success' | 'failure' | 'neutral' = 'neutral';
     try {
