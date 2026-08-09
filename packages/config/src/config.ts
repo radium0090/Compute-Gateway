@@ -43,7 +43,10 @@ export const RuntimeConfigSchema = Type.Object(
   { additionalProperties: false },
 );
 
+/** Fully validated process settings consumed by the composition root. */
 export type RuntimeConfig = Static<typeof RuntimeConfigSchema>;
+
+/** Explicit configuration source used instead of hidden global environment reads. */
 export type EnvironmentSource = Readonly<Record<string, string | undefined>>;
 
 const fieldToEnvironmentVariable: Readonly<Record<string, string>> = {
@@ -67,6 +70,7 @@ const fieldToEnvironmentVariable: Readonly<Record<string, string>> = {
   commitSha: 'GENCHI_COMMIT_SHA',
 };
 
+/** Safe startup failure containing environment-variable names, never values. */
 export class ConfigValidationError extends Error {
   public constructor(public readonly issues: readonly string[]) {
     super(`Configuration validation failed: ${issues.join('; ')}`);

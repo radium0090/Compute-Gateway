@@ -96,8 +96,10 @@ export const PolicyConfigSchema = Type.Object(
   { additionalProperties: false },
 );
 
+/** Validated versioned provider catalog and routing policy. */
 export type PolicyConfig = Static<typeof PolicyConfigSchema>;
 
+/** Safe policy failure containing structural locations, never secret values. */
 export class PolicyConfigValidationError extends Error {
   public constructor(public readonly issues: readonly string[]) {
     super(`Policy configuration validation failed: ${issues.join('; ')}`);

@@ -28,6 +28,7 @@ import {
   resultErrorMapping,
 } from './chat-errors.js';
 
+/** Dependencies and deterministic seams owned by the chat HTTP boundary. */
 export interface ChatCompletionRouteOptions {
   readonly service: Pick<
     CreateChatCompletionService,
@@ -39,12 +40,24 @@ export interface ChatCompletionRouteOptions {
   readonly timeoutSignalFactory?: (timeoutMs: number) => AbortSignal;
 }
 
+interface CompletionMetadata {
+  readonly id: string;
+  readonly created: number;
+  readonly requestedModel: string;
+  readonly requestId: string;
+  readonly provider: string;
+  readonly providerModel: string;
+  readonly attempts: number;
+}
+
 const deadlineExceeded = Symbol('request-deadline-exceeded');
 
 async function withinDeadline<Value>(
   operation: () => Promise<Value>,
   timeoutSignal: AbortSignal,
 ): Promise<Value | typeof deadlineExceeded> {
+  // The service receives the combined cancellation signal. This race is the
+  // HTTP boundary's final guard against a dependency that ignores cancellation.
   if (timeoutSignal.aborted) {
     return deadlineExceeded;
   }
@@ -92,15 +105,7 @@ function streamProviderError(error: unknown): ProviderError {
 
 function toPublicChunk(
   chunk: CanonicalChatChunk,
-  metadata: {
-    readonly id: string;
-    readonly created: number;
-    readonly requestedModel: string;
-    readonly requestId: string;
-    readonly provider: string;
-    readonly providerModel: string;
-    readonly attempts: number;
-  },
+  metadata: CompletionMetadata,
   includeRole: boolean,
 ): ChatCompletionChunk {
   return {
@@ -154,7 +159,7 @@ async function* streamBody(
   iterator: AsyncIterator<CanonicalChatChunk>,
   request: FastifyRequest<{ Body: ChatCompletionRequest }>,
   signal: AbortSignal,
-  metadata: Parameters<typeof toPublicChunk>[1],
+  metadata: CompletionMetadata,
 ): AsyncIterable<string> {
   let roleSent = false;
   const serialize = (chunk: CanonicalChatChunk): string => {
@@ -239,6 +244,8 @@ async function sendStreamingCompletion(
 
   const iterator = result.stream[Symbol.asyncIterator]();
   try {
+    // Establish the upstream stream before committing downstream headers. A
+    // failure here can still be returned as the normal Genchi error envelope.
     const first = await iterator.next();
     if (first.done) {
       const mapping = providerErrorMapping({
@@ -278,6 +285,8 @@ async function sendStreamingCompletion(
     const body = Readable.from(
       streamBody(first.value, iterator, request, signal, metadata),
     );
+    // Once the reply owns the stream, cleanup must follow the body lifecycle;
+    // the route handler itself returns before the final chunk is consumed.
     body.once('close', cleanup);
     reply
       .header('cache-control', 'no-cache, no-transform')

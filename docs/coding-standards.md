@@ -47,8 +47,9 @@ is prohibited in runtime packages.
 
 The repository pins formatter and linter versions. Formatting is automatic and
 not debated in review. Lint rules enforce dependency direction, no floating
-promises, exhaustive tagged-union checks, secure random APIs, and no secret
-field names in telemetry.
+promises, and exhaustive tagged-union checks. Focused tests enforce secure key
+generation and secret/content redaction; new telemetry fields require explicit
+security review.
 
 ## SQL and migrations
 

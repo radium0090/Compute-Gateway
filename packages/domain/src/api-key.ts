@@ -83,18 +83,22 @@ export function validateApiKey(apiKey: ApiKey): ApiKeyValidationResult {
   return { ok: true, value: apiKey };
 }
 
+/** Brands an identifier already validated by its input or persistence boundary. */
 export function apiKeyId(value: string): ApiKeyId {
   return value as ApiKeyId;
 }
 
+/** Brands a searchable public ID already validated by its input boundary. */
 export function apiKeyPublicId(value: string): ApiKeyPublicId {
   return value as ApiKeyPublicId;
 }
 
+/** Brands an HMAC digest already validated by its input boundary. */
 export function apiKeyHash(value: string): ApiKeyHash {
   return value as ApiKeyHash;
 }
 
+/** Brands a tenant identifier already validated by its input boundary. */
 export function tenantId(value: string): TenantId {
   return value as TenantId;
 }

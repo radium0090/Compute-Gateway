@@ -12,6 +12,9 @@ import type {
   RouteResolver,
 } from '@genchi/domain';
 
+type ConfiguredCapability =
+  PolicyConfig['providers'][string]['models'][string]['capabilities'][number];
+
 function patternAllows(pattern: string, requestedModel: string): boolean {
   if (pattern.endsWith('*')) {
     return requestedModel.startsWith(pattern.slice(0, -1));
@@ -40,6 +43,13 @@ function selectStableWeighted<T extends { readonly weight: number }>(
     }
   }
   return null;
+}
+
+function supportsEveryCapability(
+  capabilities: readonly ConfiguredCapability[],
+  required: readonly ConfiguredCapability[],
+): boolean {
+  return required.every((capability) => capabilities.includes(capability));
 }
 
 /** Resolves deterministic primary routes and ordered fallback plans. */
@@ -96,21 +106,17 @@ export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
     if (alias === undefined) {
       return { ok: false, reason: 'model_not_found' };
     }
-    const required = new Set([
+    const required: readonly ConfiguredCapability[] = [
       'chat',
-      ...(requireStreaming ? ['streaming'] : []),
+      ...(requireStreaming ? (['streaming'] as const) : []),
       ...(alias.required_capabilities ?? []),
-    ]);
+    ];
     const candidates = alias.candidates.filter((candidate) => {
       const model =
         this.policy.providers[candidate.provider]?.models[candidate.model];
       return (
         model !== undefined &&
-        [...required].every((capability) =>
-          model.capabilities.includes(
-            capability as (typeof model.capabilities)[number],
-          ),
-        )
+        supportsEveryCapability(model.capabilities, required)
       );
     });
     const primaries = candidates.filter((candidate) => candidate.weight > 0);

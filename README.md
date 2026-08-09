@@ -14,10 +14,11 @@ Application -> Genchi Gateway -> OpenAI | Anthropic | Gemini | future providers
 
 Genchi is in release-candidate validation for the MVP. The gateway,
 provider/routing core, operations baseline, SDK previews, contract gates, and
-repeatable performance checks are implemented. Real-provider smoke and final
-release approval remain protected operator-run gates. The documents in this
-repository are normative for the first release unless an accepted Architecture
-Decision Record (ADR) supersedes them.
+repeatable performance checks are implemented. The protected three-provider
+smoke has passed; datastore, staging, and final release evidence still need to
+be recorded before `v0.1.0`. The documents in this repository are normative for
+the first release unless an accepted Architecture Decision Record (ADR)
+supersedes them.
 
 ## MVP capabilities
 
@@ -111,6 +112,7 @@ for a locally running gateway.
 - [Architecture](docs/architecture.md)
 - [Repository layout](docs/folder.md)
 - [Roadmap](docs/roadmap.md)
+- [Implementation status and known gaps](docs/implementation-status.md)
 
 ### API and runtime behavior
 

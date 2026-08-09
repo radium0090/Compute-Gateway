@@ -27,6 +27,12 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       'no-console': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: ['@genchi/*/src', '@genchi/*/src/**'],
+        },
+      ],
     },
   },
   {
@@ -45,7 +51,20 @@ export default tseslint.config(
             '@genchi/provider-*',
             '@genchi/persistence-*',
             '@genchi/observability',
+            '@genchi/*/src',
+            '@genchi/*/src/**',
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/provider-*/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: ['@genchi/provider-*', '@genchi/*/src', '@genchi/*/src/**'],
         },
       ],
     },
