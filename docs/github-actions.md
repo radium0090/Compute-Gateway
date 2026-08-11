@@ -11,6 +11,7 @@
 | `nightly.yml` | schedule/manual | full deterministic and datastore integration suites |
 | `live-provider.yml` | manual | protected OpenAI/Anthropic/Gemini smoke through OpenAI SDK |
 | `aws-staging.yml` | manual | protected AWS OIDC, EC2, and SSM connectivity evidence |
+| `aws-staging-bootstrap.yml` | manual | approved, idempotent staging host prerequisite installation |
 | `release.yml` | signed `v*` tag | publish signed release artifacts |
 
 The CI workflow also verifies both SDK previews, OpenAPI compatibility, network
@@ -105,3 +106,10 @@ AWS access keys and SSH private keys are not stored in GitHub. The connectivity
 job can send the approved read-only probe only to the configured staging
 instance through Systems Manager. The EC2 instance role, not the GitHub role,
 is responsible for reading the staging runtime secret.
+
+The separate bootstrap workflow is also protected by `aws-staging`. It installs
+Docker Engine, the Compose plugin, Git, `jq`, and AWS CLI v2 through SSM, then
+uses the EC2 instance role to validate that the configured Secrets Manager value
+is a JSON object. Bootstrap output contains package versions and sorted secret
+field names only; secret values never leave the instance. Re-running bootstrap
+is supported and does not deploy the application or remove persistent data.

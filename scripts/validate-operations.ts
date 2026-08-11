@@ -111,6 +111,33 @@ async function validateWorkflows(): Promise<void> {
     ),
     'AWS staging workflow must not use long-lived cloud or SSH credentials',
   );
+
+  const awsBootstrapSource = await read(
+    '.github/workflows/aws-staging-bootstrap.yml',
+  );
+  const awsBootstrap = parse(awsBootstrapSource) as Workflow | null;
+  const bootstrap = awsBootstrap?.jobs?.bootstrap;
+  assert(
+    bootstrap?.environment === 'aws-staging',
+    'AWS staging bootstrap must use the protected aws-staging environment',
+  );
+  assert(
+    bootstrap.permissions?.contents === 'read' &&
+      bootstrap.permissions['id-token'] === 'write',
+    'AWS staging bootstrap must grant only contents:read and id-token:write',
+  );
+  assert(
+    awsBootstrapSource.includes('vars.GENCHI_SECRET_ARN') &&
+      awsBootstrapSource.includes('aws secretsmanager get-secret-value') &&
+      awsBootstrapSource.includes('keys | sort | join(",")'),
+    'AWS staging bootstrap must inspect only the configured secret schema',
+  );
+  assert(
+    !/(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|EC2_SSH_PRIVATE_KEY)/u.test(
+      awsBootstrapSource,
+    ),
+    'AWS staging bootstrap must not use long-lived cloud or SSH credentials',
+  );
 }
 
 async function validateHelm(): Promise<void> {
