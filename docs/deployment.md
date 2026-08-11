@@ -49,6 +49,18 @@ operator-controlled action.
 8. Run API and streaming smoke tests.
 9. Record release, configuration version, image digest, and migration version.
 
+## AWS single-host staging
+
+The protected `AWS staging deploy` workflow is the supported rehearsal path for
+the project staging EC2 instance. It deploys the exact `main` commit through
+OIDC and Systems Manager without SSH. Runtime secret values are read only by the
+EC2 role and written to `/opt/genchi/shared/staging.env` with mode `0600`.
+Commit-addressed checkouts live below `/opt/genchi/releases`, while
+`/opt/genchi/current` identifies the last fully validated deployment.
+
+This mode is for staging and single-host evaluation. It binds the gateway and
+datastores to loopback and is not the production topology described above.
+
 ## Health semantics
 
 - `/health/live` returns success when the event loop/process can serve; it does

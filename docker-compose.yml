@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: genchi
       POSTGRES_USER: genchi
-      POSTGRES_PASSWORD: genchi_dev_only
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-genchi_dev_only}
     ports:
       - '127.0.0.1:${GENCHI_COMPOSE_POSTGRES_PORT:-5432}:5432'
     volumes:
@@ -59,6 +59,9 @@ services:
     build:
       context: .
       target: runtime
+      args:
+        VERSION: ${GENCHI_SERVICE_VERSION:-0.0.0-dev}
+        REVISION: ${GENCHI_COMMIT_SHA:-unknown}
     command: ['migrate', 'up']
     env_file: .env
     volumes:
@@ -79,6 +82,9 @@ services:
     build:
       context: .
       target: runtime
+      args:
+        VERSION: ${GENCHI_SERVICE_VERSION:-0.0.0-dev}
+        REVISION: ${GENCHI_COMMIT_SHA:-unknown}
     env_file: .env
     volumes:
       - ./deploy/compose/genchi.yaml:/etc/genchi/config.yaml:ro

@@ -12,6 +12,7 @@
 | `live-provider.yml` | manual | protected OpenAI/Anthropic/Gemini smoke through OpenAI SDK |
 | `aws-staging.yml` | manual | protected AWS OIDC, EC2, and SSM connectivity evidence |
 | `aws-staging-bootstrap.yml` | manual | approved, idempotent staging host prerequisite installation |
+| `aws-staging-deploy.yml` | manual | approved deployment of the exact protected `main` commit |
 | `release.yml` | signed `v*` tag | publish signed release artifacts |
 
 The CI workflow also verifies both SDK previews, OpenAPI compatibility, network
@@ -113,3 +114,11 @@ uses the EC2 instance role to validate that the configured Secrets Manager value
 is a JSON object. Bootstrap output contains package versions and sorted secret
 field names only; secret values never leave the instance. Re-running bootstrap
 is supported and does not deploy the application or remove persistent data.
+
+The deployment workflow checks out the exact approved `main` commit into a
+commit-addressed release directory on the instance. The instance materializes a
+mode-`0600` Compose environment from Secrets Manager, builds the gateway with
+the commit as image metadata, applies forward-only migrations, starts the
+single-host staging stack, and runs live/readiness plus temporary API Key
+authentication checks. The PostgreSQL volume is preserved between deployments;
+the `current` symlink changes only after every deployment check passes.
