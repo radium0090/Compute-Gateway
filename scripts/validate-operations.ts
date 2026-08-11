@@ -164,6 +164,32 @@ async function validateWorkflows(): Promise<void> {
     ),
     'AWS staging deploy must not use long-lived cloud or SSH credentials',
   );
+
+  const awsVerifySource = await read(
+    '.github/workflows/aws-staging-verify.yml',
+  );
+  const awsVerify = parse(awsVerifySource) as Workflow | null;
+  const verify = awsVerify?.jobs?.verify;
+  assert(
+    verify?.environment === 'aws-staging',
+    'AWS staging verification must use the protected aws-staging environment',
+  );
+  assert(
+    verify.permissions?.contents === 'read' &&
+      verify.permissions['id-token'] === 'write',
+    'AWS staging verification must grant only contents:read and id-token:write',
+  );
+  assert(
+    awsVerifySource.includes('[[ "$GITHUB_REF" == refs/heads/main ]]') &&
+      awsVerifySource.includes('scripts/verify-aws-staging.sh'),
+    'AWS staging verification must execute the exact protected main verification script',
+  );
+  assert(
+    !/(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|EC2_SSH_PRIVATE_KEY)/u.test(
+      awsVerifySource,
+    ),
+    'AWS staging verification must not use long-lived cloud or SSH credentials',
+  );
 }
 
 async function validateHelm(): Promise<void> {
