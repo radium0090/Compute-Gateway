@@ -13,6 +13,7 @@
 | `aws-staging.yml` | manual | protected AWS OIDC, EC2, and SSM connectivity evidence |
 | `aws-staging-bootstrap.yml` | manual | approved, idempotent staging host prerequisite installation |
 | `aws-staging-deploy.yml` | manual | approved deployment of the exact protected `main` commit |
+| `aws-staging-verify.yml` | manual | approved real-provider, streaming, disconnect, and restart verification |
 | `release.yml` | signed `v*` tag | publish signed release artifacts |
 
 The CI workflow also verifies both SDK previews, OpenAPI compatibility, network
@@ -122,3 +123,12 @@ the commit as image metadata, applies forward-only migrations, starts the
 single-host staging stack, and runs live/readiness plus temporary API Key
 authentication checks. The PostgreSQL volume is preserved between deployments;
 the `current` symlink changes only after every deployment check passes.
+
+The verification workflow runs separately against the current validated
+deployment. It creates a disposable staging API Key, exercises non-streaming
+and streaming requests through the OpenAI, Anthropic, and Gemini aliases,
+checks recovery after a client disconnect, and restarts the gateway with
+`SIGTERM` to verify graceful shutdown and post-restart authentication. It
+deletes the temporary API Key at exit. Public workflow output contains only
+named pass/fail markers; provider credentials, the temporary key, prompts, and
+model responses remain on the instance.

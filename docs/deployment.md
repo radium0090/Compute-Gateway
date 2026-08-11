@@ -61,6 +61,12 @@ Commit-addressed checkouts live below `/opt/genchi/releases`, while
 This mode is for staging and single-host evaluation. It binds the gateway and
 datastores to loopback and is not the production topology described above.
 
+After deployment, run the protected `AWS staging verify` workflow. It verifies
+all three provider aliases in normal and streaming modes, cancellation recovery,
+graceful gateway restart, and API Key authentication after restart. The workflow
+uses a disposable key and reports only status markers. A successful deployment
+does not substitute for this provider and lifecycle verification.
+
 ## Health semantics
 
 - `/health/live` returns success when the event loop/process can serve; it does
