@@ -46,10 +46,22 @@ jobs:
               exit 1
             fi
           done
-          [[ "$EC2_INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]
-          [[ "$AWS_ROLE_ARN" == "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ComputeGatewayGitHubDeployRole" ]]
-          [[ "$GENCHI_SECRET_ARN" == "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:genchi/staging/runtime-"* ]]
-          [[ "$GENCHI_DEPLOY_PATH" == /opt/* ]]
+          if [[ ! "$EC2_INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]; then
+            echo 'EC2_INSTANCE_ID must be a full EC2 instance ID.' >&2
+            exit 1
+          fi
+          if [[ "$AWS_ROLE_ARN" != "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ComputeGatewayGitHubDeployRole" ]]; then
+            echo 'AWS_ROLE_ARN does not identify the expected deployment role.' >&2
+            exit 1
+          fi
+          if [[ "$GENCHI_SECRET_ARN" != "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:genchi/staging/runtime-"* ]]; then
+            echo 'GENCHI_SECRET_ARN is outside the expected staging secret path.' >&2
+            exit 1
+          fi
+          if [[ "$GENCHI_DEPLOY_PATH" != /opt/* ]]; then
+            echo 'GENCHI_DEPLOY_PATH must be located below /opt.' >&2
+            exit 1
+          fi
 
       - name: Assume the protected AWS deployment role
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
@@ -67,7 +79,10 @@ jobs:
           set -euo pipefail
 
           account="$(aws sts get-caller-identity --query Account --output text)"
-          [[ "$account" == "$AWS_ACCOUNT_ID" ]]
+          if [[ "$account" != "$AWS_ACCOUNT_ID" ]]; then
+            echo 'The assumed role belongs to an unexpected AWS account.' >&2
+            exit 1
+          fi
 
           read -r state profile http_tokens <<<"$(
             aws ec2 describe-instances \
@@ -75,9 +90,23 @@ jobs:
               --query 'Reservations[0].Instances[0].[State.Name,IamInstanceProfile.Arn,MetadataOptions.HttpTokens]' \
               --output text
           )"
-          [[ "$state" == running ]]
-          [[ "$profile" == */instance-profile/"$EC2_IAM_ROLE_NAME" ]]
-          [[ "$http_tokens" == required ]]
+          profile_name="${profile##*/}"
+          printf 'ec2_state=%s\n' "$state"
+          printf 'instance_profile=%s\n' "$profile_name"
+          printf 'imds_http_tokens=%s\n' "$http_tokens"
+
+          if [[ "$state" != running ]]; then
+            echo "The staging EC2 instance is not running (state=${state})." >&2
+            exit 1
+          fi
+          if [[ "$profile_name" != "$EC2_IAM_ROLE_NAME" ]]; then
+            echo "The EC2 instance profile does not match EC2_IAM_ROLE_NAME (profile=${profile_name})." >&2
+            exit 1
+          fi
+          if [[ "$http_tokens" != required ]]; then
+            echo "IMDSv2 is not enforced (HttpTokens=${http_tokens})." >&2
+            exit 1
+          fi
 
           ping_status="$(
             aws ssm describe-instance-information \
@@ -85,7 +114,11 @@ jobs:
               --query 'InstanceInformationList[0].PingStatus' \
               --output text
           )"
-          [[ "$ping_status" == Online ]]
+          printf 'ssm_ping_status=%s\n' "$ping_status"
+          if [[ "$ping_status" != Online ]]; then
+            echo "The staging EC2 instance is not online in Systems Manager (PingStatus=${ping_status})." >&2
+            exit 1
+          fi
 
           echo 'AWS identity, EC2 target, instance profile, IMDSv2, and SSM status are valid.'
 
