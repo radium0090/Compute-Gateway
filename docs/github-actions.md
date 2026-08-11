@@ -10,6 +10,7 @@
 | `kubernetes.yml` | PR, main | Helm and kind verification |
 | `nightly.yml` | schedule/manual | full deterministic and datastore integration suites |
 | `live-provider.yml` | manual | protected OpenAI/Anthropic/Gemini smoke through OpenAI SDK |
+| `aws-staging.yml` | manual | protected AWS OIDC, EC2, and SSM connectivity evidence |
 | `release.yml` | signed `v*` tag | publish signed release artifacts |
 
 The CI workflow also verifies both SDK previews, OpenAPI compatibility, network
@@ -96,3 +97,11 @@ The `live-provider-smoke` environment must require maintainer approval. It holds
 the three provider secrets and non-secret current model names. Its workflow
 checks only that values are non-empty, never prints them, caps each request at
 eight output tokens, and cannot run on pull requests.
+
+The `aws-staging` environment is restricted to `main` and requires maintainer
+approval. It stores only non-secret resource identifiers as environment
+variables. GitHub obtains short-lived AWS credentials through OIDC; long-lived
+AWS access keys and SSH private keys are not stored in GitHub. The connectivity
+job can send the approved read-only probe only to the configured staging
+instance through Systems Manager. The EC2 instance role, not the GitHub role,
+is responsible for reading the staging runtime secret.
