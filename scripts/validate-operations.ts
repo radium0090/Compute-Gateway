@@ -11,6 +11,8 @@ interface Workflow {
       string,
       {
         readonly ['timeout-minutes']?: unknown;
+        readonly environment?: unknown;
+        readonly permissions?: Readonly<Record<string, unknown>>;
         readonly steps?: readonly { readonly uses?: unknown }[];
       }
     >
@@ -85,6 +87,30 @@ async function validateWorkflows(): Promise<void> {
       }
     }
   }
+
+  const awsStagingSource = await read('.github/workflows/aws-staging.yml');
+  const awsStaging = parse(awsStagingSource) as Workflow | null;
+  const connectivity = awsStaging?.jobs?.connectivity;
+  assert(
+    connectivity?.environment === 'aws-staging',
+    'AWS staging connectivity must use the protected aws-staging environment',
+  );
+  assert(
+    connectivity.permissions?.contents === 'read' &&
+      connectivity.permissions['id-token'] === 'write',
+    'AWS staging connectivity must grant only contents:read and id-token:write',
+  );
+  assert(
+    awsStagingSource.includes('vars.AWS_ROLE_ARN') &&
+      awsStagingSource.includes('vars.EC2_INSTANCE_ID'),
+    'AWS staging workflow must receive resource identifiers from environment variables',
+  );
+  assert(
+    !/(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|EC2_SSH_PRIVATE_KEY)/u.test(
+      awsStagingSource,
+    ),
+    'AWS staging workflow must not use long-lived cloud or SSH credentials',
+  );
 }
 
 async function validateHelm(): Promise<void> {
