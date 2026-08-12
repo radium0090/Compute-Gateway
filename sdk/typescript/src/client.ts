@@ -60,6 +60,12 @@ function positiveInteger(value: number, name: string): number {
   return value;
 }
 
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+}
+
 function shouldRetry(status: number): boolean {
   return status === 429 || status >= 500;
 }
@@ -157,11 +163,11 @@ export class RaxComputeGateway {
       throw new TypeError('A RAX Compute Gateway API key is required');
     }
     this.apiKey = apiKey;
-    this.baseUrl = (
+    this.baseUrl = withoutTrailingSlashes(
       options.baseUrl ??
-      environment('RCG_BASE_URL') ??
-      'http://localhost:8080/v1'
-    ).replace(/\/+$/u, '');
+        environment('RCG_BASE_URL') ??
+        'http://localhost:8080/v1',
+    );
     this.timeoutMs = positiveInteger(
       options.timeoutMs ??
         Number(environment('RCG_TIMEOUT_SECONDS') ?? '60') * 1_000,

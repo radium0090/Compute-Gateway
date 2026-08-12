@@ -170,4 +170,26 @@ describe('RAX Compute Gateway TypeScript SDK', () => {
       RaxComputeGatewayConnectionError,
     );
   });
+
+  it('normalizes repeated trailing slashes in linear time', async () => {
+    let requestedUrl = '';
+    const client = new RaxComputeGateway({
+      apiKey: 'fake-client-key',
+      baseUrl: `http://rax-compute-gateway.test/v1${'/'.repeat(10_000)}`,
+      maxRetries: 0,
+      fetchImplementation: (input) => {
+        requestedUrl =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        return Promise.resolve(Response.json({ object: 'list', data: [] }));
+      },
+    });
+
+    await client.models.list();
+
+    expect(requestedUrl).toBe('http://rax-compute-gateway.test/v1/models');
+  });
 });
