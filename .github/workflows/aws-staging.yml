@@ -24,8 +24,8 @@ jobs:
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
       EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
       EC2_IAM_ROLE_NAME: ${{ vars.EC2_IAM_ROLE_NAME }}
-      GENCHI_SECRET_ARN: ${{ vars.GENCHI_SECRET_ARN }}
-      GENCHI_DEPLOY_PATH: ${{ vars.GENCHI_DEPLOY_PATH }}
+      RCG_SECRET_ARN: ${{ vars.RCG_SECRET_ARN }}
+      RCG_DEPLOY_PATH: ${{ vars.RCG_DEPLOY_PATH }}
     steps:
       - name: Validate protected environment variables
         shell: bash
@@ -37,8 +37,8 @@ jobs:
             AWS_ROLE_ARN
             EC2_INSTANCE_ID
             EC2_IAM_ROLE_NAME
-            GENCHI_SECRET_ARN
-            GENCHI_DEPLOY_PATH
+            RCG_SECRET_ARN
+            RCG_DEPLOY_PATH
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
@@ -54,12 +54,12 @@ jobs:
             echo 'AWS_ROLE_ARN does not identify the expected deployment role.' >&2
             exit 1
           fi
-          if [[ "$GENCHI_SECRET_ARN" != "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:genchi/staging/runtime-"* ]]; then
-            echo 'GENCHI_SECRET_ARN is outside the expected staging secret path.' >&2
+          if [[ "$RCG_SECRET_ARN" != "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:rax/compute-gateway/staging/runtime-"* ]]; then
+            echo 'RCG_SECRET_ARN is outside the expected staging secret path.' >&2
             exit 1
           fi
-          if [[ "$GENCHI_DEPLOY_PATH" != /opt/* ]]; then
-            echo 'GENCHI_DEPLOY_PATH must be located below /opt.' >&2
+          if [[ "$RCG_DEPLOY_PATH" != /opt/* ]]; then
+            echo 'RCG_DEPLOY_PATH must be located below /opt.' >&2
             exit 1
           fi
 
@@ -67,7 +67,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          role-session-name: genchi-staging-${{ github.run_id }}
+          role-session-name: rcg-staging-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
           allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
           mask-aws-account-id: true
@@ -150,7 +150,7 @@ jobs:
             aws ssm send-command \
               --instance-ids "$EC2_INSTANCE_ID" \
               --document-name AWS-RunShellScript \
-              --comment 'Genchi staging read-only connectivity check' \
+              --comment 'RAX Compute Gateway staging read-only connectivity check' \
               --timeout-seconds 120 \
               --parameters "$parameters" \
               --query 'Command.CommandId' \

@@ -1,7 +1,7 @@
 {
-  "name": "@genchi-ai/sdk",
+  "name": "@rax-digital/compute-gateway-sdk",
   "version": "0.1.0",
-  "description": "Thin TypeScript client for the Genchi API",
+  "description": "Thin TypeScript client for the RAX Compute Gateway API",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",

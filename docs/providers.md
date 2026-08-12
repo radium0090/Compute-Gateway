@@ -50,7 +50,7 @@ model to the public API.
 - Preserve provider token counts when supplied; mark estimates as estimates.
 - Normalize finish reasons to `stop`, `length`, `tool_calls`,
   `content_filter`, or `null`.
-- Generate Genchi response IDs; retain provider IDs only in protected metadata.
+- Generate RAX Compute Gateway response IDs; retain provider IDs only in protected metadata.
 
 ## Error classification
 

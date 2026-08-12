@@ -11,14 +11,14 @@ import {
   type ChatCompletionRequest,
   type ChatCompletionResponse,
   type ErrorResponse,
-} from '@genchi/api-contract';
-import type { CreateChatCompletionService } from '@genchi/application';
+} from '@rax-digital/api-contract';
+import type { CreateChatCompletionService } from '@rax-digital/application';
 import {
   ProviderStreamFailure,
   type CanonicalChatChunk,
   type CanonicalChatRequest,
   type ProviderError,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 import { bearerCredential } from './authentication.js';
 import {
@@ -135,7 +135,7 @@ function toPublicChunk(
             total_tokens: chunk.usage.totalTokens,
           },
         }),
-    genchi: {
+    rax: {
       request_id: metadata.requestId,
       provider: metadata.provider,
       provider_model: metadata.providerModel,
@@ -245,7 +245,7 @@ async function sendStreamingCompletion(
   const iterator = result.stream[Symbol.asyncIterator]();
   try {
     // Establish the upstream stream before committing downstream headers. A
-    // failure here can still be returned as the normal Genchi error envelope.
+    // failure here can still be returned as the normal RAX Compute Gateway error envelope.
     const first = await iterator.next();
     if (first.done) {
       const mapping = providerErrorMapping({
@@ -262,7 +262,7 @@ async function sendStreamingCompletion(
     }
 
     const metadata = {
-      id: `chatcmpl_gch_${idGenerator()}`,
+      id: `chatcmpl_rcg_${idGenerator()}`,
       created: Math.floor(clock().getTime() / 1_000),
       requestedModel: request.body.model,
       requestId: request.id,
@@ -409,7 +409,7 @@ export function registerChatCompletionRoute(
         );
 
         const response: ChatCompletionResponse = {
-          id: `chatcmpl_gch_${idGenerator()}`,
+          id: `chatcmpl_rcg_${idGenerator()}`,
           object: 'chat.completion',
           created: Math.floor(clock().getTime() / 1_000),
           model: request.body.model,
@@ -425,7 +425,7 @@ export function registerChatCompletionRoute(
             completion_tokens: result.response.usage.completionTokens,
             total_tokens: result.response.usage.totalTokens,
           },
-          genchi: {
+          rax: {
             request_id: request.id,
             provider: result.route.provider,
             provider_model: result.route.providerModel,

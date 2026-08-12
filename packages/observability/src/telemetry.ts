@@ -53,7 +53,7 @@ function signalsEndpoint(
 
 /** Registers a constant gauge that lets operators match telemetry to a build. */
 export function registerBuildInfo(meter: Meter, identity: BuildIdentity): void {
-  const buildInfo = meter.createObservableGauge('genchi_build_info', {
+  const buildInfo = meter.createObservableGauge('rcg_build_info', {
     description: 'Build identity for the running gateway',
   });
   buildInfo.addCallback((result) => {
@@ -103,7 +103,7 @@ export class TelemetryLifecycle {
 
     this.sdk = new NodeSDK({
       resource: resourceFromAttributes({
-        [ATTR_SERVICE_NAME]: 'genchi-gateway',
+        [ATTR_SERVICE_NAME]: 'rax-compute-gateway',
         [ATTR_SERVICE_VERSION]: options.serviceVersion,
         [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: options.environment,
       }),
@@ -112,7 +112,7 @@ export class TelemetryLifecycle {
         new FastifyOtelInstrumentation({ registerOnInitialization: true }),
       ],
       // An explicit empty list prevents NodeSDK from silently creating an
-      // environment-derived exporter when Genchi telemetry is not configured.
+      // environment-derived exporter when RAX Compute Gateway telemetry is not configured.
       spanProcessors:
         traceExporter === undefined
           ? []
@@ -124,7 +124,10 @@ export class TelemetryLifecycle {
   public start(): void {
     this.sdk.start();
     if (!this.started) {
-      registerBuildInfo(metrics.getMeter('genchi-gateway'), this.buildIdentity);
+      registerBuildInfo(
+        metrics.getMeter('rax-compute-gateway'),
+        this.buildIdentity,
+      );
       this.started = true;
     }
   }
@@ -150,6 +153,6 @@ export function getCorrelationContext(): CorrelationContext {
     : { traceId: context.traceId, spanId: context.spanId };
 }
 
-export function getGenchiMeter() {
-  return metrics.getMeter('genchi-gateway');
+export function getRaxComputeGatewayMeter() {
+  return metrics.getMeter('rax-compute-gateway');
 }

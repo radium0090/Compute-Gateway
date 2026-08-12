@@ -9,7 +9,7 @@ error instead of being silently discarded.
 
 Base URL: `https://<host>/v1`
 
-All JSON uses UTF-8. Clients send `Authorization: Bearer <genchi-api-key>`.
+All JSON uses UTF-8. Clients send `Authorization: Bearer <rax-api-key>`.
 Request bodies are limited to 2 MiB by default.
 
 ## Endpoints
@@ -31,7 +31,7 @@ there is no public admin HTTP API.
 
 ```json
 {
-  "model": "genchi/fast",
+  "model": "rax/fast",
   "messages": [
     {"role": "system", "content": "Be concise."},
     {"role": "user", "content": "Explain retries."}
@@ -66,10 +66,10 @@ silently discarded.
 
 ```json
 {
-  "id": "chatcmpl_gch_01J...",
+  "id": "chatcmpl_rcg_01J...",
   "object": "chat.completion",
   "created": 1770000000,
-  "model": "genchi/fast",
+  "model": "rax/fast",
   "choices": [{
     "index": 0,
     "message": {"role": "assistant", "content": "..."},
@@ -80,7 +80,7 @@ silently discarded.
     "completion_tokens": 18,
     "total_tokens": 42
   },
-  "genchi": {
+  "rax": {
     "request_id": "req_01J...",
     "provider": "openai",
     "provider_model": "gpt-5-mini",
@@ -90,7 +90,7 @@ silently discarded.
 ```
 
 `model` echoes the requested public model. Physical routing information is in
-the `genchi` extension. Provider request IDs MAY be returned there when safe.
+the `rax` extension. Provider request IDs MAY be returned there when safe.
 
 ## Streaming
 
@@ -115,10 +115,10 @@ provider models. It does not proxy the full provider catalog.
 {
   "object": "list",
   "data": [{
-    "id": "genchi/fast",
+    "id": "rax/fast",
     "object": "model",
     "created": 1770000000,
-    "owned_by": "genchi"
+    "owned_by": "rax-digital"
   }]
 }
 ```
@@ -135,7 +135,7 @@ Every JSON error uses one stable envelope:
     "code": "no_healthy_route",
     "param": "model"
   },
-  "genchi": {"request_id": "req_01J...", "retryable": true}
+  "rax": {"request_id": "req_01J...", "retryable": true}
 }
 ```
 
@@ -158,10 +158,10 @@ When `Retry-After` is known it is returned in seconds.
 ## Headers and idempotency
 
 - `x-request-id`: caller-supplied value is accepted only when 1..128 safe ASCII
-  characters; otherwise Genchi generates one. It is echoed on every response.
+  characters; otherwise RAX Compute Gateway generates one. It is echoed on every response.
 - `traceparent`: accepted and propagated according to W3C Trace Context.
 - `Idempotency-Key`: reserved; it is not honored for chat completions in MVP.
-- `x-genchi-timeout-ms`: not accepted from untrusted clients. Deadlines come
+- `x-rax-timeout-ms`: not accepted from untrusted clients. Deadlines come
   from server policy.
 
 ## Versioning

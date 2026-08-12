@@ -1,4 +1,4 @@
-from ._client import Genchi, GenchiAPIError, GenchiConnectionError
+from ._client import RaxComputeGateway, RaxComputeGatewayAPIError, RaxComputeGatewayConnectionError
 from ._generated.models import (
     ChatCompletionChunk,
     ChatCompletionRequest,
@@ -12,9 +12,9 @@ __all__ = [
     "ChatCompletionChunk",
     "ChatCompletionRequest",
     "ChatCompletionResponse",
-    "Genchi",
-    "GenchiAPIError",
-    "GenchiConnectionError",
+    "RaxComputeGateway",
+    "RaxComputeGatewayAPIError",
+    "RaxComputeGatewayConnectionError",
     "LivenessResponse",
     "ModelList",
     "ReadinessResponse",

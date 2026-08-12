@@ -2,15 +2,15 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { loadConfig } from '@genchi/config';
-import { createLogger } from '@genchi/observability';
+import { loadConfig } from '@rax-digital/config';
+import { createLogger } from '@rax-digital/observability';
 
 import { buildGateway } from './app.js';
 
 const config = loadConfig({
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 });
 
 const apps: Awaited<ReturnType<typeof buildGateway>>[] = [];
@@ -75,7 +75,7 @@ describe('network streaming lifecycle', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'genchi/fast',
+          model: 'rax/fast',
           messages: [{ role: 'user', content: 'stream order test' }],
           stream: true,
         }),
@@ -141,7 +141,7 @@ describe('network streaming lifecycle', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'genchi/fast',
+          model: 'rax/fast',
           messages: [{ role: 'user', content: 'disconnect test' }],
           stream: true,
         }),

@@ -14,7 +14,7 @@ import {
   type ApiKeyPolicy,
   type ApiKeyRepository,
   type TenantId,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 const environmentCodes = {
   development: 'dev',
@@ -60,7 +60,7 @@ export type AuthenticationResult =
 
 type RandomBytes = (size: number) => Uint8Array;
 
-/** Computes the accepted HMAC-SHA-256 representation of a Genchi key. */
+/** Computes the accepted HMAC-SHA-256 representation of a RAX Compute Gateway key. */
 export function hashApiKeyCredential(
   credential: string,
   pepper: string,
@@ -73,7 +73,7 @@ export function parseApiKeyCredential(
   credential: string,
 ): ParsedApiKeyCredential | null {
   const match =
-    /^gch_(dev|test|stg|prod)_([A-Za-z0-9-]{8,64})_([A-Za-z0-9_-]{43,})$/.exec(
+    /^rcg_(dev|test|stg|prod)_([A-Za-z0-9-]{8,64})_([A-Za-z0-9_-]{43,})$/.exec(
       credential,
     );
   if (match === null) {
@@ -107,7 +107,7 @@ export function provisionApiKey(
 ): ProvisionedApiKey {
   const publicId = Buffer.from(randomBytes(12)).toString('hex');
   const secret = Buffer.from(randomBytes(32)).toString('base64url');
-  const credential = `gch_${environmentCodes[input.environment]}_${publicId}_${secret}`;
+  const credential = `rcg_${environmentCodes[input.environment]}_${publicId}_${secret}`;
   const apiKey: ApiKey = {
     id: input.id,
     tenantId: input.tenantId,
@@ -129,7 +129,7 @@ export function provisionApiKey(
   return { credential, apiKey: validation.value };
 }
 
-/** Verifies Genchi credentials while exposing one uniform invalid result. */
+/** Verifies RAX Compute Gateway credentials while exposing one uniform invalid result. */
 export class ApiKeyAuthenticator {
   public constructor(
     private readonly repository: ApiKeyRepository,

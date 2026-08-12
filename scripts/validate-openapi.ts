@@ -50,7 +50,10 @@ function resolvePointer(document: unknown, pointer: string): unknown {
 
 const root = path.resolve(import.meta.dirname, '..');
 const document = parse(
-  await readFile(path.join(root, 'openapi', 'genchi.openapi.yaml'), 'utf8'),
+  await readFile(
+    path.join(root, 'openapi', 'compute-gateway.openapi.yaml'),
+    'utf8',
+  ),
 ) as unknown;
 const api = record(document, 'document');
 if (api.openapi !== '3.1.0') throw new Error('OpenAPI version must be 3.1.0');

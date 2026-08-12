@@ -1,5 +1,5 @@
 {
-  "name": "@genchi/testkit",
+  "name": "@rax-digital/testkit",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "@genchi/domain": "workspace:*",
+    "@rax-digital/domain": "workspace:*",
     "vitest": "4.1.10"
   }
 }

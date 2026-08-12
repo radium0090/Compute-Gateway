@@ -24,22 +24,22 @@ spec:
           image: postgres:16.10-bookworm
           env:
             - name: POSTGRES_DB
-              value: genchi
+              value: compute_gateway
             - name: POSTGRES_USER
-              value: genchi
+              value: rcg
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: genchi-ci-secrets
+                  name: rax-compute-gateway-ci-secrets
                   key: postgres-password
           ports:
             - name: postgres
               containerPort: 5432
           readinessProbe:
             exec:
-              command: [pg_isready, -U, genchi, -d, genchi]
+              command: [pg_isready, -U, rcg, -d, compute_gateway]
             periodSeconds: 2
             timeoutSeconds: 2
             failureThreshold: 30

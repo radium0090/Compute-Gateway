@@ -1,9 +1,9 @@
-import type { ErrorResponse } from '@genchi/api-contract';
+import type { ErrorResponse } from '@rax-digital/api-contract';
 import type {
   CreateChatCompletionResult,
   CreateChatCompletionStreamResult,
-} from '@genchi/application';
-import type { ProviderError } from '@genchi/domain';
+} from '@rax-digital/application';
+import type { ProviderError } from '@rax-digital/domain';
 
 export interface ErrorMapping {
   readonly statusCode: 400 | 401 | 403 | 404 | 408 | 429 | 502 | 503 | 504;
@@ -180,6 +180,6 @@ export function errorResponse(
       code: mapping.code,
       param: mapping.param,
     },
-    genchi: { request_id: requestId, retryable: mapping.retryable },
+    rax: { request_id: requestId, retryable: mapping.retryable },
   };
 }

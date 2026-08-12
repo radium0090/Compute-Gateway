@@ -1,9 +1,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "genchi.fullname" . }}-migrate
+  name: {{ include "rax-compute-gateway.fullname" . }}-migrate
   labels:
-    {{- include "genchi.labels" . | nindent 4 }}
+    {{- include "rax-compute-gateway.labels" . | nindent 4 }}
   annotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-5"
@@ -14,7 +14,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "genchi.selectorLabels" . | nindent 8 }}
+        {{- include "rax-compute-gateway.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: migration
     spec:
       restartPolicy: Never
@@ -27,11 +27,11 @@ spec:
           type: RuntimeDefault
       containers:
         - name: migrate
-          image: {{ include "genchi.image" . | quote }}
+          image: {{ include "rax-compute-gateway.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: [migrate, up]
           env:
-            {{- include "genchi.migrationEnvironment" . | nindent 12 }}
+            {{- include "rax-compute-gateway.migrationEnvironment" . | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp

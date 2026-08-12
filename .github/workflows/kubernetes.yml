@@ -27,9 +27,9 @@ jobs:
           version: v4.1.1
       - name: Lint and render chart variants
         run: |
-          helm lint --strict deploy/helm/genchi
-          helm template genchi deploy/helm/genchi > rendered-default.yaml
-          helm template genchi deploy/helm/genchi \
+          helm lint --strict deploy/helm/rax-compute-gateway
+          helm template rcg deploy/helm/rax-compute-gateway > rendered-default.yaml
+          helm template rcg deploy/helm/rax-compute-gateway \
             --set autoscaling.enabled=true \
             --set ingress.enabled=true \
             --set ingress.className=nginx \
@@ -52,57 +52,57 @@ jobs:
         with:
           version: v0.31.0
           node_image: kindest/node:v1.35.0@sha256:452d707d4862f52530247495d180205e029056831160e22870e37e3f6c1ac31f
-          cluster_name: genchi-validation
+          cluster_name: rax-compute-gateway-validation
           wait: 90s
       - name: Validate rendered manifests against Kubernetes API
         run: |
-          helm template genchi deploy/helm/genchi --include-crds \
+          helm template rcg deploy/helm/rax-compute-gateway --include-crds \
             | kubectl apply --dry-run=server -f -
           # Server-side dry-run validates a Namespace but does not persist it for
           # namespaced resources that follow in the same multi-document manifest.
-          kubectl create namespace genchi
-          kubectl apply --dry-run=server -f deploy/kubernetes/examples/genchi.yaml
+          kubectl create namespace rax-compute-gateway
+          kubectl apply --dry-run=server -f deploy/kubernetes/examples/rax-compute-gateway.yaml
           kubectl apply --dry-run=server -f deploy/kubernetes/ci/dependencies.yaml
       - name: Build and load release-candidate image
         run: |
           docker build \
             --build-arg VERSION=0.1.0-rc \
             --build-arg REVISION="$GITHUB_SHA" \
-            --tag genchi:rc .
-          kind load docker-image genchi:rc --name genchi-validation
+            --tag rax-compute-gateway:rc .
+          kind load docker-image rax-compute-gateway:rc --name rax-compute-gateway-validation
       - name: Apply disposable dependencies
         run: |
-          kubectl create namespace genchi-rc
-          kubectl -n genchi-rc create secret generic genchi-ci-secrets \
+          kubectl create namespace rcg-ci
+          kubectl -n rcg-ci create secret generic rax-compute-gateway-ci-secrets \
             --from-literal=postgres-password=ci-only-password \
-            --from-literal=database-url=postgresql://genchi:ci-only-password@postgres:5432/genchi \
+            --from-literal=database-url=postgresql://rcg:ci-only-password@postgres:5432/compute_gateway \
             --from-literal=redis-url=redis://redis:6379 \
             --from-literal=key-hash-pepper=ci-only-pepper-with-at-least-32-characters \
             --from-literal=openai-api-key=fake-openai \
             --from-literal=anthropic-api-key=fake-anthropic \
             --from-literal=gemini-api-key=fake-gemini
-          kubectl -n genchi-rc apply -f deploy/kubernetes/ci/dependencies.yaml
+          kubectl -n rcg-ci apply -f deploy/kubernetes/ci/dependencies.yaml
       - name: Wait for disposable PostgreSQL
-        run: kubectl -n genchi-rc rollout status deployment/postgres --timeout=180s
+        run: kubectl -n rcg-ci rollout status deployment/postgres --timeout=180s
       - name: Wait for disposable Redis
-        run: kubectl -n genchi-rc rollout status deployment/redis --timeout=180s
+        run: kubectl -n rcg-ci rollout status deployment/redis --timeout=180s
       - name: Install two ready replicas
         run: |
-          helm upgrade --install genchi deploy/helm/genchi \
-            --namespace genchi-rc \
-            --set image.repository=genchi \
+          helm upgrade --install rcg deploy/helm/rax-compute-gateway \
+            --namespace rcg-ci \
+            --set image.repository=rax-compute-gateway \
             --set image.tag=rc \
             --set image.pullPolicy=Never \
-            --set existingSecret=genchi-ci-secrets \
+            --set existingSecret=rax-compute-gateway-ci-secrets \
             --set runtime.environment=staging \
             --set-string runtime.otlpEndpoint="" \
             --set-string podAnnotations.rc-generation=initial \
             --wait --timeout=5m
-          test "$(kubectl -n genchi-rc get deployment genchi-genchi -o jsonpath='{.status.readyReplicas}')" = 2
-          test "$(kubectl -n genchi-rc get deployment genchi-genchi -o jsonpath='{.status.availableReplicas}')" = 2
+          test "$(kubectl -n rcg-ci get deployment rcg-rax-compute-gateway -o jsonpath='{.status.readyReplicas}')" = 2
+          test "$(kubectl -n rcg-ci get deployment rcg-rax-compute-gateway -o jsonpath='{.status.availableReplicas}')" = 2
       - name: Exercise readiness and rolling upgrade
         run: |
-          kubectl -n genchi-rc port-forward service/genchi-genchi 18080:80 >port-forward.log 2>&1 &
+          kubectl -n rcg-ci port-forward service/rcg-rax-compute-gateway 18080:80 >port-forward.log 2>&1 &
           FORWARD_PID=$!
           trap 'kill "$FORWARD_PID" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
@@ -114,19 +114,19 @@ jobs:
           curl --fail --silent http://127.0.0.1:18080/health/ready >/dev/null
           kill "$FORWARD_PID"
           wait "$FORWARD_PID" 2>/dev/null || true
-          helm upgrade genchi deploy/helm/genchi \
-            --namespace genchi-rc \
-            --set image.repository=genchi \
+          helm upgrade rcg deploy/helm/rax-compute-gateway \
+            --namespace rcg-ci \
+            --set image.repository=rax-compute-gateway \
             --set image.tag=rc \
             --set image.pullPolicy=Never \
-            --set existingSecret=genchi-ci-secrets \
+            --set existingSecret=rax-compute-gateway-ci-secrets \
             --set runtime.environment=staging \
             --set-string runtime.otlpEndpoint="" \
             --set-string podAnnotations.rc-generation=rollout \
             --wait --timeout=5m
-          kubectl -n genchi-rc rollout status deployment/genchi-genchi --timeout=180s
-          test "$(kubectl -n genchi-rc get deployment genchi-genchi -o jsonpath='{.status.readyReplicas}')" = 2
-          kubectl -n genchi-rc port-forward service/genchi-genchi 18080:80 >port-forward-after-rollout.log 2>&1 &
+          kubectl -n rcg-ci rollout status deployment/rcg-rax-compute-gateway --timeout=180s
+          test "$(kubectl -n rcg-ci get deployment rcg-rax-compute-gateway -o jsonpath='{.status.readyReplicas}')" = 2
+          kubectl -n rcg-ci port-forward service/rcg-rax-compute-gateway 18080:80 >port-forward-after-rollout.log 2>&1 &
           FORWARD_PID=$!
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:18080/health/ready >/dev/null; then

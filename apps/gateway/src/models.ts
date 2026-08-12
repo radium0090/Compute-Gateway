@@ -5,8 +5,8 @@ import {
   ModelListSchema,
   type ErrorResponse,
   type ModelList,
-} from '@genchi/api-contract';
-import type { ListModelsService } from '@genchi/application';
+} from '@rax-digital/api-contract';
+import type { ListModelsService } from '@rax-digital/application';
 
 import { bearerCredential } from './authentication.js';
 
@@ -23,7 +23,7 @@ function authenticationError(requestId: string): ErrorResponse {
       code: 'invalid_api_key',
       param: null,
     },
-    genchi: { request_id: requestId, retryable: false },
+    rax: { request_id: requestId, retryable: false },
   };
 }
 
@@ -55,7 +55,7 @@ export function registerModelsRoute(
           id: model.id,
           object: 'model',
           created,
-          owned_by: 'genchi',
+          owned_by: 'rax-digital',
         })),
       };
       return response;

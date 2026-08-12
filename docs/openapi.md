@@ -3,8 +3,8 @@
 ## Source of truth
 
 Runtime TypeBox/JSON Schemas in `packages/api-contract` are the editable source
-of truth. The build produces `openapi/genchi.openapi.yaml`. The generated file
-is committed so users can inspect and generate clients without building Genchi.
+of truth. The build produces `openapi/compute-gateway.openapi.yaml`. The generated file
+is committed so users can inspect and generate clients without building RAX Compute Gateway.
 
 The generated document uses OpenAPI 3.1 and JSON Schema 2020-12.
 
@@ -67,7 +67,7 @@ Any contract change includes:
 ```yaml
 openapi: 3.1.0
 info:
-  title: Genchi API
+  title: RAX Compute Gateway API
   version: 1.0.0
 paths:
   /v1/chat/completions:

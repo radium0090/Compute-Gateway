@@ -1,17 +1,17 @@
 import { randomUUID } from 'node:crypto';
 
-import { provisionApiKey } from '@genchi/auth';
-import type { RuntimeConfig } from '@genchi/config';
+import { provisionApiKey } from '@rax-digital/auth';
+import type { RuntimeConfig } from '@rax-digital/config';
 import {
   apiKeyId,
   tenantId,
   type ApiKeyEnvironment,
   type ApiKeyRepository,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 import {
   createPostgresPool,
   PostgresApiKeyRepository,
-} from '@genchi/persistence-postgres';
+} from '@rax-digital/persistence-postgres';
 
 interface KeyCommandDependencies {
   readonly repository: ApiKeyRepository;
@@ -204,7 +204,7 @@ export async function executeKeyCommand(
   const operation = args[0];
   if (operation === 'create') return createKey(args.slice(1), dependencies);
   if (operation === 'revoke') return revokeKey(args.slice(1), dependencies);
-  throw new Error('Usage: genchi keys <create|revoke> [options]');
+  throw new Error('Usage: rax-compute-gateway keys <create|revoke> [options]');
 }
 
 export async function runKeyCommand(
@@ -212,7 +212,7 @@ export async function runKeyCommand(
   args: readonly string[],
 ): Promise<void> {
   if (config.masterKey === undefined) {
-    throw new Error('GENCHI_MASTER_KEY is required for key commands');
+    throw new Error('RCG_MASTER_KEY is required for key commands');
   }
   const pool = createPostgresPool({
     databaseUrl: config.databaseUrl,

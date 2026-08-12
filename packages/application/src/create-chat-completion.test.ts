@@ -10,8 +10,8 @@ import type {
   RequestAdmissionController,
   RoutePlanner,
   RouteResolver,
-} from '@genchi/domain';
-import { ProviderStreamFailure, apiKeyId } from '@genchi/domain';
+} from '@rax-digital/domain';
+import { ProviderStreamFailure, apiKeyId } from '@rax-digital/domain';
 
 import { CreateChatCompletionService } from './create-chat-completion.js';
 
@@ -20,7 +20,7 @@ const streamingApiKey = {
   policy: { allowStreaming: true },
 } as ApiKey;
 const request = {
-  model: 'genchi/fast',
+  model: 'rax/fast',
   messages: [{ role: 'user' as const, content: 'content stays in memory' }],
 };
 

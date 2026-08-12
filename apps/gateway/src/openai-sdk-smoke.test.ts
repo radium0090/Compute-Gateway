@@ -2,15 +2,15 @@ import type { FastifyInstance } from 'fastify';
 import OpenAI from 'openai';
 import { describe, expect, it } from 'vitest';
 
-import { loadConfig } from '@genchi/config';
-import { createLogger } from '@genchi/observability';
+import { loadConfig } from '@rax-digital/config';
+import { createLogger } from '@rax-digital/observability';
 
 import { buildGateway } from './app.js';
 
 const config = loadConfig({
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 });
 
 function injectFetch(app: FastifyInstance): typeof fetch {
@@ -86,24 +86,24 @@ describe('OpenAI Node SDK compatibility', () => {
       },
       listModelsService: {
         execute: () =>
-          Promise.resolve({ ok: true, models: [{ id: 'genchi/fast' }] }),
+          Promise.resolve({ ok: true, models: [{ id: 'rax/fast' }] }),
       },
     });
     const client = new OpenAI({
       apiKey: 'fake-client-key',
-      baseURL: 'http://genchi.test/v1',
+      baseURL: 'http://rax-compute-gateway.test/v1',
       fetch: injectFetch(app),
       maxRetries: 0,
     });
 
     const completion = await client.chat.completions.create({
-      model: 'genchi/fast',
+      model: 'rax/fast',
       messages: [{ role: 'user', content: 'SDK smoke prompt' }],
     });
     expect(completion.choices[0]?.message.content).toBe('SDK answer');
 
     const stream = await client.chat.completions.create({
-      model: 'genchi/fast',
+      model: 'rax/fast',
       messages: [{ role: 'user', content: 'SDK stream prompt' }],
       stream: true,
     });
@@ -114,7 +114,7 @@ describe('OpenAI Node SDK compatibility', () => {
     expect(streamed).toBe('SDK stream');
 
     const models = await client.models.list();
-    expect(models.data.map((model) => model.id)).toEqual(['genchi/fast']);
+    expect(models.data.map((model) => model.id)).toEqual(['rax/fast']);
     await app.close();
   });
 });

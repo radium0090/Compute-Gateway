@@ -5,7 +5,7 @@ export const ModelSchema = Type.Object(
     id: Type.String({ minLength: 1 }),
     object: Type.Literal('model'),
     created: Type.Integer({ minimum: 0 }),
-    owned_by: Type.Literal('genchi'),
+    owned_by: Type.Literal('rax-digital'),
   },
   { additionalProperties: false },
 );

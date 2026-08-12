@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "genchi.fullname" . }}
+  name: {{ include "rax-compute-gateway.fullname" . }}
   labels:
-    {{- include "genchi.labels" . | nindent 4 }}
+    {{- include "rax-compute-gateway.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "genchi.fullname" . }}
+    name: {{ include "rax-compute-gateway.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   behavior:

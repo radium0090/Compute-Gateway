@@ -1,15 +1,15 @@
-import { Genchi } from '../../sdk/typescript/dist/index.js';
+import { RaxComputeGateway } from '../../sdk/typescript/dist/index.js';
 
-const client = new Genchi();
+const client = new RaxComputeGateway();
 const completion = await client.chat.completions.create({
-  model: 'genchi/fast',
+  model: 'rax/fast',
   messages: [{ role: 'user', content: 'Hello from Node.js' }],
 });
 
 process.stdout.write(`${completion.choices[0]?.message.content ?? ''}\n`);
 
 const stream = await client.chat.completions.stream({
-  model: 'genchi/fast',
+  model: 'rax/fast',
   messages: [{ role: 'user', content: 'Count to three' }],
 });
 const iterator = stream[Symbol.asyncIterator]();

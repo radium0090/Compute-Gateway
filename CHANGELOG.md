@@ -1,9 +1,14 @@
 # Changelog
 
-All notable changes to Genchi are documented in this file. The project follows
+All notable changes to RAX Compute Gateway are documented in this file. The project follows
 Semantic Versioning and keeps release dates in UTC.
 
 ## Unreleased
+
+### Changed
+
+- Renamed the platform to RAX Compute Gateway under RAX Digital ownership,
+  separating the neutral product identity from customer tenant names.
 
 ### Added
 
@@ -11,7 +16,7 @@ Semantic Versioning and keeps release dates in UTC.
 - OpenAI, Anthropic, and Gemini provider adapters with shared conformance tests.
 - Deterministic aliases, fallback, bounded retries, deadlines, concurrency
   limits, and circuit state.
-- Hashed Genchi API keys, model permissions, and operator key commands.
+- Hashed RAX Compute Gateway API keys, model permissions, and operator key commands.
 - PostgreSQL metadata persistence and optional Redis coordination.
 - OpenTelemetry metrics, traces, and structured redacted logging.
 - Docker Compose, hardened OCI image, Kubernetes manifests, and Helm chart.

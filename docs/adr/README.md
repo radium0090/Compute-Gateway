@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-ADRs record decisions that materially constrain Genchi architecture or public
+ADRs record decisions that materially constrain RAX Compute Gateway architecture or public
 behavior. Accepted ADRs are normative and take precedence over general design
 documents.
 
@@ -12,13 +12,14 @@ documents.
 | [0002](0002-openai-compatible-api.md) | OpenAI-compatible public API | Accepted |
 | [0003](0003-canonical-provider-adapters.md) | Canonical domain and provider adapters | Accepted |
 | [0004](0004-deterministic-policy-routing.md) | Deterministic policy routing | Accepted |
-| [0005](0005-api-key-and-byok-auth.md) | Genchi keys and centrally managed BYOK | Accepted |
+| [0005](0005-api-key-and-byok-auth.md) | RAX Compute Gateway keys and centrally managed BYOK | Accepted |
 | [0006](0006-postgres-and-optional-redis.md) | PostgreSQL plus optional Redis | Accepted |
 | [0007](0007-opentelemetry-observability.md) | OpenTelemetry-first observability | Accepted |
 | [0008](0008-stateless-oci-kubernetes-deployment.md) | Stateless OCI/Kubernetes deployment | Accepted |
 | [0009](0009-no-content-persistence-by-default.md) | No content persistence by default | Accepted |
 | [0010](0010-apache-2-license.md) | Apache-2.0 licensing intent | Accepted |
 | [0011](0011-node-24-runtime.md) | Node.js 24 runtime baseline | Accepted |
+| [0012](0012-rax-digital-product-identity.md) | RAX Digital product identity and tenant separation | Accepted |
 
 ## Format and lifecycle
 

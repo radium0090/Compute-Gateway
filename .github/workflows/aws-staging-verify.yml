@@ -24,7 +24,7 @@ jobs:
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
       EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
       EC2_IAM_ROLE_NAME: ${{ vars.EC2_IAM_ROLE_NAME }}
-      GENCHI_DEPLOY_PATH: ${{ vars.GENCHI_DEPLOY_PATH }}
+      RCG_DEPLOY_PATH: ${{ vars.RCG_DEPLOY_PATH }}
     steps:
       - name: Validate protected verification context
         shell: bash
@@ -36,7 +36,7 @@ jobs:
             AWS_ROLE_ARN
             EC2_INSTANCE_ID
             EC2_IAM_ROLE_NAME
-            GENCHI_DEPLOY_PATH
+            RCG_DEPLOY_PATH
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
@@ -48,13 +48,13 @@ jobs:
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EC2_INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]
           [[ "$AWS_ROLE_ARN" == "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ComputeGatewayGitHubDeployRole" ]]
-          [[ "$GENCHI_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]
+          [[ "$RCG_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]
 
       - name: Assume the protected AWS deployment role
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          role-session-name: genchi-verify-${{ github.run_id }}
+          role-session-name: rcg-verify-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
           allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
           mask-aws-account-id: true
@@ -108,7 +108,7 @@ jobs:
           git -C "$verification_root" checkout --detach "$commit_sha"
           [[ "$(git -C "$verification_root" rev-parse HEAD)" == "$commit_sha" ]]
 
-          export GENCHI_DEPLOY_PATH="$deploy_path"
+          export RCG_DEPLOY_PATH="$deploy_path"
           exec "$verification_root/scripts/verify-aws-staging.sh"
           SCRIPT
           )"
@@ -116,7 +116,7 @@ jobs:
           parameters="$(
             jq -cn \
               --arg script "$script_base64" \
-              --arg path "$GENCHI_DEPLOY_PATH" \
+              --arg path "$RCG_DEPLOY_PATH" \
               --arg commit "$GITHUB_SHA" \
               '{commands: ["printf %s " + ($script | @sh) + " | base64 -d | bash -s -- " + ($path | @sh) + " " + ($commit | @sh)]}'
           )"
@@ -124,7 +124,7 @@ jobs:
             aws ssm send-command \
               --instance-ids "$EC2_INSTANCE_ID" \
               --document-name AWS-RunShellScript \
-              --comment "Genchi staging verification ${GITHUB_SHA}" \
+              --comment "RAX Compute Gateway staging verification ${GITHUB_SHA}" \
               --timeout-seconds 1200 \
               --parameters "$parameters" \
               --query 'Command.CommandId' \

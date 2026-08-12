@@ -1,13 +1,13 @@
 # Examples
 
-These examples target a running Genchi gateway and read credentials from
+These examples target a running RAX Compute Gateway instance and read credentials from
 environment variables so they are never stored in source files.
 
 Set the client key and, if necessary, override the local base URL:
 
 ```bash
-export GENCHI_API_KEY='<client-key>'
-export GENCHI_BASE_URL='http://localhost:8080/v1'
+export RCG_API_KEY='<client-key>'
+export RCG_BASE_URL='http://localhost:8080/v1'
 ```
 
 Run the curl example:

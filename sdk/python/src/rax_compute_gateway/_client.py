@@ -18,7 +18,7 @@ from ._generated.models import (
 )
 
 
-class GenchiAPIError(Exception):
+class RaxComputeGatewayAPIError(Exception):
     def __init__(
         self,
         message: str,
@@ -37,7 +37,7 @@ class GenchiAPIError(Exception):
         self.param = param
 
 
-class GenchiConnectionError(Exception):
+class RaxComputeGatewayConnectionError(Exception):
     pass
 
 
@@ -76,7 +76,7 @@ def _bounded_int(value: int, name: str, *, positive: bool) -> int:
 
 
 class _Completions:
-    def __init__(self, client: Genchi) -> None:
+    def __init__(self, client: RaxComputeGateway) -> None:
         self._client = client
 
     def create(self, **request: Any) -> ChatCompletionResponse:
@@ -92,12 +92,12 @@ class _Completions:
 
 
 class _Chat:
-    def __init__(self, client: Genchi) -> None:
+    def __init__(self, client: RaxComputeGateway) -> None:
         self.completions = _Completions(client)
 
 
 class _Models:
-    def __init__(self, client: Genchi) -> None:
+    def __init__(self, client: RaxComputeGateway) -> None:
         self._client = client
 
     def list(self) -> ModelList:
@@ -105,7 +105,7 @@ class _Models:
 
 
 class _Health:
-    def __init__(self, client: Genchi) -> None:
+    def __init__(self, client: RaxComputeGateway) -> None:
         self._client = client
 
     def live(self) -> LivenessResponse:
@@ -115,7 +115,7 @@ class _Health:
         return cast(ReadinessResponse, self._client._health("/health/ready"))
 
 
-class Genchi:
+class RaxComputeGateway:
     def __init__(
         self,
         *,
@@ -125,26 +125,26 @@ class Genchi:
         max_retries: int | None = None,
         transport: Transport | None = None,
     ) -> None:
-        resolved_key = api_key if api_key is not None else os.getenv("GENCHI_API_KEY")
+        resolved_key = api_key if api_key is not None else os.getenv("RCG_API_KEY")
         if not resolved_key:
-            raise ValueError("A Genchi API key is required")
+            raise ValueError("A RAX Compute Gateway API key is required")
         self._api_key = resolved_key
         self._base_url = (
             base_url
-            or os.getenv("GENCHI_BASE_URL")
+            or os.getenv("RCG_BASE_URL")
             or "http://localhost:8080/v1"
         ).rstrip("/")
         self._timeout = _bounded_int(
             timeout_seconds
             if timeout_seconds is not None
-            else int(os.getenv("GENCHI_TIMEOUT_SECONDS", "60")),
+            else int(os.getenv("RCG_TIMEOUT_SECONDS", "60")),
             "timeout_seconds",
             positive=True,
         )
         self._max_retries = _bounded_int(
             max_retries
             if max_retries is not None
-            else int(os.getenv("GENCHI_MAX_RETRIES", "1")),
+            else int(os.getenv("RCG_MAX_RETRIES", "1")),
             "max_retries",
             positive=False,
         )
@@ -180,36 +180,36 @@ class Genchi:
                 last_error = error
                 if attempt < self._max_retries:
                     continue
-                raise GenchiConnectionError("Unable to reach the Genchi gateway.") from error
+                raise RaxComputeGatewayConnectionError("Unable to reach RAX Compute Gateway.") from error
             if _should_retry(response.status) and attempt < self._max_retries:
                 response.close()
                 continue
             return response
-        raise GenchiConnectionError("Unable to reach the Genchi gateway.") from last_error
+        raise RaxComputeGatewayConnectionError("Unable to reach RAX Compute Gateway.") from last_error
 
-    def _api_error(self, response: Response) -> GenchiAPIError:
+    def _api_error(self, response: Response) -> RaxComputeGatewayAPIError:
         try:
             value = json.loads(response.read())
         except (json.JSONDecodeError, UnicodeDecodeError):
             value = {}
         error = value.get("error") if isinstance(value, dict) else None
-        genchi = value.get("genchi") if isinstance(value, dict) else None
+        rax = value.get("rax") if isinstance(value, dict) else None
         error = error if isinstance(error, dict) else {}
-        genchi = genchi if isinstance(genchi, dict) else {}
-        request_id = genchi.get("request_id")
+        rax = rax if isinstance(rax, dict) else {}
+        request_id = rax.get("request_id")
         if not isinstance(request_id, str):
             request_id = response.headers.get("x-request-id")
-        return GenchiAPIError(
+        return RaxComputeGatewayAPIError(
             error.get("message")
             if isinstance(error.get("message"), str)
-            else "The Genchi gateway rejected the request.",
+            else "RAX Compute Gateway rejected the request.",
             status=response.status,
             code=error.get("code")
             if isinstance(error.get("code"), str)
             else "gateway_request_failed",
             request_id=request_id if isinstance(request_id, str) else None,
-            retryable=genchi.get("retryable")
-            if isinstance(genchi.get("retryable"), bool)
+            retryable=rax.get("retryable")
+            if isinstance(rax.get("retryable"), bool)
             else _should_retry(response.status),
             param=error.get("param") if isinstance(error.get("param"), str) else None,
         )
@@ -267,8 +267,8 @@ class Genchi:
                         return
                     yield cast(ChatCompletionChunk, json.loads(data))
                 if not saw_done:
-                    raise GenchiConnectionError(
-                        "The Genchi stream ended before the [DONE] marker."
+                    raise RaxComputeGatewayConnectionError(
+                        "The RAX Compute Gateway stream ended before the [DONE] marker."
                     )
             finally:
                 response.close()

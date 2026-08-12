@@ -50,24 +50,24 @@ export type RuntimeConfig = Static<typeof RuntimeConfigSchema>;
 export type EnvironmentSource = Readonly<Record<string, string | undefined>>;
 
 const fieldToEnvironmentVariable: Readonly<Record<string, string>> = {
-  environment: 'GENCHI_ENVIRONMENT',
-  databaseUrl: 'GENCHI_DATABASE_URL',
-  masterKey: 'GENCHI_MASTER_KEY',
-  keyHashPepper: 'GENCHI_KEY_HASH_PEPPER',
-  configFile: 'GENCHI_CONFIG_FILE',
-  redisUrl: 'GENCHI_REDIS_URL',
+  environment: 'RCG_ENVIRONMENT',
+  databaseUrl: 'RCG_DATABASE_URL',
+  masterKey: 'RCG_MASTER_KEY',
+  keyHashPepper: 'RCG_KEY_HASH_PEPPER',
+  configFile: 'RCG_CONFIG_FILE',
+  redisUrl: 'RCG_REDIS_URL',
   otlpEndpoint: 'OTEL_EXPORTER_OTLP_ENDPOINT',
-  host: 'GENCHI_HOST',
-  port: 'GENCHI_PORT',
-  logLevel: 'GENCHI_LOG_LEVEL',
-  requestBodyLimitBytes: 'GENCHI_REQUEST_BODY_LIMIT_BYTES',
-  totalTimeoutMs: 'GENCHI_TOTAL_TIMEOUT_MS',
-  connectTimeoutMs: 'GENCHI_CONNECT_TIMEOUT_MS',
-  shutdownGraceMs: 'GENCHI_SHUTDOWN_GRACE_MS',
-  trustProxy: 'GENCHI_TRUST_PROXY',
-  metricsEnabled: 'GENCHI_METRICS_ENABLED',
-  serviceVersion: 'GENCHI_SERVICE_VERSION',
-  commitSha: 'GENCHI_COMMIT_SHA',
+  host: 'RCG_HOST',
+  port: 'RCG_PORT',
+  logLevel: 'RCG_LOG_LEVEL',
+  requestBodyLimitBytes: 'RCG_REQUEST_BODY_LIMIT_BYTES',
+  totalTimeoutMs: 'RCG_TOTAL_TIMEOUT_MS',
+  connectTimeoutMs: 'RCG_CONNECT_TIMEOUT_MS',
+  shutdownGraceMs: 'RCG_SHUTDOWN_GRACE_MS',
+  trustProxy: 'RCG_TRUST_PROXY',
+  metricsEnabled: 'RCG_METRICS_ENABLED',
+  serviceVersion: 'RCG_SERVICE_VERSION',
+  commitSha: 'RCG_COMMIT_SHA',
 };
 
 /** Safe startup failure containing environment-variable names, never values. */
@@ -114,33 +114,34 @@ function schemaIssueToSafeMessage(path: string): string {
 /** Loads and validates all process-level settings without exposing secret values. */
 export function loadConfig(source: EnvironmentSource): RuntimeConfig {
   const candidate = {
-    environment: source.GENCHI_ENVIRONMENT,
-    databaseUrl: source.GENCHI_DATABASE_URL,
-    ...(source.GENCHI_MASTER_KEY === undefined
+    environment: source.RCG_ENVIRONMENT,
+    databaseUrl: source.RCG_DATABASE_URL,
+    ...(source.RCG_MASTER_KEY === undefined
       ? {}
-      : { masterKey: source.GENCHI_MASTER_KEY }),
-    keyHashPepper: source.GENCHI_KEY_HASH_PEPPER,
-    configFile: source.GENCHI_CONFIG_FILE ?? '/etc/genchi/config.yaml',
-    ...(source.GENCHI_REDIS_URL === undefined
+      : { masterKey: source.RCG_MASTER_KEY }),
+    keyHashPepper: source.RCG_KEY_HASH_PEPPER,
+    configFile:
+      source.RCG_CONFIG_FILE ?? '/etc/rax-compute-gateway/config.yaml',
+    ...(source.RCG_REDIS_URL === undefined
       ? {}
-      : { redisUrl: source.GENCHI_REDIS_URL }),
+      : { redisUrl: source.RCG_REDIS_URL }),
     ...(source.OTEL_EXPORTER_OTLP_ENDPOINT === undefined
       ? {}
       : { otlpEndpoint: source.OTEL_EXPORTER_OTLP_ENDPOINT }),
-    host: source.GENCHI_HOST ?? '0.0.0.0',
-    port: parseInteger(source.GENCHI_PORT, 8080),
-    logLevel: source.GENCHI_LOG_LEVEL ?? 'info',
+    host: source.RCG_HOST ?? '0.0.0.0',
+    port: parseInteger(source.RCG_PORT, 8080),
+    logLevel: source.RCG_LOG_LEVEL ?? 'info',
     requestBodyLimitBytes: parseInteger(
-      source.GENCHI_REQUEST_BODY_LIMIT_BYTES,
+      source.RCG_REQUEST_BODY_LIMIT_BYTES,
       2_097_152,
     ),
-    totalTimeoutMs: parseInteger(source.GENCHI_TOTAL_TIMEOUT_MS, 60_000),
-    connectTimeoutMs: parseInteger(source.GENCHI_CONNECT_TIMEOUT_MS, 30_000),
-    shutdownGraceMs: parseInteger(source.GENCHI_SHUTDOWN_GRACE_MS, 30_000),
-    trustProxy: parseBoolean(source.GENCHI_TRUST_PROXY, false),
-    metricsEnabled: parseBoolean(source.GENCHI_METRICS_ENABLED, true),
-    serviceVersion: source.GENCHI_SERVICE_VERSION ?? '0.0.0',
-    commitSha: source.GENCHI_COMMIT_SHA ?? 'unknown',
+    totalTimeoutMs: parseInteger(source.RCG_TOTAL_TIMEOUT_MS, 60_000),
+    connectTimeoutMs: parseInteger(source.RCG_CONNECT_TIMEOUT_MS, 30_000),
+    shutdownGraceMs: parseInteger(source.RCG_SHUTDOWN_GRACE_MS, 30_000),
+    trustProxy: parseBoolean(source.RCG_TRUST_PROXY, false),
+    metricsEnabled: parseBoolean(source.RCG_METRICS_ENABLED, true),
+    serviceVersion: source.RCG_SERVICE_VERSION ?? '0.0.0',
+    commitSha: source.RCG_COMMIT_SHA ?? 'unknown',
   };
 
   const issues = [...Value.Errors(RuntimeConfigSchema, candidate)].map(
@@ -151,14 +152,14 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     typeof candidate.databaseUrl === 'string' &&
     !isUrlWithProtocol(candidate.databaseUrl, ['postgres:', 'postgresql:'])
   ) {
-    issues.push('GENCHI_DATABASE_URL must be a PostgreSQL URL');
+    issues.push('RCG_DATABASE_URL must be a PostgreSQL URL');
   }
 
   if (
     candidate.redisUrl !== undefined &&
     !isUrlWithProtocol(candidate.redisUrl, ['redis:', 'rediss:'])
   ) {
-    issues.push('GENCHI_REDIS_URL must be a Redis URL');
+    issues.push('RCG_REDIS_URL must be a Redis URL');
   }
 
   if (
@@ -170,18 +171,16 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
 
   if (candidate.connectTimeoutMs >= candidate.totalTimeoutMs) {
     issues.push(
-      'GENCHI_CONNECT_TIMEOUT_MS must be less than GENCHI_TOTAL_TIMEOUT_MS',
+      'RCG_CONNECT_TIMEOUT_MS must be less than RCG_TOTAL_TIMEOUT_MS',
     );
   }
 
   if (/\s/.test(candidate.host)) {
-    issues.push('GENCHI_HOST is invalid');
+    issues.push('RCG_HOST is invalid');
   }
 
   if (candidate.environment === 'production' && candidate.trustProxy) {
-    issues.push(
-      'GENCHI_TRUST_PROXY requires explicit proxy CIDRs in production',
-    );
+    issues.push('RCG_TRUST_PROXY requires explicit proxy CIDRs in production');
   }
 
   if (
@@ -189,7 +188,7 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     candidate.redisUrl === undefined
   ) {
     issues.push(
-      'GENCHI_REDIS_URL is required in production for distributed limits',
+      'RCG_REDIS_URL is required in production for distributed limits',
     );
   }
 
@@ -204,10 +203,10 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
 export function describeSecretPresence(
   config: RuntimeConfig,
 ): Readonly<
-  Record<'GENCHI_KEY_HASH_PEPPER' | 'GENCHI_MASTER_KEY', '<set>' | '<unset>'>
+  Record<'RCG_KEY_HASH_PEPPER' | 'RCG_MASTER_KEY', '<set>' | '<unset>'>
 > {
   return {
-    GENCHI_KEY_HASH_PEPPER: '<set>',
-    GENCHI_MASTER_KEY: config.masterKey === undefined ? '<unset>' : '<set>',
+    RCG_KEY_HASH_PEPPER: '<set>',
+    RCG_MASTER_KEY: config.masterKey === undefined ? '<unset>' : '<set>',
   };
 }

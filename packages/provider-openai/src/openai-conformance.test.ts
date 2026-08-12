@@ -1,6 +1,6 @@
 import { expect } from 'vitest';
 
-import { defineProviderAdapterConformance } from '@genchi/testkit';
+import { defineProviderAdapterConformance } from '@rax-digital/testkit';
 
 import { OpenAiAdapter } from './openai-adapter.js';
 
@@ -20,7 +20,7 @@ defineProviderAdapterConformance({
   name: 'OpenAiAdapter',
   model: 'gpt-test',
   request: {
-    model: 'genchi/fast',
+    model: 'rax/fast',
     messages: [{ role: 'user', content: 'private prompt text' }],
     temperature: 0.2,
     topP: 0.8,

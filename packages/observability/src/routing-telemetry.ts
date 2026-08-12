@@ -1,19 +1,19 @@
-import type { RoutingObserver } from '@genchi/domain';
+import type { RoutingObserver } from '@rax-digital/domain';
 import type { Meter } from '@opentelemetry/api';
 
-import { getGenchiMeter } from './telemetry.js';
+import { getRaxComputeGatewayMeter } from './telemetry.js';
 
 /** Creates bounded, content-free routing and resilience metrics. */
 export function createRoutingObserver(
-  meter: Meter = getGenchiMeter(),
+  meter: Meter = getRaxComputeGatewayMeter(),
 ): RoutingObserver {
-  const attempts = meter.createCounter('genchi_provider_attempts_total');
-  const duration = meter.createHistogram('genchi_provider_duration_seconds', {
+  const attempts = meter.createCounter('rcg_provider_attempts_total');
+  const duration = meter.createHistogram('rcg_provider_duration_seconds', {
     unit: 's',
   });
-  const decisions = meter.createCounter('genchi_routing_decisions_total');
-  const fallbacks = meter.createCounter('genchi_fallbacks_total');
-  const rejections = meter.createCounter('genchi_admission_rejections_total');
+  const decisions = meter.createCounter('rcg_routing_decisions_total');
+  const fallbacks = meter.createCounter('rcg_fallbacks_total');
+  const rejections = meter.createCounter('rcg_admission_rejections_total');
   const circuitStates = new Map<
     string,
     {
@@ -22,7 +22,7 @@ export function createRoutingObserver(
       state: 'closed' | 'open' | 'half_open';
     }
   >();
-  meter.createObservableGauge('genchi_circuit_state').addCallback((result) => {
+  meter.createObservableGauge('rcg_circuit_state').addCallback((result) => {
     for (const circuit of circuitStates.values()) {
       result.observe(1, {
         provider: circuit.provider,

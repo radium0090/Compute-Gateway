@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Genchi is pre-1.0. Security fixes are applied to the latest release only.
+RAX Compute Gateway is pre-1.0. Security fixes are applied to the latest release only.
 
 ## Reporting a vulnerability
 

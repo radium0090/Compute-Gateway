@@ -74,7 +74,7 @@ export const ChatCompletionResponseSchema = Type.Object(
       },
       { additionalProperties: false },
     ),
-    genchi: Type.Object(
+    rax: Type.Object(
       {
         request_id: Type.String(),
         provider: Type.String(),
@@ -130,7 +130,7 @@ export const ChatCompletionChunkSchema = Type.Object(
       { maxItems: 1 },
     ),
     usage: Type.Optional(UsageSchema),
-    genchi: Type.Object(
+    rax: Type.Object(
       {
         request_id: Type.String(),
         provider: Type.String(),
@@ -156,7 +156,7 @@ export const ErrorResponseSchema = Type.Object(
       },
       { additionalProperties: false },
     ),
-    genchi: Type.Object(
+    rax: Type.Object(
       {
         request_id: Type.String(),
         retryable: Type.Boolean(),

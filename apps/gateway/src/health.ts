@@ -5,7 +5,7 @@ import {
   ReadinessResponseSchema,
   type LivenessResponse,
   type ReadinessResponse,
-} from '@genchi/api-contract';
+} from '@rax-digital/api-contract';
 
 export interface ReadinessProbe {
   check(): Promise<{

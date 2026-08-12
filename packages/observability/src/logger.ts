@@ -37,10 +37,10 @@ const forbiddenLogPaths = [
 export function createLogger(options: LoggerOptions): Logger {
   return pino(
     {
-      name: 'genchi-gateway',
+      name: 'rax-compute-gateway',
       level: options.level,
       base: {
-        service: 'genchi-gateway',
+        service: 'rax-compute-gateway',
         environment: options.environment,
       },
       timestamp: pino.stdTimeFunctions.isoTime,

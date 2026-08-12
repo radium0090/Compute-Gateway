@@ -1,5 +1,5 @@
 {
-  "name": "@genchi/coordination-redis",
+  "name": "@rax-digital/coordination-redis",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "@genchi/domain": "workspace:*",
+    "@rax-digital/domain": "workspace:*",
     "redis": "6.1.0"
   }
 }

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { Pool } from 'pg';
 
 const migrationFilePattern = /^(\d{4})_[a-z0-9-]+\.sql$/;
-const advisoryLockName = 'genchi:schema-migrations';
+const advisoryLockName = 'rcg:schema-migrations';
 
 interface AppliedMigrationRow {
   readonly version: string;

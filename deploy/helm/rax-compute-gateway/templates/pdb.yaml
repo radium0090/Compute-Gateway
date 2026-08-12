@@ -2,12 +2,12 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "genchi.fullname" . }}
+  name: {{ include "rax-compute-gateway.fullname" . }}
   labels:
-    {{- include "genchi.labels" . | nindent 4 }}
+    {{- include "rax-compute-gateway.labels" . | nindent 4 }}
 spec:
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
   selector:
     matchLabels:
-      {{- include "genchi.selectorLabels" . | nindent 6 }}
+      {{- include "rax-compute-gateway.selectorLabels" . | nindent 6 }}
 {{- end }}

@@ -6,7 +6,7 @@ import {
   type ApiKey,
   type ApiKeyPolicy,
   type ApiKeyRepository,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 import {
   ApiKeyAuthenticator,
@@ -15,7 +15,7 @@ import {
 } from './api-key-authenticator.js';
 
 const policy: ApiKeyPolicy = {
-  allowedModelPatterns: ['genchi/*'],
+  allowedModelPatterns: ['rax/*'],
   allowStreaming: false,
   allowTools: false,
   requestsPerMinute: 60,
@@ -149,7 +149,7 @@ describe('ApiKeyAuthenticator', () => {
 
   it.each([
     ['wrong secret', (credential: string) => `${credential.slice(0, -1)}A`],
-    ['malformed key', () => 'not-a-genchi-key'],
+    ['malformed key', () => 'not-an-rcg-key'],
   ])('returns the same invalid result for %s', async (_name, mutate) => {
     const provisioned = provision();
     const authenticator = new ApiKeyAuthenticator(

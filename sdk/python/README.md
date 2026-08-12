@@ -1,13 +1,13 @@
-# Genchi Python SDK
+# RAX Compute Gateway Python SDK
 
-Thin, typed Python client for Genchi's OpenAI-compatible API.
+Thin, typed Python client for RAX Compute Gateway's OpenAI-compatible API.
 
 ```python
-from genchi import Genchi
+from rax_compute_gateway import RaxComputeGateway
 
-client = Genchi(api_key="local-development-key", base_url="http://localhost:8080/v1")
+client = RaxComputeGateway(api_key="local-development-key", base_url="http://localhost:8080/v1")
 response = client.chat.completions.create(
-    model="genchi/fast",
+    model="rax/fast",
     messages=[{"role": "user", "content": "Hello"}],
 )
 ```
@@ -17,7 +17,7 @@ closed early:
 
 ```python
 stream = client.chat.completions.stream(
-    model="genchi/fast",
+    model="rax/fast",
     messages=[{"role": "user", "content": "Count to three"}],
 )
 try:
@@ -27,6 +27,6 @@ finally:
     stream.close()
 ```
 
-`GENCHI_API_KEY`, `GENCHI_BASE_URL`, `GENCHI_TIMEOUT_SECONDS`, and
-`GENCHI_MAX_RETRIES` provide environment defaults. Constructor arguments take
+`RCG_API_KEY`, `RCG_BASE_URL`, `RCG_TIMEOUT_SECONDS`, and
+`RCG_MAX_RETRIES` provide environment defaults. Constructor arguments take
 precedence.

@@ -42,7 +42,7 @@ operator-controlled action.
 1. Read release notes and schema compatibility requirements.
 2. Back up the database and verify recent restore evidence.
 3. Run the migration job with the release migration image/command.
-4. Validate configuration with `genchi --check-config`.
+4. Validate configuration with `rax-compute-gateway --check-config`.
 5. Deploy a canary with no more than 5% of traffic.
 6. Compare error rate, gateway latency, provider outcomes, and resource use.
 7. Roll out with readiness gates and `maxUnavailable: 0` where capacity allows.
@@ -54,9 +54,9 @@ operator-controlled action.
 The protected `AWS staging deploy` workflow is the supported rehearsal path for
 the project staging EC2 instance. It deploys the exact `main` commit through
 OIDC and Systems Manager without SSH. Runtime secret values are read only by the
-EC2 role and written to `/opt/genchi/shared/staging.env` with mode `0600`.
-Commit-addressed checkouts live below `/opt/genchi/releases`, while
-`/opt/genchi/current` identifies the last fully validated deployment.
+EC2 role and written to `/opt/rax-compute-gateway/shared/staging.env` with mode `0600`.
+Commit-addressed checkouts live below `/opt/rax-compute-gateway/releases`, while
+`/opt/rax-compute-gateway/current` identifies the last fully validated deployment.
 
 This mode is for staging and single-host evaluation. It binds the gateway and
 datastores to loopback and is not the production topology described above.

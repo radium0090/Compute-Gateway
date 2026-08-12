@@ -1,6 +1,6 @@
 # Implementation status
 
-This page records the code-to-specification review performed on 2026-08-09.
+This page records the code-to-specification review updated on 2026-08-12.
 Accepted ADRs and the normative documents remain authoritative; this page is a
 status snapshot, not a new architecture decision.
 
@@ -15,6 +15,13 @@ OpenTelemetry, SDK previews, and Docker/Kubernetes delivery assets are present.
 The protected live-provider workflow has passed non-streaming and streaming
 requests for OpenAI, Anthropic, and Gemini. This does not replace datastore,
 staging, backup/restore, or immutable-image validation.
+
+ADR 0012 establishes RAX Digital as the operator and RAX Compute Gateway as the
+neutral platform identity. Source, packages, API extensions, credentials,
+telemetry, deployment assets, and SDKs use the new identity. The existing AWS
+staging stack remains a temporary rollback target; production DNS, HTTPS,
+single-host risk acceptance, datastore migration, and tenant provisioning still
+require separate deployment evidence.
 
 ## Specification mapping
 

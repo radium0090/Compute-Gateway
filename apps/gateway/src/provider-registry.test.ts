@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parsePolicyConfig } from '@genchi/config';
+import { parsePolicyConfig } from '@rax-digital/config';
 
 import { buildProviderRegistry } from './main.js';
 
@@ -29,7 +29,7 @@ providers:
     models:
       gemini-model: { capabilities: [chat, streaming] }
 aliases:
-  genchi/fast:
+  rax/fast:
     candidates:
       - { provider: oa, model: openai-model, weight: 100 }
 routing:

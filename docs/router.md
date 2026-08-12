@@ -8,7 +8,7 @@ a route.
 
 ## Model identifiers
 
-- Public alias: `genchi/fast`
+- Public alias: `rax/fast`
 - Provider-qualified model: `openai/gpt-5-mini`
 - Bare provider model names are rejected to avoid ambiguity.
 
@@ -16,7 +16,7 @@ An alias resolves to ordered candidates:
 
 ```yaml
 aliases:
-  genchi/fast:
+  rax/fast:
     candidates:
       - provider: openai
         model: gpt-5-mini

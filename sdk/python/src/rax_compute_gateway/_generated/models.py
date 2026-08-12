@@ -1,4 +1,4 @@
-# Generated from openapi/genchi.openapi.yaml. Do not edit by hand.
+# Generated from openapi/compute-gateway.openapi.yaml. Do not edit by hand.
 from typing import Literal, TypeAlias, TypedDict
 
 
@@ -21,7 +21,7 @@ class ChatCompletionResponse(TypedDict, total=False):
     model: str
     choices: list[dict[str, object]]
     usage: dict[str, object]
-    genchi: dict[str, object]
+    rax: dict[str, object]
 
 
 class ChatCompletionChunk(TypedDict, total=False):
@@ -31,12 +31,12 @@ class ChatCompletionChunk(TypedDict, total=False):
     model: str
     choices: list[dict[str, object]]
     usage: dict[str, object]
-    genchi: dict[str, object]
+    rax: dict[str, object]
 
 
 class ErrorResponse(TypedDict, total=False):
     error: dict[str, object]
-    genchi: dict[str, object]
+    rax: dict[str, object]
 
 
 class LivenessResponse(TypedDict, total=False):

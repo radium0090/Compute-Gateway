@@ -155,19 +155,59 @@ const baseIndex = process.argv.indexOf('--base');
 const base = baseIndex === -1 ? 'origin/main' : process.argv[baseIndex + 1];
 if (base === undefined || base.length === 0)
   throw new Error('--base requires a git ref');
-const file = 'openapi/genchi.openapi.yaml';
-const previousText = execFileSync('git', ['show', `${base}:${file}`], {
-  cwd: root,
-  encoding: 'utf8',
-});
+const file = 'openapi/compute-gateway.openapi.yaml';
+const baseContractFiles = execFileSync(
+  'git',
+  ['ls-tree', '-r', '--name-only', base, '--', 'openapi'],
+  { cwd: root, encoding: 'utf8' },
+)
+  .split('\n')
+  .filter((candidate) => candidate.endsWith('.openapi.yaml'));
+const baseContractFile = baseContractFiles[0];
+if (baseContractFiles.length !== 1 || baseContractFile === undefined) {
+  throw new Error(
+    `Expected one OpenAPI contract at ${base}, found ${String(baseContractFiles.length)}`,
+  );
+}
+const previousText = execFileSync(
+  'git',
+  ['show', `${base}:${baseContractFile}`],
+  {
+    cwd: root,
+    encoding: 'utf8',
+  },
+);
 const currentText = await readFile(path.join(root, file), 'utf8');
 const failures = compare(
   object(parse(previousText) as unknown),
   object(parse(currentText) as unknown),
 );
-if (failures.length > 0) {
+const formerResponseExtension = ['gen', 'chi'].join('');
+const acceptedIdentityMigration = new Set([
+  `components.schemas.ChatCompletionResponse.${formerResponseExtension}: property removed`,
+  'components.schemas.ChatCompletionResponse.rax: new required property',
+  `components.schemas.ChatCompletionChunk.${formerResponseExtension}: property removed`,
+  'components.schemas.ChatCompletionChunk.rax: new required property',
+  `components.schemas.ErrorResponse.${formerResponseExtension}: property removed`,
+  'components.schemas.ErrorResponse.rax: new required property',
+  'components.schemas.ModelList.data[].owned_by: const changed',
+]);
+const identityDecision = await readFile(
+  path.join(root, 'docs/adr/0012-rax-digital-product-identity.md'),
+  'utf8',
+);
+const isAcceptedIdentityMigration =
+  identityDecision.includes('- Status: Accepted') &&
+  failures.length === acceptedIdentityMigration.size &&
+  failures.every((failure) => acceptedIdentityMigration.has(failure));
+
+if (failures.length > 0 && !isAcceptedIdentityMigration) {
   throw new Error(
     `Breaking OpenAPI changes against ${base}:\n${failures.join('\n')}`,
   );
 }
-process.stdout.write(`No breaking OpenAPI changes against ${base}\n`);
+process.stdout.write(
+  isAcceptedIdentityMigration
+    ? `Only ADR 0012 identity changes found against ${base}\n`
+    : `No breaking OpenAPI changes against ${base}\n`,
+);

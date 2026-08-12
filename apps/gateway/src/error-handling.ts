@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 
-import type { ErrorResponse } from '@genchi/api-contract';
+import type { ErrorResponse } from '@rax-digital/api-contract';
 
 function errorCode(error: unknown): string | undefined {
   if (typeof error !== 'object' || error === null || !('code' in error)) {
@@ -49,7 +49,7 @@ function response(
       code: input.code,
       param: input.param,
     },
-    genchi: { request_id: requestId, retryable: input.retryable },
+    rax: { request_id: requestId, retryable: input.retryable },
   };
 }
 

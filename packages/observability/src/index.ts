@@ -3,7 +3,7 @@ export { createRoutingObserver } from './routing-telemetry.js';
 export {
   TelemetryLifecycle,
   getCorrelationContext,
-  getGenchiMeter,
+  getRaxComputeGatewayMeter,
   type CorrelationContext,
   type MetricsRequestHandler,
   type TelemetryOptions,

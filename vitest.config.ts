@@ -5,36 +5,40 @@ import { configDefaults, defineConfig } from 'vitest/config';
 const fromRoot = (path: string): string =>
   fileURLToPath(new URL(path, import.meta.url));
 
-export const genchiResolve = {
+export const raxComputeGatewayResolve = {
   alias: {
-    '@genchi/api-contract': fromRoot('./packages/api-contract/src/index.ts'),
-    '@genchi/application': fromRoot('./packages/application/src/index.ts'),
-    '@genchi/auth': fromRoot('./packages/auth/src/index.ts'),
-    '@genchi/config': fromRoot('./packages/config/src/index.ts'),
-    '@genchi/coordination-redis': fromRoot(
+    '@rax-digital/api-contract': fromRoot(
+      './packages/api-contract/src/index.ts',
+    ),
+    '@rax-digital/application': fromRoot('./packages/application/src/index.ts'),
+    '@rax-digital/auth': fromRoot('./packages/auth/src/index.ts'),
+    '@rax-digital/config': fromRoot('./packages/config/src/index.ts'),
+    '@rax-digital/coordination-redis': fromRoot(
       './packages/coordination-redis/src/index.ts',
     ),
-    '@genchi/domain': fromRoot('./packages/domain/src/index.ts'),
-    '@genchi/observability': fromRoot('./packages/observability/src/index.ts'),
-    '@genchi/persistence-postgres': fromRoot(
+    '@rax-digital/domain': fromRoot('./packages/domain/src/index.ts'),
+    '@rax-digital/observability': fromRoot(
+      './packages/observability/src/index.ts',
+    ),
+    '@rax-digital/persistence-postgres': fromRoot(
       './packages/persistence-postgres/src/index.ts',
     ),
-    '@genchi/provider-anthropic': fromRoot(
+    '@rax-digital/provider-anthropic': fromRoot(
       './packages/provider-anthropic/src/index.ts',
     ),
-    '@genchi/provider-gemini': fromRoot(
+    '@rax-digital/provider-gemini': fromRoot(
       './packages/provider-gemini/src/index.ts',
     ),
-    '@genchi/provider-openai': fromRoot(
+    '@rax-digital/provider-openai': fromRoot(
       './packages/provider-openai/src/index.ts',
     ),
-    '@genchi/router': fromRoot('./packages/router/src/index.ts'),
-    '@genchi/testkit': fromRoot('./packages/testkit/src/index.ts'),
+    '@rax-digital/router': fromRoot('./packages/router/src/index.ts'),
+    '@rax-digital/testkit': fromRoot('./packages/testkit/src/index.ts'),
   },
 } as const;
 
 export default defineConfig({
-  resolve: genchiResolve,
+  resolve: raxComputeGatewayResolve,
   test: {
     coverage: {
       reporter: ['text', 'lcov'],

@@ -1,13 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { Genchi, GenchiApiError, GenchiConnectionError } from './client.js';
+import {
+  RaxComputeGateway,
+  RaxComputeGatewayApiError,
+  RaxComputeGatewayConnectionError,
+} from './client.js';
 
 const request = {
-  model: 'genchi/fast',
+  model: 'rax/fast',
   messages: [{ role: 'user' as const, content: 'test prompt' }],
 };
 
-describe('Genchi TypeScript SDK', () => {
+describe('RAX Compute Gateway TypeScript SDK', () => {
   it('creates completions and lists models with bearer authentication', async () => {
     const fetchImplementation = vi
       .fn<typeof fetch>()
@@ -16,7 +20,7 @@ describe('Genchi TypeScript SDK', () => {
           id: 'chatcmpl_test',
           object: 'chat.completion',
           created: 1,
-          model: 'genchi/fast',
+          model: 'rax/fast',
           choices: [
             {
               index: 0,
@@ -25,7 +29,7 @@ describe('Genchi TypeScript SDK', () => {
             },
           ],
           usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
-          genchi: {
+          rax: {
             request_id: 'req_test',
             provider: 'openai',
             provider_model: 'gpt-test',
@@ -38,17 +42,17 @@ describe('Genchi TypeScript SDK', () => {
           object: 'list',
           data: [
             {
-              id: 'genchi/fast',
+              id: 'rax/fast',
               object: 'model',
               created: 1,
-              owned_by: 'genchi',
+              owned_by: 'rax-digital',
             },
           ],
         }),
       );
-    const client = new Genchi({
+    const client = new RaxComputeGateway({
       apiKey: 'fake-client-key',
-      baseUrl: 'http://genchi.test/v1/',
+      baseUrl: 'http://rax-compute-gateway.test/v1/',
       maxRetries: 0,
       fetchImplementation,
     });
@@ -59,10 +63,10 @@ describe('Genchi TypeScript SDK', () => {
       choices: [{ message: { content: 'answer' } }],
     });
     await expect(client.models.list()).resolves.toMatchObject({
-      data: [{ id: 'genchi/fast' }],
+      data: [{ id: 'rax/fast' }],
     });
     expect(fetchImplementation.mock.calls[0]?.[0]).toBe(
-      'http://genchi.test/v1/chat/completions',
+      'http://rax-compute-gateway.test/v1/chat/completions',
     );
     expect(
       new Headers(fetchImplementation.mock.calls[0]?.[1]?.headers).get(
@@ -84,14 +88,14 @@ describe('Genchi TypeScript SDK', () => {
               code: 'no_healthy_route',
               param: 'model',
             },
-            genchi: { request_id: 'req_error', retryable: true },
+            rax: { request_id: 'req_error', retryable: true },
           },
           { status: 503 },
         ),
       );
-    const client = new Genchi({
+    const client = new RaxComputeGateway({
       apiKey: 'fake-client-key',
-      baseUrl: 'http://genchi.test/v1',
+      baseUrl: 'http://rax-compute-gateway.test/v1',
       maxRetries: 1,
       fetchImplementation,
     });
@@ -99,7 +103,7 @@ describe('Genchi TypeScript SDK', () => {
     const error = await client.chat.completions
       .create(request)
       .catch((caught: unknown) => caught);
-    expect(error).toBeInstanceOf(GenchiApiError);
+    expect(error).toBeInstanceOf(RaxComputeGatewayApiError);
     expect(error).toMatchObject({
       status: 503,
       code: 'no_healthy_route',
@@ -121,7 +125,7 @@ describe('Genchi TypeScript SDK', () => {
         );
         controller.enqueue(
           encoded.encode(
-            '"model":"genchi/fast","choices":[],"genchi":{"request_id":"req","provider":"openai","provider_model":"gpt","attempts":1}}\n\n',
+            '"model":"rax/fast","choices":[],"rax":{"request_id":"req","provider":"openai","provider_model":"gpt","attempts":1}}\n\n',
           ),
         );
         controller.enqueue(encoded.encode('data: [DONE]\n\n'));
@@ -130,7 +134,7 @@ describe('Genchi TypeScript SDK', () => {
         cancelled = true;
       },
     });
-    const client = new Genchi({
+    const client = new RaxComputeGateway({
       apiKey: 'fake-client-key',
       maxRetries: 0,
       fetchImplementation: () =>
@@ -150,8 +154,8 @@ describe('Genchi TypeScript SDK', () => {
   });
 
   it('rejects missing credentials and network timeouts safely', async () => {
-    expect(() => new Genchi({ apiKey: '' })).toThrow(TypeError);
-    const client = new Genchi({
+    expect(() => new RaxComputeGateway({ apiKey: '' })).toThrow(TypeError);
+    const client = new RaxComputeGateway({
       apiKey: 'fake-client-key',
       timeoutMs: 1,
       maxRetries: 0,
@@ -163,7 +167,7 @@ describe('Genchi TypeScript SDK', () => {
         }),
     });
     await expect(client.models.list()).rejects.toBeInstanceOf(
-      GenchiConnectionError,
+      RaxComputeGatewayConnectionError,
     );
   });
 });

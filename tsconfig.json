@@ -14,7 +14,8 @@
     "scripts/generate-python-sdk.ts",
     "scripts/validate-docs.ts",
     "scripts/validate-openapi.ts",
-    "scripts/validate-operations.ts"
+    "scripts/validate-operations.ts",
+    "scripts/validate-product-identity.ts"
   ],
   "references": [
     { "path": "packages/api-contract" },

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { ProviderStreamFailure } from '@genchi/domain';
+import { ProviderStreamFailure } from '@rax-digital/domain';
 import type {
   CanonicalChatChunk,
   CanonicalChatRequest,
   CanonicalChatResponse,
   ProviderAdapter,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 export interface CapturedProviderRequest {
   readonly url: string;

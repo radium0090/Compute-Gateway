@@ -1,26 +1,26 @@
-{{- define "genchi.name" -}}
+{{- define "rax-compute-gateway.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "genchi.migrationEnvironment" -}}
-- name: GENCHI_ENVIRONMENT
+{{- define "rax-compute-gateway.migrationEnvironment" -}}
+- name: RCG_ENVIRONMENT
   value: {{ .Values.runtime.environment | quote }}
-- name: GENCHI_DATABASE_URL
+- name: RCG_DATABASE_URL
   valueFrom:
     secretKeyRef:
       name: {{ .Values.existingSecret | quote }}
       key: {{ .Values.secretKeys.databaseUrl | quote }}
-- name: GENCHI_REDIS_URL
+- name: RCG_REDIS_URL
   valueFrom:
     secretKeyRef:
       name: {{ .Values.existingSecret | quote }}
       key: {{ .Values.secretKeys.redisUrl | quote }}
-- name: GENCHI_KEY_HASH_PEPPER
+- name: RCG_KEY_HASH_PEPPER
   valueFrom:
     secretKeyRef:
       name: {{ .Values.existingSecret | quote }}
       key: {{ .Values.secretKeys.keyHashPepper | quote }}
-- name: GENCHI_LOG_LEVEL
+- name: RCG_LOG_LEVEL
   value: {{ .Values.runtime.logLevel | quote }}
 {{- if .Values.runtime.otlpEndpoint }}
 - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -28,36 +28,36 @@
 {{- end }}
 {{- end }}
 
-{{- define "genchi.fullname" -}}
+{{- define "rax-compute-gateway.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- printf "%s-%s" .Release.Name (include "genchi.name" .) | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-%s" .Release.Name (include "rax-compute-gateway.name" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
 
-{{- define "genchi.labels" -}}
-app.kubernetes.io/name: {{ include "genchi.name" . }}
+{{- define "rax-compute-gateway.labels" -}}
+app.kubernetes.io/name: {{ include "rax-compute-gateway.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | quote }}
 {{- end }}
 
-{{- define "genchi.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "genchi.name" . }}
+{{- define "rax-compute-gateway.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "rax-compute-gateway.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{- define "genchi.serviceAccountName" -}}
+{{- define "rax-compute-gateway.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "genchi.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "rax-compute-gateway.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- required "serviceAccount.name is required when create=false" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
-{{- define "genchi.image" -}}
+{{- define "rax-compute-gateway.image" -}}
 {{- if .Values.image.digest }}
 {{- printf "%s:%s@%s" .Values.image.repository .Values.image.tag .Values.image.digest }}
 {{- else }}
@@ -65,26 +65,26 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
-{{- define "genchi.environment" -}}
-- name: GENCHI_ENVIRONMENT
+{{- define "rax-compute-gateway.environment" -}}
+- name: RCG_ENVIRONMENT
   value: {{ .Values.runtime.environment | quote }}
-- name: GENCHI_DATABASE_URL
+- name: RCG_DATABASE_URL
   valueFrom:
     secretKeyRef:
       name: {{ .Values.existingSecret | quote }}
       key: {{ .Values.secretKeys.databaseUrl | quote }}
-- name: GENCHI_REDIS_URL
+- name: RCG_REDIS_URL
   valueFrom:
     secretKeyRef:
       name: {{ .Values.existingSecret | quote }}
       key: {{ .Values.secretKeys.redisUrl | quote }}
-- name: GENCHI_KEY_HASH_PEPPER
+- name: RCG_KEY_HASH_PEPPER
   valueFrom:
     secretKeyRef:
       name: {{ .Values.existingSecret | quote }}
       key: {{ .Values.secretKeys.keyHashPepper | quote }}
 {{- if .Values.secretKeys.masterKey }}
-- name: GENCHI_MASTER_KEY
+- name: RCG_MASTER_KEY
   valueFrom:
     secretKeyRef:
       name: {{ .Values.existingSecret | quote }}
@@ -111,25 +111,25 @@ app.kubernetes.io/instance: {{ .Release.Name }}
       name: {{ .Values.existingSecret | quote }}
       key: {{ .Values.secretKeys.geminiApiKey | quote }}
 {{- end }}
-- name: GENCHI_CONFIG_FILE
-  value: /etc/genchi/config.yaml
-- name: GENCHI_HOST
+- name: RCG_CONFIG_FILE
+  value: /etc/rax-compute-gateway/config.yaml
+- name: RCG_HOST
   value: 0.0.0.0
-- name: GENCHI_PORT
+- name: RCG_PORT
   value: "8080"
-- name: GENCHI_LOG_LEVEL
+- name: RCG_LOG_LEVEL
   value: {{ .Values.runtime.logLevel | quote }}
-- name: GENCHI_REQUEST_BODY_LIMIT_BYTES
+- name: RCG_REQUEST_BODY_LIMIT_BYTES
   value: {{ .Values.runtime.requestBodyLimitBytes | quote }}
-- name: GENCHI_TOTAL_TIMEOUT_MS
+- name: RCG_TOTAL_TIMEOUT_MS
   value: {{ .Values.runtime.totalTimeoutMs | quote }}
-- name: GENCHI_CONNECT_TIMEOUT_MS
+- name: RCG_CONNECT_TIMEOUT_MS
   value: {{ .Values.runtime.connectTimeoutMs | quote }}
-- name: GENCHI_SHUTDOWN_GRACE_MS
+- name: RCG_SHUTDOWN_GRACE_MS
   value: {{ .Values.runtime.shutdownGraceMs | quote }}
-- name: GENCHI_TRUST_PROXY
+- name: RCG_TRUST_PROXY
   value: {{ .Values.runtime.trustProxy | quote }}
-- name: GENCHI_METRICS_ENABLED
+- name: RCG_METRICS_ENABLED
   value: {{ .Values.runtime.metricsEnabled | quote }}
 {{- if .Values.runtime.otlpEndpoint }}
 - name: OTEL_EXPORTER_OTLP_ENDPOINT

@@ -1,5 +1,5 @@
 apiVersion: v2
-name: genchi
+name: rax-compute-gateway
 description: Open-source AI compute gateway
 type: application
 version: 0.1.0
@@ -9,5 +9,5 @@ home: https://github.com/radium0090/Compute-Gateway
 sources:
   - https://github.com/radium0090/Compute-Gateway
 maintainers:
-  - name: Genchi maintainers
+  - name: RAX Digital
     url: https://github.com/radium0090/Compute-Gateway

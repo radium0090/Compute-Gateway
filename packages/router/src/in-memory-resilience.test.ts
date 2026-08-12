@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { apiKeyId } from '@genchi/domain';
-import type { ResolvedRoute } from '@genchi/domain';
+import { apiKeyId } from '@rax-digital/domain';
+import type { ResolvedRoute } from '@rax-digital/domain';
 
 import {
   InMemoryCircuitBreaker,

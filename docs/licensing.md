@@ -2,7 +2,7 @@
 
 ## Project license
 
-Genchi source code and documentation are licensed under the Apache License,
+RAX Compute Gateway source code and documentation are licensed under the Apache License,
 Version 2.0. The complete terms and project notice are in the root `LICENSE` and
 `NOTICE` files. This document is operational guidance, not legal advice or a
 substitute for those files.
@@ -16,7 +16,7 @@ SPDX identifiers, use:
 SPDX-License-Identifier: Apache-2.0
 ```
 
-Do not add third-party copyright notices to Genchi-authored files unless
+Do not add third-party copyright notices to RAX Compute Gateway-authored files unless
 required. Preserve notices on copied or substantially derived material.
 
 ## Contributions
@@ -40,7 +40,7 @@ code, and bundled assets are included in release review.
 ## Provider names and SDKs
 
 Provider names and model identifiers are used for factual interoperability.
-They remain trademarks of their owners. Genchi MUST NOT imply endorsement or
+They remain trademarks of their owners. RAX Compute Gateway MUST NOT imply endorsement or
 bundle provider API access. Users bring credentials and remain responsible for
 provider terms, acceptable-use rules, data handling, and charges.
 

@@ -1,5 +1,5 @@
 {
-  "name": "@genchi/persistence-postgres",
+  "name": "@rax-digital/persistence-postgres",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "@genchi/domain": "workspace:*",
+    "@rax-digital/domain": "workspace:*",
     "pg": "8.22.0"
   },
   "devDependencies": {

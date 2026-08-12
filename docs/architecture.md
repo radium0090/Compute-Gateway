@@ -8,7 +8,7 @@
                  | PostgreSQL      Secret source |
                  +--------+---------------+------+
                           |               |
-Client -> Load balancer -> Genchi Gateway replicas -> Provider APIs
+Client -> Load balancer -> RAX Compute Gateway Gateway replicas -> Provider APIs
                           |       |
                           |       +-> Redis (optional coordination)
                           +----------> OpenTelemetry Collector
@@ -37,7 +37,7 @@ or an external secret manager, never from PostgreSQL in the MVP.
 ## Request lifecycle
 
 1. The edge assigns or validates `x-request-id`, enforces the body limit, and
-   authenticates the Genchi key.
+   authenticates the RAX Compute Gateway key.
 2. The API service validates the request against the public schema.
 3. Policy resolves the requested alias/model and caller permissions.
 4. The router builds an ordered candidate set and removes unavailable routes.

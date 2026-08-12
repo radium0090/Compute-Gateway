@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 
-import type { MetricsRequestHandler } from '@genchi/observability';
+import type { MetricsRequestHandler } from '@rax-digital/observability';
 
 /** Exposes the process-local OpenTelemetry reader in Prometheus text format. */
 export function registerMetricsRoute(

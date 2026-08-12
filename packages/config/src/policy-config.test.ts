@@ -17,7 +17,7 @@ providers:
       model-a:
         capabilities: [chat, streaming]
 aliases:
-  genchi/fast:
+  rax/fast:
     candidates:
       - provider: primary
         model: model-a
@@ -32,7 +32,7 @@ describe('parsePolicyConfig', () => {
     const policy = parsePolicyConfig(validPolicy, 'test');
 
     expect(policy.version).toBe(1);
-    expect(policy.aliases['genchi/fast']?.candidates).toHaveLength(1);
+    expect(policy.aliases['rax/fast']?.candidates).toHaveLength(1);
   });
 
   it('rejects unknown keys and dangling provider references', () => {

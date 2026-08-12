@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { parsePolicyConfig } from '@genchi/config';
+import { parsePolicyConfig } from '@rax-digital/config';
 import {
   apiKeyHash,
   apiKeyId,
   apiKeyPublicId,
   tenantId,
   type ApiKey,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 import { StaticModelCatalog, StaticPolicyRouter } from './policy-router.js';
 
@@ -34,7 +34,7 @@ providers:
     models:
       model-c: { capabilities: [chat, streaming] }
 aliases:
-  genchi/fast:
+  rax/fast:
     candidates:
       - { provider: openai-a, model: model-a, weight: 50 }
       - { provider: openai-b, model: model-b, weight: 50 }
@@ -71,9 +71,9 @@ describe('StaticPolicyRouter', () => {
   it('returns the same weighted primary for the same request and alias', () => {
     const router = new StaticPolicyRouter(policy);
     const input = {
-      requestedModel: 'genchi/fast',
+      requestedModel: 'rax/fast',
       requestId: 'req_stable_123',
-      apiKey: key(['genchi/*']),
+      apiKey: key(['rax/*']),
     };
 
     expect(router.resolve(input)).toEqual(router.resolve(input));
@@ -84,9 +84,9 @@ describe('StaticPolicyRouter', () => {
     const selected = new Set<string>();
     for (let index = 0; index < 100; index += 1) {
       const result = router.resolve({
-        requestedModel: 'genchi/fast',
+        requestedModel: 'rax/fast',
         requestId: `req_${String(index).padStart(3, '0')}`,
-        apiKey: key(['genchi/*']),
+        apiKey: key(['rax/*']),
       });
       if (result.ok) {
         selected.add(result.route.providerRef);
@@ -98,9 +98,9 @@ describe('StaticPolicyRouter', () => {
   it('builds a primary-first plan followed by ordered fallback candidates', () => {
     const router = new StaticPolicyRouter(policy);
     const result = router.plan({
-      requestedModel: 'genchi/fast',
+      requestedModel: 'rax/fast',
       requestId: 'req_plan',
-      apiKey: key(['genchi/*']),
+      apiKey: key(['rax/*']),
     });
 
     expect(result.ok).toBe(true);
@@ -120,7 +120,7 @@ describe('StaticPolicyRouter', () => {
 
     expect(
       router.resolve({
-        requestedModel: 'genchi/fast',
+        requestedModel: 'rax/fast',
         requestId: 'req_denied',
         apiKey: key([]),
       }),
@@ -152,9 +152,9 @@ describe('StaticPolicyRouter', () => {
 
     expect(
       router.resolve({
-        requestedModel: 'genchi/fast',
+        requestedModel: 'rax/fast',
         requestId: 'req_streaming',
-        apiKey: key(['genchi/*']),
+        apiKey: key(['rax/*']),
         requireStreaming: true,
       }),
     ).toMatchObject({
@@ -174,9 +174,7 @@ describe('StaticPolicyRouter', () => {
   it('lists only configured and key-allowed public models', () => {
     const catalog = new StaticModelCatalog(policy);
 
-    expect(catalog.listAllowed(key(['genchi/*']))).toEqual([
-      { id: 'genchi/fast' },
-    ]);
+    expect(catalog.listAllowed(key(['rax/*']))).toEqual([{ id: 'rax/fast' }]);
     expect(catalog.listAllowed(key(['openai/*']))).toEqual([
       { id: 'openai/model-a' },
       { id: 'openai/model-b' },

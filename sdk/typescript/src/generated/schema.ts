@@ -134,7 +134,7 @@ export interface components {
         readonly completion_tokens: number;
         readonly total_tokens: number;
       };
-      readonly genchi: {
+      readonly rax: {
         readonly request_id: string;
         readonly provider: string;
         readonly provider_model: string;
@@ -163,7 +163,7 @@ export interface components {
         readonly completion_tokens: number;
         readonly total_tokens: number;
       };
-      readonly genchi: {
+      readonly rax: {
         readonly request_id: string;
         readonly provider: string;
         readonly provider_model: string;
@@ -177,7 +177,7 @@ export interface components {
         readonly code: string;
         readonly param: string | null;
       };
-      readonly genchi: {
+      readonly rax: {
         readonly request_id: string;
         readonly retryable: boolean;
       };
@@ -195,7 +195,7 @@ export interface components {
         readonly object: 'model';
         readonly created: number;
         /** @constant */
-        readonly owned_by: 'genchi';
+        readonly owned_by: 'rax-digital';
       }[];
     };
     readonly ReadinessResponse: {
@@ -237,7 +237,7 @@ export interface operations {
           readonly 'text/event-stream': string;
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 400: {
         headers: {
           readonly [name: string]: unknown;
@@ -246,7 +246,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 401: {
         headers: {
           readonly [name: string]: unknown;
@@ -255,7 +255,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 403: {
         headers: {
           readonly [name: string]: unknown;
@@ -264,7 +264,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 404: {
         headers: {
           readonly [name: string]: unknown;
@@ -273,7 +273,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 408: {
         headers: {
           readonly [name: string]: unknown;
@@ -282,7 +282,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 413: {
         headers: {
           readonly [name: string]: unknown;
@@ -291,7 +291,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 429: {
         headers: {
           readonly [name: string]: unknown;
@@ -300,7 +300,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 502: {
         headers: {
           readonly [name: string]: unknown;
@@ -309,7 +309,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 503: {
         headers: {
           readonly [name: string]: unknown;
@@ -318,7 +318,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ErrorResponse'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 504: {
         headers: {
           readonly [name: string]: unknown;
@@ -347,7 +347,7 @@ export interface operations {
           readonly 'application/json': components['schemas']['ModelList'];
         };
       };
-      /** @description Canonical Genchi error */
+      /** @description Canonical RAX Compute Gateway error */
       readonly 401: {
         headers: {
           readonly [name: string]: unknown;
