@@ -6,13 +6,16 @@ import type {
   CreateChatCompletionInput,
   CreateChatCompletionResult,
   CreateChatCompletionStreamResult,
-} from '@genchi/application';
-import { loadConfig } from '@genchi/config';
-import type { ProviderAdapter, ProviderCapabilities } from '@genchi/domain';
-import { createLogger } from '@genchi/observability';
-import { AnthropicAdapter } from '@genchi/provider-anthropic';
-import { GeminiAdapter } from '@genchi/provider-gemini';
-import { OpenAiAdapter } from '@genchi/provider-openai';
+} from '@rax-digital/application';
+import { loadConfig } from '@rax-digital/config';
+import type {
+  ProviderAdapter,
+  ProviderCapabilities,
+} from '@rax-digital/domain';
+import { createLogger } from '@rax-digital/observability';
+import { AnthropicAdapter } from '@rax-digital/provider-anthropic';
+import { GeminiAdapter } from '@rax-digital/provider-gemini';
+import { OpenAiAdapter } from '@rax-digital/provider-openai';
 
 import { buildGateway } from './app.js';
 import {
@@ -20,8 +23,7 @@ import {
   safeGatewayFailureSummary,
 } from './live-provider-diagnostics.js';
 
-const live =
-  process.env.GENCHI_LIVE_ENABLED === 'true' ? describe : describe.skip;
+const live = process.env.RCG_LIVE_ENABLED === 'true' ? describe : describe.skip;
 const capabilities: ProviderCapabilities = {
   chat: true,
   streaming: true,
@@ -31,9 +33,9 @@ const capabilities: ProviderCapabilities = {
   systemMessages: true,
 };
 const config = loadConfig({
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 });
 
 function required(name: string): string {
@@ -117,7 +119,7 @@ type ProviderCase = Readonly<{
 const providers: readonly ProviderCase[] = [
   {
     name: 'openai',
-    modelEnvironment: 'GENCHI_LIVE_OPENAI_MODEL',
+    modelEnvironment: 'RCG_LIVE_OPENAI_MODEL',
     create: (model) =>
       new OpenAiAdapter({
         id: 'openai-live',
@@ -128,7 +130,7 @@ const providers: readonly ProviderCase[] = [
   },
   {
     name: 'anthropic',
-    modelEnvironment: 'GENCHI_LIVE_ANTHROPIC_MODEL',
+    modelEnvironment: 'RCG_LIVE_ANTHROPIC_MODEL',
     create: (model) =>
       new AnthropicAdapter({
         id: 'anthropic-live',
@@ -139,7 +141,7 @@ const providers: readonly ProviderCase[] = [
   },
   {
     name: 'gemini',
-    modelEnvironment: 'GENCHI_LIVE_GEMINI_MODEL',
+    modelEnvironment: 'RCG_LIVE_GEMINI_MODEL',
     create: (model) =>
       new GeminiAdapter({
         id: 'gemini-live',
@@ -168,7 +170,7 @@ live('live provider compatibility through the OpenAI Node SDK', () => {
       try {
         const client = new OpenAI({
           apiKey: 'live-test-client-placeholder',
-          baseURL: 'http://genchi.test/v1',
+          baseURL: 'http://rax-compute-gateway.test/v1',
           fetch: injectFetch(app),
           maxRetries: 0,
         });

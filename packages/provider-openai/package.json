@@ -1,5 +1,5 @@
 {
-  "name": "@genchi/provider-openai",
+  "name": "@rax-digital/provider-openai",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,10 +15,10 @@
     "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "@genchi/domain": "workspace:*",
+    "@rax-digital/domain": "workspace:*",
     "@sinclair/typebox": "0.34.52"
   },
   "devDependencies": {
-    "@genchi/testkit": "workspace:*"
+    "@rax-digital/testkit": "workspace:*"
   }
 }

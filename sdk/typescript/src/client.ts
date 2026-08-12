@@ -8,7 +8,7 @@ import type {
   ReadinessResponse,
 } from './types.js';
 
-export interface GenchiOptions {
+export interface RaxComputeGatewayOptions {
   readonly apiKey?: string;
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
@@ -21,7 +21,7 @@ interface RawResponse {
   cleanup(): void;
 }
 
-export class GenchiApiError extends Error {
+export class RaxComputeGatewayApiError extends Error {
   public constructor(
     message: string,
     public readonly status: number,
@@ -31,14 +31,14 @@ export class GenchiApiError extends Error {
     public readonly param: string | null,
   ) {
     super(message);
-    this.name = 'GenchiApiError';
+    this.name = 'RaxComputeGatewayApiError';
   }
 }
 
-export class GenchiConnectionError extends Error {
+export class RaxComputeGatewayConnectionError extends Error {
   public constructor(message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = 'GenchiConnectionError';
+    this.name = 'RaxComputeGatewayConnectionError';
   }
 }
 
@@ -60,6 +60,12 @@ function positiveInteger(value: number, name: string): number {
   return value;
 }
 
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+}
+
 function shouldRetry(status: number): boolean {
   return status === 429 || status >= 500;
 }
@@ -78,33 +84,33 @@ function safeError(value: unknown): ErrorResponse | undefined {
   if (
     typeof record.error !== 'object' ||
     record.error === null ||
-    typeof record.genchi !== 'object' ||
-    record.genchi === null
+    typeof record.rax !== 'object' ||
+    record.rax === null
   ) {
     return undefined;
   }
   const error = record.error as Readonly<Record<string, unknown>>;
-  const genchi = record.genchi as Readonly<Record<string, unknown>>;
+  const rax = record.rax as Readonly<Record<string, unknown>>;
   if (
     typeof error.message !== 'string' ||
     typeof error.code !== 'string' ||
-    typeof genchi.retryable !== 'boolean'
+    typeof rax.retryable !== 'boolean'
   ) {
     return undefined;
   }
   return value as ErrorResponse;
 }
 
-async function apiError(response: Response): Promise<GenchiApiError> {
+async function apiError(
+  response: Response,
+): Promise<RaxComputeGatewayApiError> {
   const parsed = safeError(await response.json().catch(() => undefined));
-  return new GenchiApiError(
-    parsed?.error.message ?? 'The Genchi gateway rejected the request.',
+  return new RaxComputeGatewayApiError(
+    parsed?.error.message ?? 'RAX Compute Gateway rejected the request.',
     response.status,
     parsed?.error.code ?? 'gateway_request_failed',
-    parsed?.genchi.request_id ??
-      response.headers.get('x-request-id') ??
-      undefined,
-    parsed?.genchi.retryable ?? shouldRetry(response.status),
+    parsed?.rax.request_id ?? response.headers.get('x-request-id') ?? undefined,
+    parsed?.rax.retryable ?? shouldRetry(response.status),
     parsed?.error.param ?? null,
   );
 }
@@ -126,7 +132,7 @@ function eventData(event: string): string | undefined {
   return lines.length === 0 ? undefined : lines.join('\n');
 }
 
-export class Genchi {
+export class RaxComputeGateway {
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
@@ -151,24 +157,24 @@ export class Genchi {
     ready: () => this.getHealth<ReadinessResponse>('/health/ready'),
   };
 
-  public constructor(options: GenchiOptions = {}) {
-    const apiKey = options.apiKey ?? environment('GENCHI_API_KEY');
+  public constructor(options: RaxComputeGatewayOptions = {}) {
+    const apiKey = options.apiKey ?? environment('RCG_API_KEY');
     if (apiKey === undefined || apiKey.length === 0) {
-      throw new TypeError('A Genchi API key is required');
+      throw new TypeError('A RAX Compute Gateway API key is required');
     }
     this.apiKey = apiKey;
-    this.baseUrl = (
+    this.baseUrl = withoutTrailingSlashes(
       options.baseUrl ??
-      environment('GENCHI_BASE_URL') ??
-      'http://localhost:8080/v1'
-    ).replace(/\/+$/u, '');
+        environment('RCG_BASE_URL') ??
+        'http://localhost:8080/v1',
+    );
     this.timeoutMs = positiveInteger(
       options.timeoutMs ??
-        Number(environment('GENCHI_TIMEOUT_SECONDS') ?? '60') * 1_000,
+        Number(environment('RCG_TIMEOUT_SECONDS') ?? '60') * 1_000,
       'timeoutMs',
     );
     this.maxRetries = nonNegativeInteger(
-      options.maxRetries ?? Number(environment('GENCHI_MAX_RETRIES') ?? '1'),
+      options.maxRetries ?? Number(environment('RCG_MAX_RETRIES') ?? '1'),
       'maxRetries',
     );
     this.fetchImplementation = options.fetchImplementation ?? globalThis.fetch;
@@ -219,19 +225,22 @@ export class Genchi {
         lastError = error;
         if (controller.signal.aborted || attempt >= this.maxRetries) {
           cleanup();
-          throw new GenchiConnectionError(
+          throw new RaxComputeGatewayConnectionError(
             controller.signal.aborted
-              ? 'The Genchi request timed out.'
-              : 'Unable to reach the Genchi gateway.',
+              ? 'The RAX Compute Gateway request timed out.'
+              : 'Unable to reach RAX Compute Gateway.',
             { cause: error },
           );
         }
       }
     }
     cleanup();
-    throw new GenchiConnectionError('Unable to reach the Genchi gateway.', {
-      cause: lastError,
-    });
+    throw new RaxComputeGatewayConnectionError(
+      'Unable to reach RAX Compute Gateway.',
+      {
+        cause: lastError,
+      },
+    );
   }
 
   private async createCompletion(
@@ -267,8 +276,8 @@ export class Genchi {
     }
     if (raw.response.body === null) {
       raw.cleanup();
-      throw new GenchiConnectionError(
-        'The Genchi stream had no response body.',
+      throw new RaxComputeGatewayConnectionError(
+        'The RAX Compute Gateway stream had no response body.',
       );
     }
     return this.decodeStream(raw.response.body, () => {
@@ -302,8 +311,8 @@ export class Genchi {
               yield JSON.parse(data) as ChatCompletionChunk;
             }
           }
-          throw new GenchiConnectionError(
-            'The Genchi stream ended before the [DONE] marker.',
+          throw new RaxComputeGatewayConnectionError(
+            'The RAX Compute Gateway stream ended before the [DONE] marker.',
           );
         }
       }

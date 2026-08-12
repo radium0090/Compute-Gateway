@@ -8,7 +8,7 @@ No answer should require collecting prompt or completion content.
 
 ## Correlation
 
-Every request has a Genchi request ID and W3C trace context. The request ID is
+Every request has a RAX Compute Gateway request ID and W3C trace context. The request ID is
 returned in `x-request-id` and error metadata. Provider request IDs are recorded
 as protected, bounded attributes when available.
 
@@ -24,7 +24,7 @@ Logs are JSON in production with fields such as:
   "request_id": "req_01J...",
   "trace_id": "...",
   "tenant_id": "tnt_...",
-  "model_alias": "genchi/fast",
+  "model_alias": "rax/fast",
   "provider": "openai",
   "provider_model": "gpt-5-mini",
   "attempts": 1,
@@ -39,18 +39,18 @@ IDs are forbidden log fields. Debug level does not relax this rule.
 
 ## Metrics
 
-Metric names use a `genchi_` prefix. Recommended baseline:
+Metric names use a `rcg_` prefix. Recommended baseline:
 
-- `genchi_http_requests_total{route,method,status_class}`
-- `genchi_http_request_duration_seconds{route}`
-- `genchi_active_requests{route}`
-- `genchi_provider_attempts_total{provider,model,outcome}`
-- `genchi_provider_duration_seconds{provider,model,outcome}`
-- `genchi_routing_decisions_total{alias,provider,reason}`
-- `genchi_fallbacks_total{from_provider,to_provider,reason}`
-- `genchi_admission_rejections_total{scope,reason}`
-- `genchi_circuit_state{provider,model,state}`
-- `genchi_build_info{version,commit}`
+- `rcg_http_requests_total{route,method,status_class}`
+- `rcg_http_request_duration_seconds{route}`
+- `rcg_active_requests{route}`
+- `rcg_provider_attempts_total{provider,model,outcome}`
+- `rcg_provider_duration_seconds{provider,model,outcome}`
+- `rcg_routing_decisions_total{alias,provider,reason}`
+- `rcg_fallbacks_total{from_provider,to_provider,reason}`
+- `rcg_admission_rejections_total{scope,reason}`
+- `rcg_circuit_state{provider,model,state}`
+- `rcg_build_info{version,commit}`
 
 Do not label metrics with request, tenant, key, user, or provider request IDs.
 Model labels are bounded to configured models to control cardinality.
@@ -61,14 +61,14 @@ It records only configured alias/provider/model names and bounded reason codes;
 request IDs, API key IDs, credentials, prompts, and completions are excluded
 from metric labels.
 
-When `GENCHI_METRICS_ENABLED=true`, `GET /metrics` exposes the same process-local
+When `RCG_METRICS_ENABLED=true`, `GET /metrics` exposes the same process-local
 OpenTelemetry instruments in Prometheus text format. It is unauthenticated at
 the application layer and MUST remain on a private Service/ingress policy. When
 metrics are disabled, the route is not registered. OTLP export may run at the
 same time without duplicating instrumentation.
 
-Release builds also register `genchi_build_info` from
-`GENCHI_SERVICE_VERSION` and `GENCHI_COMMIT_SHA`. The Docker build sets both
+Release builds also register `rcg_build_info` from
+`RCG_SERVICE_VERSION` and `RCG_COMMIT_SHA`. The Docker build sets both
 from release identity; operators can use them as deployment markers without
 adding unbounded labels.
 

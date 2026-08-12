@@ -6,7 +6,7 @@ import {
 } from '@opentelemetry/sdk-metrics';
 import { describe, expect, it } from 'vitest';
 
-import type { ResolvedRoute } from '@genchi/domain';
+import type { ResolvedRoute } from '@rax-digital/domain';
 
 import { createRoutingObserver } from './routing-telemetry.js';
 
@@ -35,7 +35,7 @@ describe('createRoutingObserver', () => {
     const observer = createRoutingObserver(provider.getMeter('routing-test'));
 
     observer.plan({
-      requestedModel: 'genchi/fast',
+      requestedModel: 'rax/fast',
       candidateCount: 2,
       selected: primary,
       selectionReason: 'stable_weighted_primary',
@@ -65,12 +65,12 @@ describe('createRoutingObserver', () => {
       .flatMap((scope) => scope.metrics);
     expect(metrics.map((metric) => metric.descriptor.name)).toEqual(
       expect.arrayContaining([
-        'genchi_provider_attempts_total',
-        'genchi_provider_duration_seconds',
-        'genchi_routing_decisions_total',
-        'genchi_fallbacks_total',
-        'genchi_admission_rejections_total',
-        'genchi_circuit_state',
+        'rcg_provider_attempts_total',
+        'rcg_provider_duration_seconds',
+        'rcg_routing_decisions_total',
+        'rcg_fallbacks_total',
+        'rcg_admission_rejections_total',
+        'rcg_circuit_state',
       ]),
     );
     const attributes = metrics.flatMap((metric) =>

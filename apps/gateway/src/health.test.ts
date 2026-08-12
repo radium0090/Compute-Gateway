@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadConfig } from '@genchi/config';
-import { createLogger } from '@genchi/observability';
+import { loadConfig } from '@rax-digital/config';
+import { createLogger } from '@rax-digital/observability';
 
 import { buildGateway } from './app.js';
 
 const config = loadConfig({
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 });
 
 const logger = createLogger({ environment: 'test', level: 'error' });
@@ -72,7 +72,9 @@ describe('health routes', () => {
       readinessProbe: {
         check: () =>
           Promise.reject(
-            new Error('postgresql://private-user:private-password@db/genchi'),
+            new Error(
+              'postgresql://private-user:private-password@db/compute_gateway',
+            ),
           ),
       },
     });

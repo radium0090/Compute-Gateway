@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import type { PolicyConfig } from '@genchi/config';
+import type { PolicyConfig } from '@rax-digital/config';
 import type {
   ApiKey,
   ModelCatalog,
@@ -10,7 +10,7 @@ import type {
   RoutePlanner,
   RouteResolutionResult,
   RouteResolver,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 type ConfiguredCapability =
   PolicyConfig['providers'][string]['models'][string]['capabilities'][number];
@@ -84,7 +84,7 @@ export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
       return { ok: false, reason: 'model_not_allowed' };
     }
 
-    if (input.requestedModel.startsWith('genchi/')) {
+    if (input.requestedModel.startsWith('rax/')) {
       return this.planAlias(
         input.requestedModel,
         input.requestId,

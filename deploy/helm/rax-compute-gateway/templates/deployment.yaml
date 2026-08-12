@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "genchi.fullname" . }}
+  name: {{ include "rax-compute-gateway.fullname" . }}
   labels:
-    {{- include "genchi.labels" . | nindent 4 }}
+    {{- include "rax-compute-gateway.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -15,7 +15,7 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      {{- include "genchi.selectorLabels" . | nindent 6 }}
+      {{- include "rax-compute-gateway.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -24,12 +24,12 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "genchi.selectorLabels" . | nindent 8 }}
+        {{- include "rax-compute-gateway.selectorLabels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: {{ include "genchi.serviceAccountName" . }}
+      serviceAccountName: {{ include "rax-compute-gateway.serviceAccountName" . }}
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       securityContext:
@@ -45,17 +45,17 @@ spec:
       {{- end }}
       containers:
         - name: gateway
-          image: {{ include "genchi.image" . | quote }}
+          image: {{ include "rax-compute-gateway.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
           env:
-            {{- include "genchi.environment" . | nindent 12 }}
+            {{- include "rax-compute-gateway.environment" . | nindent 12 }}
           volumeMounts:
             - name: policy
-              mountPath: /etc/genchi/config.yaml
+              mountPath: /etc/rax-compute-gateway/config.yaml
               subPath: config.yaml
               readOnly: true
             - name: tmp
@@ -98,7 +98,7 @@ spec:
       volumes:
         - name: policy
           configMap:
-            name: {{ include "genchi.fullname" . }}
+            name: {{ include "rax-compute-gateway.fullname" . }}
         - name: tmp
           emptyDir:
             medium: Memory
@@ -111,7 +111,7 @@ spec:
           whenUnsatisfiable: {{ .whenUnsatisfiable }}
           labelSelector:
             matchLabels:
-              {{- include "genchi.selectorLabels" $ | nindent 14 }}
+              {{- include "rax-compute-gateway.selectorLabels" $ | nindent 14 }}
         {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}

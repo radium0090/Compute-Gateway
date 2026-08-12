@@ -20,13 +20,13 @@ type OpenApi = Readonly<{
 }>;
 
 const root = path.resolve(import.meta.dirname, '..');
-const source = path.join(root, 'openapi', 'genchi.openapi.yaml');
+const source = path.join(root, 'openapi', 'compute-gateway.openapi.yaml');
 const destination = path.join(
   root,
   'sdk',
   'python',
   'src',
-  'genchi',
+  'rax_compute_gateway',
   '_generated',
   'models.py',
 );
@@ -76,7 +76,7 @@ function render(schemas: Readonly<Record<string, Schema>>): string {
       ...(fields.length === 0 ? ['    pass'] : fields),
     ].join('\n');
   });
-  return `# Generated from openapi/genchi.openapi.yaml. Do not edit by hand.
+  return `# Generated from openapi/compute-gateway.openapi.yaml. Do not edit by hand.
 from typing import Literal, TypeAlias, TypedDict
 
 

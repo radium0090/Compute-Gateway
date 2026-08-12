@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "genchi.fullname" . }}
+  name: {{ include "rax-compute-gateway.fullname" . }}
   labels:
-    {{- include "genchi.labels" . | nindent 4 }}
+    {{- include "rax-compute-gateway.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -27,7 +27,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "genchi.fullname" $ }}
+                name: {{ include "rax-compute-gateway.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}

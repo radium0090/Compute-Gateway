@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Genchi API
-  description: OpenAI-compatible API for the Genchi compute gateway.
+  title: RAX Compute Gateway API
+  description: OpenAI-compatible API for RAX Compute Gateway.
   version: 0.1.0
   license:
     name: Apache-2.0
@@ -41,61 +41,61 @@ paths:
                 type: string
                 description: SSE data events containing ChatCompletionChunk JSON, terminated by [DONE].
         "400":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "401": &a1
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "408":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "413":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "502":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "503":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "504":
-          description: Canonical Genchi error
+          description: Canonical RAX Compute Gateway error
           content:
             application/json:
               schema:
@@ -161,7 +161,7 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: Genchi API key
+      bearerFormat: RAX Compute Gateway API key
   schemas:
     ChatCompletionRequest:
       additionalProperties: false
@@ -238,7 +238,7 @@ components:
         - model
         - choices
         - usage
-        - genchi
+        - rax
       properties:
         id:
           type: string
@@ -305,7 +305,7 @@ components:
             total_tokens:
               minimum: 0
               type: integer
-        genchi:
+        rax:
           additionalProperties: false
           type: object
           required:
@@ -332,7 +332,7 @@ components:
         - created
         - model
         - choices
-        - genchi
+        - rax
       properties:
         id:
           type: string
@@ -395,7 +395,7 @@ components:
             total_tokens:
               minimum: 0
               type: integer
-        genchi:
+        rax:
           additionalProperties: false
           type: object
           required:
@@ -418,7 +418,7 @@ components:
       type: object
       required:
         - error
-        - genchi
+        - rax
       properties:
         error:
           additionalProperties: false
@@ -439,7 +439,7 @@ components:
               anyOf:
                 - type: string
                 - type: "null"
-        genchi:
+        rax:
           additionalProperties: false
           type: object
           required:
@@ -490,7 +490,7 @@ components:
                 minimum: 0
                 type: integer
               owned_by:
-                const: genchi
+                const: rax-digital
                 type: string
     ReadinessResponse:
       additionalProperties: false

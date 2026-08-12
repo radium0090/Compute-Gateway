@@ -1,18 +1,18 @@
-# Genchi
+# RAX Compute Gateway
 
 > One API. Every AI model.
 
-Genchi is an open-source AI Compute Gateway. It gives applications one stable,
+RAX Compute Gateway is an open-source AI Compute Gateway. It gives applications one stable,
 OpenAI-compatible API for multiple model providers while centralizing routing,
 authentication, retries, limits, and telemetry.
 
 ```text
-Application -> Genchi Gateway -> OpenAI | Anthropic | Gemini | future providers
+Application -> RAX Compute Gateway -> OpenAI | Anthropic | Gemini | future providers
 ```
 
 ## Status
 
-Genchi is in release-candidate validation for the MVP. The gateway,
+RAX Compute Gateway is in release-candidate validation for the MVP. The gateway,
 provider/routing core, operations baseline, SDK previews, contract gates, and
 repeatable performance checks are implemented. The protected three-provider
 smoke has passed; datastore, staging, and final release evidence still need to
@@ -26,7 +26,7 @@ supersedes them.
 - OpenAI, Anthropic, and Gemini adapters
 - Stable public model aliases and explicit provider models
 - Deterministic routing, fallback, timeout, and retry policies
-- Genchi API keys and bring-your-own-provider-key (BYOK) operation
+- RAX Compute Gateway API keys and bring-your-own-provider-key (BYOK) operation
 - PostgreSQL metadata, optional Redis coordination, and stateless gateway nodes
 - OpenTelemetry traces and metrics plus structured, redacted logs
 - Docker Compose for local use and Kubernetes manifests/Helm for production
@@ -44,7 +44,7 @@ its documented alias in the request.
 
 ```bash
 cp .env.example .env
-# Replace GENCHI_MASTER_KEY, GENCHI_KEY_HASH_PEPPER, and OPENAI_API_KEY in .env
+# Replace RCG_MASTER_KEY, RCG_KEY_HASH_PEPPER, and OPENAI_API_KEY in .env
 docker compose up --build --wait
 curl http://localhost:8080/health/ready
 ```
@@ -52,13 +52,13 @@ curl http://localhost:8080/health/ready
 Bootstrap a development tenant and create a client key after migrations finish:
 
 ```bash
-docker compose exec postgres psql -U genchi -d genchi -c \
+docker compose exec postgres psql -U rcg -d compute_gateway -c \
   "INSERT INTO tenants (id, name, status) VALUES ('123e4567-e89b-42d3-a456-426614174000', 'local', 'active') ON CONFLICT DO NOTHING"
-GENCHI_API_KEY="$(docker compose run --rm gateway keys create \
+RCG_API_KEY="$(docker compose run --rm gateway keys create \
   --tenant-id 123e4567-e89b-42d3-a456-426614174000 \
-  --name local-app --environment dev --models 'genchi/*' --allow-streaming)"
-export GENCHI_API_KEY
-test -n "$GENCHI_API_KEY"
+  --name local-app --environment dev --models 'rax/*' --allow-streaming)"
+export RCG_API_KEY
+test -n "$RCG_API_KEY"
 ```
 
 The key command emits the new credential once; command substitution keeps it
@@ -66,7 +66,7 @@ out of the terminal and stores it in the current shell. Keep it out of shell
 history, source control, logs, and URLs.
 
 Compose supplies PostgreSQL and Redis. Outside production, running the gateway
-without `GENCHI_REDIS_URL` uses process-local limits and circuit state; every
+without `RCG_REDIS_URL` uses process-local limits and circuit state; every
 production replica requires Redis coordination and fails startup if it is not
 configured.
 
@@ -74,15 +74,15 @@ Send a request:
 
 ```bash
 curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer $GENCHI_API_KEY" \
+  -H "Authorization: Bearer $RCG_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "genchi/fast",
-    "messages": [{"role": "user", "content": "Hello from Genchi"}]
+    "model": "rax/fast",
+    "messages": [{"role": "user", "content": "Hello from RAX Compute Gateway"}]
   }'
 ```
 
-Genchi accepts the OpenAI client by changing its base URL:
+RAX Compute Gateway accepts the OpenAI client by changing its base URL:
 
 ```python
 import os
@@ -90,12 +90,12 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    api_key=os.environ["GENCHI_API_KEY"],
+    api_key=os.environ["RCG_API_KEY"],
     base_url="http://localhost:8080/v1",
 )
 
 response = client.chat.completions.create(
-    model="genchi/fast",
+    model="rax/fast",
     messages=[{"role": "user", "content": "Hello"}],
 )
 ```

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ApiKey } from '@genchi/domain';
+import type { ApiKey } from '@rax-digital/domain';
 
 import { ListModelsService } from './list-models.js';
 
@@ -31,12 +31,12 @@ describe('ListModelsService', () => {
       {
         authenticate: () => Promise.resolve({ authenticated: true, apiKey }),
       },
-      { listAllowed: () => [{ id: 'genchi/fast' }] },
+      { listAllowed: () => [{ id: 'rax/fast' }] },
     );
 
     await expect(service.execute('valid')).resolves.toEqual({
       ok: true,
-      models: [{ id: 'genchi/fast' }],
+      models: [{ id: 'rax/fast' }],
     });
   });
 });

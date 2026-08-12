@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ProviderStreamFailure } from '@genchi/domain';
+import { ProviderStreamFailure } from '@rax-digital/domain';
 
 import { OpenAiAdapter } from './openai-adapter.js';
 
@@ -16,7 +16,7 @@ const capabilities = {
 const streamingCapabilities = { ...capabilities, streaming: true };
 
 const request = {
-  model: 'genchi/fast',
+  model: 'rax/fast',
   messages: [{ role: 'user' as const, content: 'private prompt text' }],
   temperature: 0.2,
 };

@@ -13,7 +13,7 @@ import {
   type ApiKeyRepository,
   type ApiKeyStatus,
   type ApiKeyId,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 interface ApiKeyRow {
   readonly id: string;

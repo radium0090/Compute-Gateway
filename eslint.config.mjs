@@ -30,7 +30,7 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: ['@genchi/*/src', '@genchi/*/src/**'],
+          patterns: ['@rax-digital/*/src', '@rax-digital/*/src/**'],
         },
       ],
     },
@@ -48,11 +48,11 @@ export default tseslint.config(
             'pg/*',
             'pino',
             '@opentelemetry/*',
-            '@genchi/provider-*',
-            '@genchi/persistence-*',
-            '@genchi/observability',
-            '@genchi/*/src',
-            '@genchi/*/src/**',
+            '@rax-digital/provider-*',
+            '@rax-digital/persistence-*',
+            '@rax-digital/observability',
+            '@rax-digital/*/src',
+            '@rax-digital/*/src/**',
           ],
         },
       ],
@@ -64,7 +64,11 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: ['@genchi/provider-*', '@genchi/*/src', '@genchi/*/src/**'],
+          patterns: [
+            '@rax-digital/provider-*',
+            '@rax-digital/*/src',
+            '@rax-digital/*/src/**',
+          ],
         },
       ],
     },

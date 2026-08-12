@@ -11,12 +11,12 @@ route policy. Environment variables override file values only where documented.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `GENCHI_ENVIRONMENT` | yes | `development`, `test`, `staging`, or `production` |
-| `GENCHI_DATABASE_URL` | yes | PostgreSQL connection URL |
-| `GENCHI_MASTER_KEY` | bootstrap | initial operator secret; disable after bootstrap |
-| `GENCHI_KEY_HASH_PEPPER` | yes | HMAC pepper for API key verification |
-| `GENCHI_CONFIG_FILE` | no | route policy path; default `/etc/genchi/config.yaml` |
-| `GENCHI_REDIS_URL` | conditional | required in production for distributed limits/circuit state |
+| `RCG_ENVIRONMENT` | yes | `development`, `test`, `staging`, or `production` |
+| `RCG_DATABASE_URL` | yes | PostgreSQL connection URL |
+| `RCG_MASTER_KEY` | bootstrap | initial operator secret; disable after bootstrap |
+| `RCG_KEY_HASH_PEPPER` | yes | HMAC pepper for API key verification |
+| `RCG_CONFIG_FILE` | no | route policy path; default `/etc/rax-compute-gateway/config.yaml` |
+| `RCG_REDIS_URL` | conditional | required in production for distributed limits/circuit state |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | no | OpenTelemetry Collector endpoint |
 
 Provider credentials follow explicit names such as `OPENAI_API_KEY`,
@@ -27,20 +27,20 @@ credential name; the value is never included in route YAML.
 
 | Variable | Default | Constraint |
 | --- | --- | --- |
-| `GENCHI_HOST` | `0.0.0.0` | valid bind address |
-| `GENCHI_PORT` | `8080` | 1..65535 |
-| `GENCHI_LOG_LEVEL` | `info` | `debug/info/warn/error` |
-| `GENCHI_REQUEST_BODY_LIMIT_BYTES` | `2097152` | positive integer |
-| `GENCHI_TOTAL_TIMEOUT_MS` | `60000` | 1000..300000 |
-| `GENCHI_CONNECT_TIMEOUT_MS` | `30000` | less than total timeout |
-| `GENCHI_SHUTDOWN_GRACE_MS` | `30000` | positive integer |
-| `GENCHI_TRUST_PROXY` | `false` | development only; must remain false in production for `0.1` |
-| `GENCHI_METRICS_ENABLED` | `true` | boolean |
-| `GENCHI_SERVICE_VERSION` | `0.0.0` | build/release identifier, maximum 64 characters |
-| `GENCHI_COMMIT_SHA` | `unknown` | `unknown` or a 7..64 character lowercase Git SHA |
+| `RCG_HOST` | `0.0.0.0` | valid bind address |
+| `RCG_PORT` | `8080` | 1..65535 |
+| `RCG_LOG_LEVEL` | `info` | `debug/info/warn/error` |
+| `RCG_REQUEST_BODY_LIMIT_BYTES` | `2097152` | positive integer |
+| `RCG_TOTAL_TIMEOUT_MS` | `60000` | 1000..300000 |
+| `RCG_CONNECT_TIMEOUT_MS` | `30000` | less than total timeout |
+| `RCG_SHUTDOWN_GRACE_MS` | `30000` | positive integer |
+| `RCG_TRUST_PROXY` | `false` | development only; must remain false in production for `0.1` |
+| `RCG_METRICS_ENABLED` | `true` | boolean |
+| `RCG_SERVICE_VERSION` | `0.0.0` | build/release identifier, maximum 64 characters |
+| `RCG_COMMIT_SHA` | `unknown` | `unknown` or a 7..64 character lowercase Git SHA |
 
 Release images set the last two values from immutable build metadata. Operators
-normally leave them unchanged so traces and `genchi_build_info` match the image
+normally leave them unchanged so traces and `rcg_build_info` match the image
 provenance.
 
 ## Route policy example
@@ -57,7 +57,7 @@ providers:
         capabilities: [chat, streaming]
 
 aliases:
-  genchi/fast:
+  rax/fast:
     candidates:
       - provider: openai-primary
         model: gpt-5-mini
@@ -89,7 +89,7 @@ less than `max_attempts`; the connect timeout must be less than the total
 timeout; and the minimum attempt budget cannot exceed the total timeout.
 Zero-weight alias candidates are fallback-only.
 
-When `GENCHI_REDIS_URL` is unset outside production, limits and circuit state
+When `RCG_REDIS_URL` is unset outside production, limits and circuit state
 are process-local and suitable only for development or a single replica. In
 production Redis is mandatory. Admission, provider concurrency, and circuit
 operations fail closed when configured Redis coordination is unavailable, and

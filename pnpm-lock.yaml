@@ -8,7 +8,7 @@ importers:
 
   .:
     devDependencies:
-      '@genchi/api-contract':
+      '@rax-digital/api-contract':
         specifier: workspace:*
         version: link:packages/api-contract
       '@types/node':
@@ -50,40 +50,40 @@ importers:
 
   apps/gateway:
     dependencies:
-      '@genchi/api-contract':
+      '@rax-digital/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
-      '@genchi/application':
+      '@rax-digital/application':
         specifier: workspace:*
         version: link:../../packages/application
-      '@genchi/auth':
+      '@rax-digital/auth':
         specifier: workspace:*
         version: link:../../packages/auth
-      '@genchi/config':
+      '@rax-digital/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@genchi/coordination-redis':
+      '@rax-digital/coordination-redis':
         specifier: workspace:*
         version: link:../../packages/coordination-redis
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@genchi/observability':
+      '@rax-digital/observability':
         specifier: workspace:*
         version: link:../../packages/observability
-      '@genchi/persistence-postgres':
+      '@rax-digital/persistence-postgres':
         specifier: workspace:*
         version: link:../../packages/persistence-postgres
-      '@genchi/provider-anthropic':
+      '@rax-digital/provider-anthropic':
         specifier: workspace:*
         version: link:../../packages/provider-anthropic
-      '@genchi/provider-gemini':
+      '@rax-digital/provider-gemini':
         specifier: workspace:*
         version: link:../../packages/provider-gemini
-      '@genchi/provider-openai':
+      '@rax-digital/provider-openai':
         specifier: workspace:*
         version: link:../../packages/provider-openai
-      '@genchi/router':
+      '@rax-digital/router':
         specifier: workspace:*
         version: link:../../packages/router
       fastify:
@@ -108,13 +108,13 @@ importers:
 
   packages/application:
     dependencies:
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
 
   packages/auth:
     dependencies:
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
 
@@ -129,7 +129,7 @@ importers:
 
   packages/coordination-redis:
     dependencies:
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
       redis:
@@ -143,7 +143,7 @@ importers:
       '@fastify/otel':
         specifier: 0.20.1
         version: 0.20.1(@opentelemetry/api@1.9.1)
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
       '@opentelemetry/api':
@@ -182,7 +182,7 @@ importers:
 
   packages/persistence-postgres:
     dependencies:
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
       pg:
@@ -195,55 +195,55 @@ importers:
 
   packages/provider-anthropic:
     dependencies:
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
       '@sinclair/typebox':
         specifier: 0.34.52
         version: 0.34.52
     devDependencies:
-      '@genchi/testkit':
+      '@rax-digital/testkit':
         specifier: workspace:*
         version: link:../testkit
 
   packages/provider-gemini:
     dependencies:
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
       '@sinclair/typebox':
         specifier: 0.34.52
         version: 0.34.52
     devDependencies:
-      '@genchi/testkit':
+      '@rax-digital/testkit':
         specifier: workspace:*
         version: link:../testkit
 
   packages/provider-openai:
     dependencies:
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
       '@sinclair/typebox':
         specifier: 0.34.52
         version: 0.34.52
     devDependencies:
-      '@genchi/testkit':
+      '@rax-digital/testkit':
         specifier: workspace:*
         version: link:../testkit
 
   packages/router:
     dependencies:
-      '@genchi/config':
+      '@rax-digital/config':
         specifier: workspace:*
         version: link:../config
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
 
   packages/testkit:
     dependencies:
-      '@genchi/domain':
+      '@rax-digital/domain':
         specifier: workspace:*
         version: link:../domain
       vitest:

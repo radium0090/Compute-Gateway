@@ -1,10 +1,10 @@
 {
-  "name": "@genchi/gateway",
+  "name": "@rax-digital/gateway",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "bin": {
-    "genchi": "./dist/index.js"
+    "rax-compute-gateway": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -17,18 +17,18 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@genchi/api-contract": "workspace:*",
-    "@genchi/application": "workspace:*",
-    "@genchi/auth": "workspace:*",
-    "@genchi/config": "workspace:*",
-    "@genchi/coordination-redis": "workspace:*",
-    "@genchi/domain": "workspace:*",
-    "@genchi/observability": "workspace:*",
-    "@genchi/persistence-postgres": "workspace:*",
-    "@genchi/provider-anthropic": "workspace:*",
-    "@genchi/provider-gemini": "workspace:*",
-    "@genchi/provider-openai": "workspace:*",
-    "@genchi/router": "workspace:*",
+    "@rax-digital/api-contract": "workspace:*",
+    "@rax-digital/application": "workspace:*",
+    "@rax-digital/auth": "workspace:*",
+    "@rax-digital/config": "workspace:*",
+    "@rax-digital/coordination-redis": "workspace:*",
+    "@rax-digital/domain": "workspace:*",
+    "@rax-digital/observability": "workspace:*",
+    "@rax-digital/persistence-postgres": "workspace:*",
+    "@rax-digital/provider-anthropic": "workspace:*",
+    "@rax-digital/provider-gemini": "workspace:*",
+    "@rax-digital/provider-openai": "workspace:*",
+    "@rax-digital/router": "workspace:*",
     "fastify": "5.11.0",
     "pg": "8.22.0"
   },

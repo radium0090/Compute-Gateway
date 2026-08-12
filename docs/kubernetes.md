@@ -2,7 +2,7 @@
 
 ## Packaging
 
-The supported package is `deploy/helm/genchi`. Plain manifests in
+The supported package is `deploy/helm/rax-compute-gateway`. Plain manifests in
 `deploy/kubernetes/examples` illustrate integration but are not a substitute
 for environment-specific secret, ingress, and database configuration.
 
@@ -10,10 +10,10 @@ Create the secret through the cluster's secret-management path, then install by
 immutable image digest:
 
 ```bash
-helm lint --strict deploy/helm/genchi
-helm upgrade --install genchi deploy/helm/genchi \
-  --namespace genchi --create-namespace \
-  --set existingSecret=genchi-production-secrets \
+helm lint --strict deploy/helm/rax-compute-gateway
+helm upgrade --install rax-compute-gateway deploy/helm/rax-compute-gateway \
+  --namespace rax-compute-gateway --create-namespace \
+  --set existingSecret=rax-compute-gateway-production-secrets \
   --set image.tag=v0.1.0 \
   --set image.digest=sha256:<digest>
 ```

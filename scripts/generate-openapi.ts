@@ -10,15 +10,18 @@ import {
   LivenessResponseSchema,
   ModelListSchema,
   ReadinessResponseSchema,
-} from '@genchi/api-contract';
+} from '@rax-digital/api-contract';
 
-const outputPath = new URL('../openapi/genchi.openapi.yaml', import.meta.url);
+const outputPath = new URL(
+  '../openapi/compute-gateway.openapi.yaml',
+  import.meta.url,
+);
 
 const errorResponses = Object.fromEntries(
   [400, 401, 403, 404, 408, 413, 429, 502, 503, 504].map((status) => [
     status,
     {
-      description: 'Canonical Genchi error',
+      description: 'Canonical RAX Compute Gateway error',
       content: {
         'application/json': {
           schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -31,8 +34,8 @@ const errorResponses = Object.fromEntries(
 const document = {
   openapi: '3.1.0',
   info: {
-    title: 'Genchi API',
-    description: 'OpenAI-compatible API for the Genchi compute gateway.',
+    title: 'RAX Compute Gateway API',
+    description: 'OpenAI-compatible API for RAX Compute Gateway.',
     version: '0.1.0',
     license: { name: 'Apache-2.0', identifier: 'Apache-2.0' },
   },
@@ -162,7 +165,7 @@ const document = {
       bearerAuth: {
         type: 'http',
         scheme: 'bearer',
-        bearerFormat: 'Genchi API key',
+        bearerFormat: 'RAX Compute Gateway API key',
       },
     },
     schemas: {
@@ -186,5 +189,5 @@ if (process.argv.includes('--check')) {
   }
 } else {
   await writeFile(outputPath, generated, 'utf8');
-  process.stdout.write('Generated openapi/genchi.openapi.yaml\n');
+  process.stdout.write('Generated openapi/compute-gateway.openapi.yaml\n');
 }

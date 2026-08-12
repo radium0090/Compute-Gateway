@@ -4,7 +4,7 @@
 
 Protect tenants and credentials, contain provider/network abuse, preserve safe
 evidence, restore known-good service, and communicate verified facts. Model
-content is sensitive even when it is not persisted by Genchi.
+content is sensitive even when it is not persisted by RAX Compute Gateway.
 
 ## Triage and containment
 
@@ -12,7 +12,7 @@ content is sensitive even when it is not persisted by Genchi.
    channel. Security reports follow `SECURITY.md`, never a public issue.
 2. Identify affected tenants, key public IDs, provider routes, versions,
    regions, and time window using metadata only.
-3. Disable or revoke affected Genchi keys. Rotate provider credentials through
+3. Disable or revoke affected RAX Compute Gateway keys. Rotate provider credentials through
    the secret manager and restart/roll workloads so stale environment values
    disappear.
 4. Restrict ingress/egress or remove affected provider routes when active abuse

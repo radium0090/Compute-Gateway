@@ -22,7 +22,7 @@ providers:
       gemini-3.5-flash:
         capabilities: [chat, streaming]
 aliases:
-  genchi/fast:
+  rax/fast:
     candidates:
       - provider: openai-primary
         model: gpt-5-mini
@@ -33,12 +33,12 @@ aliases:
       - provider: gemini-primary
         model: gemini-3.5-flash
         weight: 0
-  genchi/anthropic:
+  rax/anthropic:
     candidates:
       - provider: anthropic-primary
         model: claude-sonnet-4-6
         weight: 100
-  genchi/gemini:
+  rax/gemini:
     candidates:
       - provider: gemini-primary
         model: gemini-3.5-flash

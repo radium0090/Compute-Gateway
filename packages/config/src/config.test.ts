@@ -7,26 +7,26 @@ import {
 } from './config.js';
 
 const validEnvironment = {
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 } as const;
 
 describe('loadConfig', () => {
   it('loads validated defaults and typed overrides', () => {
     const config = loadConfig({
       ...validEnvironment,
-      GENCHI_PORT: '9090',
-      GENCHI_METRICS_ENABLED: 'false',
-      GENCHI_SERVICE_VERSION: 'v0.1.0',
-      GENCHI_COMMIT_SHA: 'abcdef1234567',
+      RCG_PORT: '9090',
+      RCG_METRICS_ENABLED: 'false',
+      RCG_SERVICE_VERSION: 'v0.1.0',
+      RCG_COMMIT_SHA: 'abcdef1234567',
     });
 
     expect(config.port).toBe(9090);
     expect(config.metricsEnabled).toBe(false);
     expect(config.totalTimeoutMs).toBe(60_000);
     expect(config.connectTimeoutMs).toBe(30_000);
-    expect(config.configFile).toBe('/etc/genchi/config.yaml');
+    expect(config.configFile).toBe('/etc/rax-compute-gateway/config.yaml');
     expect(config.serviceVersion).toBe('v0.1.0');
     expect(config.commitSha).toBe('abcdef1234567');
   });
@@ -36,17 +36,17 @@ describe('loadConfig', () => {
 
     expect(() =>
       loadConfig({
-        GENCHI_ENVIRONMENT: 'test',
-        GENCHI_DATABASE_URL: leakedCandidate,
-        GENCHI_KEY_HASH_PEPPER: 'short',
+        RCG_ENVIRONMENT: 'test',
+        RCG_DATABASE_URL: leakedCandidate,
+        RCG_KEY_HASH_PEPPER: 'short',
       }),
     ).toThrow(ConfigValidationError);
 
     try {
       loadConfig({
-        GENCHI_ENVIRONMENT: 'test',
-        GENCHI_DATABASE_URL: leakedCandidate,
-        GENCHI_KEY_HASH_PEPPER: 'short',
+        RCG_ENVIRONMENT: 'test',
+        RCG_DATABASE_URL: leakedCandidate,
+        RCG_KEY_HASH_PEPPER: 'short',
       });
     } catch (error: unknown) {
       expect(error).toBeInstanceOf(ConfigValidationError);
@@ -59,24 +59,24 @@ describe('loadConfig', () => {
     expect(() =>
       loadConfig({
         ...validEnvironment,
-        GENCHI_ENVIRONMENT: 'production',
-        GENCHI_TOTAL_TIMEOUT_MS: '5000',
-        GENCHI_CONNECT_TIMEOUT_MS: '5000',
-        GENCHI_TRUST_PROXY: 'true',
+        RCG_ENVIRONMENT: 'production',
+        RCG_TOTAL_TIMEOUT_MS: '5000',
+        RCG_CONNECT_TIMEOUT_MS: '5000',
+        RCG_TRUST_PROXY: 'true',
       }),
     ).toThrow(/must be less|explicit proxy CIDRs/);
   });
 
   it('requires Redis for production distributed controls', () => {
     expect(() =>
-      loadConfig({ ...validEnvironment, GENCHI_ENVIRONMENT: 'production' }),
-    ).toThrow(/GENCHI_REDIS_URL is required/);
+      loadConfig({ ...validEnvironment, RCG_ENVIRONMENT: 'production' }),
+    ).toThrow(/RCG_REDIS_URL is required/);
 
     expect(
       loadConfig({
         ...validEnvironment,
-        GENCHI_ENVIRONMENT: 'production',
-        GENCHI_REDIS_URL: 'rediss://redis.example:6379',
+        RCG_ENVIRONMENT: 'production',
+        RCG_REDIS_URL: 'rediss://redis.example:6379',
       }).redisUrl,
     ).toBe('rediss://redis.example:6379');
   });
@@ -84,12 +84,12 @@ describe('loadConfig', () => {
   it('reports only whether secrets are set', () => {
     const config = loadConfig({
       ...validEnvironment,
-      GENCHI_MASTER_KEY: 'fake-master-key-with-at-least-32-characters',
+      RCG_MASTER_KEY: 'fake-master-key-with-at-least-32-characters',
     });
 
     expect(describeSecretPresence(config)).toEqual({
-      GENCHI_KEY_HASH_PEPPER: '<set>',
-      GENCHI_MASTER_KEY: '<set>',
+      RCG_KEY_HASH_PEPPER: '<set>',
+      RCG_MASTER_KEY: '<set>',
     });
   });
 });

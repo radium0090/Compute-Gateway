@@ -21,7 +21,7 @@ grade authentication, routing, failure handling, and telemetry.
 | Models | `GET /v1/models` returns models allowed for the caller |
 | Providers | OpenAI, Anthropic, Gemini |
 | Routing | aliases, ordered candidates, health filtering, fallback |
-| Auth | hashed Genchi API keys; provider credentials from server configuration |
+| Auth | hashed RAX Compute Gateway API keys; provider credentials from server configuration |
 | Limits | request size, concurrency, per-key rate limits, provider timeout |
 | Storage | PostgreSQL for identities/config metadata; Redis optional for distributed limits |
 | Operations | liveness, readiness, metrics, traces, structured logs |
@@ -41,15 +41,15 @@ grade authentication, routing, failure handling, and telemetry.
 
 ## User stories
 
-1. As a developer, I can point the OpenAI SDK at Genchi and receive a standard
+1. As a developer, I can point the OpenAI SDK at RAX Compute Gateway and receive a standard
    chat completion.
-2. As a platform engineer, I can map `genchi/fast` to an ordered list of models
+2. As a platform engineer, I can map `rax/fast` to an ordered list of models
    without changing application code.
 3. As an operator, I can see which provider was selected and why without
    capturing prompt or completion content.
 4. As a developer, I receive one documented error envelope even when provider
    errors differ.
-5. As an operator, I can rotate Genchi and provider credentials without
+5. As an operator, I can rotate RAX Compute Gateway and provider credentials without
    rebuilding the image.
 6. As a contributor, I can validate an adapter with a shared conformance suite.
 

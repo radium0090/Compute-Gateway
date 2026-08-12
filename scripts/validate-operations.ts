@@ -127,7 +127,7 @@ async function validateWorkflows(): Promise<void> {
     'AWS staging bootstrap must grant only contents:read and id-token:write',
   );
   assert(
-    awsBootstrapSource.includes('vars.GENCHI_SECRET_ARN') &&
+    awsBootstrapSource.includes('vars.RCG_SECRET_ARN') &&
       awsBootstrapSource.includes('aws secretsmanager get-secret-value') &&
       awsBootstrapSource.includes('keys | sort | join(",")'),
     'AWS staging bootstrap must inspect only the configured secret schema',
@@ -193,7 +193,7 @@ async function validateWorkflows(): Promise<void> {
 }
 
 async function validateHelm(): Promise<void> {
-  const chartRoot = 'deploy/helm/genchi/';
+  const chartRoot = 'deploy/helm/rax-compute-gateway/';
   const required = [
     'Chart.yaml',
     'values.yaml',
@@ -231,8 +231,8 @@ async function validateContainerReferences(): Promise<void> {
   const sources = await Promise.all([
     read('Dockerfile'),
     read('docker-compose.yml'),
-    read('deploy/helm/genchi/values.yaml'),
-    read('deploy/kubernetes/examples/genchi.yaml'),
+    read('deploy/helm/rax-compute-gateway/values.yaml'),
+    read('deploy/kubernetes/examples/rax-compute-gateway.yaml'),
   ]);
   assert(
     !sources.some((source) => /image:\s*[^\s]+:latest(?:\s|$)/m.test(source)),

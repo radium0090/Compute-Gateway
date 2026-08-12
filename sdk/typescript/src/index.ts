@@ -1,8 +1,8 @@
 export {
-  Genchi,
-  GenchiApiError,
-  GenchiConnectionError,
-  type GenchiOptions,
+  RaxComputeGateway,
+  RaxComputeGatewayApiError,
+  RaxComputeGatewayConnectionError,
+  type RaxComputeGatewayOptions,
 } from './client.js';
 export type {
   ChatCompletionChunk,

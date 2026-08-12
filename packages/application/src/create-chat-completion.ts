@@ -1,7 +1,7 @@
 import {
   ProviderStreamFailure,
   circuitOutcomeForProviderError,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 import type {
   AdmissionRejectionReason,
   ApiKey,
@@ -25,7 +25,7 @@ import type {
   RouteResolver,
   RoutingExecutionPolicy,
   RoutingObserver,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 export type ChatCompletionFailure =
   | { readonly kind: 'authentication' }

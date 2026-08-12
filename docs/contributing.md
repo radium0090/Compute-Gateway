@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for helping build Genchi. Contributions are welcome as issues,
+Thank you for helping build RAX Compute Gateway. Contributions are welcome as issues,
 documentation, tests, provider adapters, fixes, and focused features.
 
 ## Before coding
@@ -47,8 +47,8 @@ pnpm operations:check
 pnpm build
 ```
 
-Integration tests skip unless `GENCHI_TEST_DATABASE_URL` and/or
-`GENCHI_TEST_REDIS_URL` are set. Container and kind checks run in CI and should
+Integration tests skip unless `RCG_TEST_DATABASE_URL` and/or
+`RCG_TEST_REDIS_URL` are set. Container and kind checks run in CI and should
 also be run locally when those tools are available and their assets change.
 `pnpm release:check` runs the complete locally reproducible candidate gate.
 `pnpm test:live` safely skips unless explicitly enabled; use the protected

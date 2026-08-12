@@ -2,14 +2,14 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { apiKeyId, type ResolvedRoute } from '@genchi/domain';
+import { apiKeyId, type ResolvedRoute } from '@rax-digital/domain';
 
 import {
   RedisCoordination,
   createRedisCoordination,
 } from './redis-coordination.js';
 
-const redisUrl = process.env.GENCHI_TEST_REDIS_URL;
+const redisUrl = process.env.RCG_TEST_REDIS_URL;
 const describeIntegration = redisUrl === undefined ? describe.skip : describe;
 
 describeIntegration('RedisCoordination integration', () => {

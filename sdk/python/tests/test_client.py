@@ -4,7 +4,11 @@ import os
 import unittest
 from unittest.mock import patch
 
-from genchi import Genchi, GenchiAPIError, GenchiConnectionError
+from rax_compute_gateway import (
+    RaxComputeGateway,
+    RaxComputeGatewayAPIError,
+    RaxComputeGatewayConnectionError,
+)
 
 
 class FakeResponse:
@@ -24,7 +28,7 @@ class FakeResponse:
         self.closed = True
 
 
-class GenchiTests(unittest.TestCase):
+class RaxComputeGatewayTests(unittest.TestCase):
     def test_completion_and_models_send_auth_without_leaking_key(self):
         requests = []
 
@@ -38,17 +42,17 @@ class GenchiTests(unittest.TestCase):
                         "id": "c-1",
                         "object": "chat.completion",
                         "created": 1,
-                        "model": "genchi/fast",
+                        "model": "rax/fast",
                         "choices": [],
                         "usage": {},
-                        "genchi": {},
+                        "rax": {},
                     }
                 ).encode()
             )
 
-        client = Genchi(api_key="test-only-key", transport=transport)
+        client = RaxComputeGateway(api_key="test-only-key", transport=transport)
         result = client.chat.completions.create(
-            model="genchi/fast", messages=[{"role": "user", "content": "Hi"}]
+            model="rax/fast", messages=[{"role": "user", "content": "Hi"}]
         )
         models = client.models.list()
 
@@ -62,15 +66,15 @@ class GenchiTests(unittest.TestCase):
         attempts = []
         error = {
             "error": {"message": "busy", "code": "provider_unavailable", "param": None},
-            "genchi": {"request_id": "req-1", "retryable": True},
+            "rax": {"request_id": "req-1", "retryable": True},
         }
 
         def transport(_request, _timeout):
             attempts.append(1)
             return FakeResponse(status=503, body=json.dumps(error).encode())
 
-        client = Genchi(api_key="test", max_retries=1, transport=transport)
-        with self.assertRaises(GenchiAPIError) as raised:
+        client = RaxComputeGateway(api_key="test", max_retries=1, transport=transport)
+        with self.assertRaises(RaxComputeGatewayAPIError) as raised:
             client.models.list()
         self.assertEqual(len(attempts), 2)
         self.assertEqual(raised.exception.status, 503)
@@ -85,9 +89,9 @@ class GenchiTests(unittest.TestCase):
                 b"data: [DONE]\n\n"
             )
         )
-        client = Genchi(api_key="test", transport=lambda _request, _timeout: response)
+        client = RaxComputeGateway(api_key="test", transport=lambda _request, _timeout: response)
         stream = client.chat.completions.stream(
-            model="genchi/fast", messages=[{"role": "user", "content": "Hi"}]
+            model="rax/fast", messages=[{"role": "user", "content": "Hi"}]
         )
         self.assertEqual(next(stream)["id"], "chunk-1")
         stream.close()
@@ -96,13 +100,13 @@ class GenchiTests(unittest.TestCase):
     def test_missing_credentials_and_network_failures_are_safe(self):
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(ValueError, "API key"):
-                Genchi()
+                RaxComputeGateway()
 
         def unavailable(_request, _timeout):
             raise OSError("contains internal endpoint details")
 
-        client = Genchi(api_key="test", max_retries=0, transport=unavailable)
-        with self.assertRaises(GenchiConnectionError) as raised:
+        client = RaxComputeGateway(api_key="test", max_retries=0, transport=unavailable)
+        with self.assertRaises(RaxComputeGatewayConnectionError) as raised:
             client.models.list()
         self.assertNotIn("internal endpoint", str(raised.exception))
 

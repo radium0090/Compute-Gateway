@@ -1,4 +1,4 @@
-Genchi has been rendered as {{ include "genchi.fullname" . }}.
+RAX Compute Gateway has been rendered as {{ include "rax-compute-gateway.fullname" . }}.
 
 The chart references the existing Secret {{ .Values.existingSecret | quote }};
 it never renders secret values. Wait for the migration hook and all replicas to

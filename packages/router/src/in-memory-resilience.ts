@@ -10,7 +10,7 @@ import type {
   ProviderConcurrencyController,
   RequestAdmissionController,
   ResolvedRoute,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 interface KeyLimitState {
   bucket: number;

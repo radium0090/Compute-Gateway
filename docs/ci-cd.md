@@ -40,7 +40,7 @@ before the next schema migration is accepted.
 | unit | domain rules, translation, validation | none |
 | contract | adapters against fixtures/mock server | local only |
 | integration | gateway + PostgreSQL/Redis | ephemeral containers |
-| compatibility | OpenAI/Genchi SDK request behavior | local gateway |
+| compatibility | OpenAI/RAX Compute Gateway SDK request behavior | local gateway |
 | live smoke | minimal real provider request | protected scheduled/manual |
 | performance | overhead, streams, resource saturation | isolated environment |
 

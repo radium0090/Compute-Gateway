@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Genchi is committed to a welcoming, safe, and productive community. Everyone
+RAX Compute Gateway is committed to a welcoming, safe, and productive community. Everyone
 participating in the project is expected to help create an environment where
 people can collaborate across differences in experience, identity, and point of
 view.
@@ -33,7 +33,7 @@ The following behavior is not acceptable:
 
 This code applies in repositories, issues, pull requests, discussions, project
 events, and project-related public or private communication. It also applies
-when someone officially represents Genchi.
+when someone officially represents RAX Compute Gateway.
 
 ## Reporting
 

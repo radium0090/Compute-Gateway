@@ -2,21 +2,21 @@ import { Writable } from 'node:stream';
 
 import { describe, expect, it } from 'vitest';
 
-import { loadConfig } from '@genchi/config';
-import { ProviderStreamFailure } from '@genchi/domain';
-import { createLogger } from '@genchi/observability';
+import { loadConfig } from '@rax-digital/config';
+import { ProviderStreamFailure } from '@rax-digital/domain';
+import { createLogger } from '@rax-digital/observability';
 
 import { buildGateway } from './app.js';
 
 const config = loadConfig({
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 });
 const logger = createLogger({ environment: 'test', level: 'error' });
 const readinessProbe = { check: () => Promise.resolve({ ready: true }) };
 const validBody = {
-  model: 'genchi/fast',
+  model: 'rax/fast',
   messages: [{ role: 'user', content: 'private prompt' }],
 };
 
@@ -51,14 +51,14 @@ describe('POST /v1/chat/completions', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/chat/completions',
-      headers: { authorization: 'Bearer fake-genchi-key' },
+      headers: { authorization: 'Bearer fake-rcg-key' },
       payload: validBody,
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       object: 'chat.completion',
-      model: 'genchi/fast',
+      model: 'rax/fast',
       choices: [
         {
           index: 0,
@@ -67,7 +67,7 @@ describe('POST /v1/chat/completions', () => {
         },
       ],
       usage: { prompt_tokens: 4, completion_tokens: 2, total_tokens: 6 },
-      genchi: {
+      rax: {
         provider: 'openai',
         provider_model: 'gpt-test',
         attempts: 1,
@@ -108,7 +108,7 @@ describe('POST /v1/chat/completions', () => {
         code: 'invalid_api_key',
         param: null,
       },
-      genchi: {
+      rax: {
         request_id: response.headers['x-request-id'],
         retryable: false,
       },
@@ -137,14 +137,14 @@ describe('POST /v1/chat/completions', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/chat/completions',
-      headers: { authorization: 'Bearer fake-genchi-key' },
+      headers: { authorization: 'Bearer fake-rcg-key' },
       payload: validBody,
     });
 
     expect(response.statusCode).toBe(408);
     expect(response.json()).toMatchObject({
       error: { type: 'timeout_error', code: 'request_deadline_exceeded' },
-      genchi: { retryable: true },
+      rax: { retryable: true },
     });
     expect(serviceCalled).toBe(false);
     await app.close();
@@ -171,14 +171,14 @@ describe('POST /v1/chat/completions', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/chat/completions',
-      headers: { authorization: 'Bearer fake-genchi-key' },
+      headers: { authorization: 'Bearer fake-rcg-key' },
       payload: { ...validBody, stream: true },
     });
 
     expect(response.statusCode).toBe(408);
     expect(response.json()).toMatchObject({
       error: { type: 'timeout_error', code: 'request_deadline_exceeded' },
-      genchi: { retryable: true },
+      rax: { retryable: true },
     });
     expect(serviceCalled).toBe(false);
     await app.close();
@@ -202,7 +202,7 @@ describe('POST /v1/chat/completions', () => {
     const unknown = await app.inject({
       method: 'POST',
       url: '/v1/chat/completions',
-      headers: { authorization: 'Bearer fake-genchi-key' },
+      headers: { authorization: 'Bearer fake-rcg-key' },
       payload: { ...validBody, unsupported: 'value' },
     });
     expect(unknown.statusCode).toBe(400);
@@ -264,7 +264,7 @@ describe('POST /v1/chat/completions', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/chat/completions',
-      headers: { authorization: 'Bearer fake-genchi-key' },
+      headers: { authorization: 'Bearer fake-rcg-key' },
       payload: { ...validBody, stream: true },
     });
 
@@ -281,7 +281,7 @@ describe('POST /v1/chat/completions', () => {
     expect(chunks).toMatchObject([
       {
         object: 'chat.completion.chunk',
-        model: 'genchi/fast',
+        model: 'rax/fast',
         choices: [
           {
             delta: { role: 'assistant', content: 'first' },
@@ -334,7 +334,7 @@ describe('POST /v1/chat/completions', () => {
     const errorResponse = await preCommit.inject({
       method: 'POST',
       url: '/v1/chat/completions',
-      headers: { authorization: 'Bearer fake-genchi-key' },
+      headers: { authorization: 'Bearer fake-rcg-key' },
       payload: { ...validBody, stream: true },
     });
     expect(errorResponse.statusCode).toBe(429);
@@ -378,7 +378,7 @@ describe('POST /v1/chat/completions', () => {
     const partial = await midStream.inject({
       method: 'POST',
       url: '/v1/chat/completions',
-      headers: { authorization: 'Bearer fake-genchi-key' },
+      headers: { authorization: 'Bearer fake-rcg-key' },
       payload: { ...validBody, stream: true },
     });
     expect(partial.statusCode).toBe(200);

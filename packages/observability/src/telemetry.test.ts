@@ -47,7 +47,7 @@ describe('registerBuildInfo', () => {
       commitSha: 'abcdef1',
     });
 
-    expect(createObservableGauge).toHaveBeenCalledWith('genchi_build_info', {
+    expect(createObservableGauge).toHaveBeenCalledWith('rcg_build_info', {
       description: 'Build identity for the running gateway',
     });
     const callback = addCallback.mock.calls[0]?.[0] as

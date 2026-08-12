@@ -9,7 +9,7 @@ the gateway.
 ## Trust boundaries
 
 ```text
-Untrusted client | ingress | Genchi | PostgreSQL/Redis | external providers
+Untrusted client | ingress | RAX Compute Gateway | PostgreSQL/Redis | external providers
 ```
 
 Client input, forwarded headers, model names, and provider responses are
@@ -20,7 +20,7 @@ retention policies.
 
 | Threat | Primary controls |
 | --- | --- |
-| stolen Genchi key | high entropy, one-way hash, expiration, scope, rate limit, rotation |
+| stolen RAX Compute Gateway key | high entropy, one-way hash, expiration, scope, rate limit, rotation |
 | provider key disclosure | secret manager, redaction, no client exposure, restricted egress |
 | SSRF through base URL | operator-only configuration, HTTPS, allowlist/egress policy |
 | prompt leakage in telemetry | content-free schema, automated redaction tests |
@@ -40,7 +40,7 @@ snapshots are disabled in production unless a controlled incident procedure
 protects and deletes them.
 
 Operators MUST document provider-side data processing and configure provider
-retention controls separately. Self-hosting Genchi does not eliminate provider
+retention controls separately. Self-hosting RAX Compute Gateway does not eliminate provider
 data transfer.
 
 ## Input and output safety
@@ -49,7 +49,7 @@ data transfer.
 - Bound message count, string length, and SSE frame size.
 - Avoid dynamic code evaluation and shell execution.
 - Serialize JSON with standard libraries.
-- Treat model output as untrusted; Genchi does not claim to sanitize it for an
+- Treat model output as untrusted; RAX Compute Gateway does not claim to sanitize it for an
   application's HTML, SQL, shell, or tool environment.
 - Do not follow provider-supplied URLs.
 

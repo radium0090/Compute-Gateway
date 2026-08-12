@@ -29,7 +29,7 @@ jobs:
           context: .
           load: true
           push: false
-          tags: genchi:ci
+          tags: rax-compute-gateway:ci
           build-args: |
             VERSION=0.0.0-ci
             REVISION=${{ github.sha }}
@@ -38,23 +38,23 @@ jobs:
       - name: Verify configuration in hardened runtime
         run: |
           docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m \
-            -v "$PWD/deploy/compose/genchi.yaml:/etc/genchi/config.yaml:ro" \
-            -e GENCHI_ENVIRONMENT=production \
-            -e GENCHI_DATABASE_URL=postgresql://genchi:fake@postgres.invalid:5432/genchi \
-            -e GENCHI_REDIS_URL=rediss://redis.invalid:6379 \
-            -e GENCHI_KEY_HASH_PEPPER=fake-pepper-with-at-least-32-characters \
+            -v "$PWD/deploy/compose/rax-compute-gateway.yaml:/etc/rax-compute-gateway/config.yaml:ro" \
+            -e RCG_ENVIRONMENT=production \
+            -e RCG_DATABASE_URL=postgresql://rcg:fake@postgres.invalid:5432/compute_gateway \
+            -e RCG_REDIS_URL=rediss://redis.invalid:6379 \
+            -e RCG_KEY_HASH_PEPPER=fake-pepper-with-at-least-32-characters \
             -e OPENAI_API_KEY=fake-openai \
             -e ANTHROPIC_API_KEY=fake-anthropic \
             -e GEMINI_API_KEY=fake-gemini \
-            genchi:ci --check-config
-          if docker run --rm --entrypoint /bin/sh genchi:ci -c true; then
+            rax-compute-gateway:ci --check-config
+          if docker run --rm --entrypoint /bin/sh rax-compute-gateway:ci -c true; then
             echo "runtime image unexpectedly contains a shell" >&2
             exit 1
           fi
       - name: Exercise fresh-clone Compose bootstrap
         env:
-          GENCHI_IMAGE: genchi:ci
-          GENCHI_SMOKE_NO_BUILD: 'true'
+          RCG_IMAGE: rax-compute-gateway:ci
+          RCG_SMOKE_NO_BUILD: 'true'
         run: |
           cp .env.example .env
           sh scripts/smoke-compose.sh
@@ -62,7 +62,7 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: v0.70.0
-          image-ref: genchi:ci
+          image-ref: rax-compute-gateway:ci
           scanners: vuln,misconfig,secret
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -71,16 +71,16 @@ jobs:
       - name: Generate candidate SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
-          image: genchi:ci
+          image: rax-compute-gateway:ci
           format: spdx-json
-          output-file: genchi-ci.spdx.json
+          output-file: rax-compute-gateway-ci.spdx.json
           syft-version: v1.44.0
           upload-release-assets: false
           upload-artifact: false
       - name: Upload candidate SBOM
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: genchi-ci-sbom
-          path: genchi-ci.spdx.json
+          name: rax-compute-gateway-ci-sbom
+          path: rax-compute-gateway-ci.spdx.json
           retention-days: 7
           if-no-files-found: error

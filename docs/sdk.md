@@ -2,14 +2,14 @@
 
 ## Strategy
 
-Genchi first-class SDKs are thin, typed clients for the public API. The gateway
+RAX Compute Gateway first-class SDKs are thin, typed clients for the public API. The gateway
 also supports existing OpenAI SDKs by changing the base URL. SDKs MUST not hide
 routing decisions or implement gateway retry logic by default.
 
 MVP languages:
 
-- TypeScript (`@genchi-ai/sdk`)
-- Python (`genchi-ai`)
+- TypeScript (`@rax-digital/compute-gateway-sdk`)
+- Python (`rax-compute-gateway`)
 
 Package names are provisional until registry ownership is verified.
 
@@ -21,15 +21,15 @@ and the release candidate are approved.
 ## TypeScript example
 
 ```ts
-import { Genchi } from "@genchi-ai/sdk";
+import { RAX Compute Gateway } from "@rax-digital/compute-gateway-sdk";
 
-const genchi = new Genchi({
-  apiKey: process.env.GENCHI_API_KEY!,
+const gateway = new RaxComputeGateway({
+  apiKey: process.env.RCG_API_KEY!,
   baseUrl: "http://localhost:8080/v1",
 });
 
-const response = await genchi.chat.completions.create({
-  model: "genchi/fast",
+const response = await gateway.chat.completions.create({
+  model: "rax/fast",
   messages: [{ role: "user", content: "Hello" }],
 });
 ```
@@ -38,15 +38,15 @@ const response = await genchi.chat.completions.create({
 
 ```python
 import os
-from genchi import Genchi
+from rax_compute_gateway import RaxComputeGateway
 
-client = Genchi(
-    api_key=os.environ["GENCHI_API_KEY"],
+client = RaxComputeGateway(
+    api_key=os.environ["RCG_API_KEY"],
     base_url="http://localhost:8080/v1",
 )
 
 response = client.chat.completions.create(
-    model="genchi/fast",
+    model="rax/fast",
     messages=[{"role": "user", "content": "Hello"}],
 )
 ```
@@ -57,8 +57,8 @@ Both SDKs expose streaming as an iterator/async iterator and close the network
 connection when iteration is cancelled. Examples MUST demonstrate cleanup.
 
 ```ts
-const stream = await genchi.chat.completions.stream({
-  model: "genchi/fast",
+const stream = await gateway.chat.completions.stream({
+  model: "rax/fast",
   messages: [{ role: "user", content: "Count to three" }],
 });
 
@@ -81,10 +81,10 @@ Constructor arguments override environment variables:
 
 | Setting | Environment | Default |
 | --- | --- | --- |
-| API key | `GENCHI_API_KEY` | required |
-| Base URL | `GENCHI_BASE_URL` | `http://localhost:8080/v1` |
-| Timeout | `GENCHI_TIMEOUT_SECONDS` | 60 |
-| Max network retries | `GENCHI_MAX_RETRIES` | 1 for connection/429/5xx only |
+| API key | `RCG_API_KEY` | required |
+| Base URL | `RCG_BASE_URL` | `http://localhost:8080/v1` |
+| Timeout | `RCG_TIMEOUT_SECONDS` | 60 |
+| Max network retries | `RCG_MAX_RETRIES` | 1 for connection/429/5xx only |
 
 SDK retries are conservative because the gateway already applies policy.
 Streaming requests are never retried after bytes are received. Users can
@@ -93,7 +93,7 @@ disable SDK retry with `maxRetries: 0`.
 ## Error surface
 
 SDKs map the public envelope to typed errors while preserving HTTP status,
-Genchi code, request ID, and retryable flag. They never expose provider secrets
+RAX Compute Gateway code, request ID, and retryable flag. They never expose provider secrets
 or depend on provider SDK error classes.
 
 ## Versioning
@@ -118,7 +118,7 @@ kept in `scripts/generate-python-sdk.ts`. Generated files are never hand-edited.
 
 Compatibility examples are maintained for current supported OpenAI Python and
 JavaScript SDK majors. Those third-party SDK versions are test inputs, not
-Genchi runtime dependencies.
+RAX Compute Gateway runtime dependencies.
 
 The deterministic suite exercises pinned current OpenAI Node and Python SDKs.
 A protected, manual workflow sends bounded completion and streaming requests

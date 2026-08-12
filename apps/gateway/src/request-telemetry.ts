@@ -1,21 +1,24 @@
 import type { FastifyInstance } from 'fastify';
 
-import { getCorrelationContext, getGenchiMeter } from '@genchi/observability';
+import {
+  getCorrelationContext,
+  getRaxComputeGatewayMeter,
+} from '@rax-digital/observability';
 
 /** Registers bounded, content-free HTTP metrics and completion events. */
 export function registerRequestTelemetry(app: FastifyInstance): void {
-  const meter = getGenchiMeter();
-  const requestCount = meter.createCounter('genchi_http_requests_total', {
+  const meter = getRaxComputeGatewayMeter();
+  const requestCount = meter.createCounter('rcg_http_requests_total', {
     description: 'Completed gateway HTTP requests',
   });
   const requestDuration = meter.createHistogram(
-    'genchi_http_request_duration_seconds',
+    'rcg_http_request_duration_seconds',
     {
       description: 'Gateway HTTP request duration in seconds',
       unit: 's',
     },
   );
-  const activeRequests = meter.createUpDownCounter('genchi_active_requests', {
+  const activeRequests = meter.createUpDownCounter('rcg_active_requests', {
     description: 'Currently active gateway HTTP requests',
   });
 

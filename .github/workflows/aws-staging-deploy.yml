@@ -24,8 +24,8 @@ jobs:
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
       EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
       EC2_IAM_ROLE_NAME: ${{ vars.EC2_IAM_ROLE_NAME }}
-      GENCHI_SECRET_ARN: ${{ vars.GENCHI_SECRET_ARN }}
-      GENCHI_DEPLOY_PATH: ${{ vars.GENCHI_DEPLOY_PATH }}
+      RCG_SECRET_ARN: ${{ vars.RCG_SECRET_ARN }}
+      RCG_DEPLOY_PATH: ${{ vars.RCG_DEPLOY_PATH }}
     steps:
       - name: Validate protected deployment context
         shell: bash
@@ -37,8 +37,8 @@ jobs:
             AWS_ROLE_ARN
             EC2_INSTANCE_ID
             EC2_IAM_ROLE_NAME
-            GENCHI_SECRET_ARN
-            GENCHI_DEPLOY_PATH
+            RCG_SECRET_ARN
+            RCG_DEPLOY_PATH
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
@@ -50,14 +50,14 @@ jobs:
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EC2_INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]
           [[ "$AWS_ROLE_ARN" == "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ComputeGatewayGitHubDeployRole" ]]
-          [[ "$GENCHI_SECRET_ARN" == "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:genchi/staging/runtime-"* ]]
-          [[ "$GENCHI_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]
+          [[ "$RCG_SECRET_ARN" == "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:rax/compute-gateway/staging/runtime-"* ]]
+          [[ "$RCG_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]
 
       - name: Assume the protected AWS deployment role
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          role-session-name: genchi-deploy-${{ github.run_id }}
+          role-session-name: rcg-deploy-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
           allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
           mask-aws-account-id: true
@@ -114,9 +114,9 @@ jobs:
           [[ "$(git -C "$release_root" rev-parse HEAD)" == "$commit_sha" ]]
 
           export AWS_REGION="$aws_region"
-          export GENCHI_COMMIT_SHA="$commit_sha"
-          export GENCHI_DEPLOY_PATH="$deploy_path"
-          export GENCHI_SECRET_ARN="$secret_arn"
+          export RCG_COMMIT_SHA="$commit_sha"
+          export RCG_DEPLOY_PATH="$deploy_path"
+          export RCG_SECRET_ARN="$secret_arn"
           exec "$release_root/scripts/deploy-aws-staging.sh"
           SCRIPT
           )"
@@ -124,9 +124,9 @@ jobs:
           parameters="$(
             jq -cn \
               --arg script "$script_base64" \
-              --arg path "$GENCHI_DEPLOY_PATH" \
+              --arg path "$RCG_DEPLOY_PATH" \
               --arg commit "$GITHUB_SHA" \
-              --arg secret "$GENCHI_SECRET_ARN" \
+              --arg secret "$RCG_SECRET_ARN" \
               --arg region "$AWS_REGION" \
               '{commands: ["printf %s " + ($script | @sh) + " | base64 -d | bash -s -- " + ($path | @sh) + " " + ($commit | @sh) + " " + ($secret | @sh) + " " + ($region | @sh)]}'
           )"
@@ -134,7 +134,7 @@ jobs:
             aws ssm send-command \
               --instance-ids "$EC2_INSTANCE_ID" \
               --document-name AWS-RunShellScript \
-              --comment "Genchi staging deploy ${GITHUB_SHA}" \
+              --comment "RAX Compute Gateway staging deploy ${GITHUB_SHA}" \
               --timeout-seconds 1800 \
               --parameters "$parameters" \
               --query 'Command.CommandId' \

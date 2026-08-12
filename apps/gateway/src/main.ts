@@ -5,10 +5,10 @@ import type { FastifyInstance } from 'fastify';
 import {
   CreateChatCompletionService,
   ListModelsService,
-} from '@genchi/application';
-import { ApiKeyAuthenticator } from '@genchi/auth';
-import type { PolicyConfig, RuntimeConfig } from '@genchi/config';
-import { createRedisCoordination } from '@genchi/coordination-redis';
+} from '@rax-digital/application';
+import { ApiKeyAuthenticator } from '@rax-digital/auth';
+import type { PolicyConfig, RuntimeConfig } from '@rax-digital/config';
+import { createRedisCoordination } from '@rax-digital/coordination-redis';
 import type {
   CircuitBreaker,
   ProviderAdapter,
@@ -16,27 +16,27 @@ import type {
   ProviderConcurrencyController,
   RequestAdmissionController,
   RoutingExecutionPolicy,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 import {
   createLogger,
   createRoutingObserver,
   type MetricsRequestHandler,
-} from '@genchi/observability';
+} from '@rax-digital/observability';
 import {
   PostgresApiKeyRepository,
   PostgresReadinessProbe,
   createPostgresPool,
   runMigrations,
-} from '@genchi/persistence-postgres';
-import { AnthropicAdapter } from '@genchi/provider-anthropic';
-import { GeminiAdapter } from '@genchi/provider-gemini';
-import { OpenAiAdapter } from '@genchi/provider-openai';
+} from '@rax-digital/persistence-postgres';
+import { AnthropicAdapter } from '@rax-digital/provider-anthropic';
+import { GeminiAdapter } from '@rax-digital/provider-gemini';
+import { OpenAiAdapter } from '@rax-digital/provider-openai';
 import {
   InMemoryCircuitBreaker,
   InMemoryCoordination,
   StaticModelCatalog,
   StaticPolicyRouter,
-} from '@genchi/router';
+} from '@rax-digital/router';
 
 import { buildGateway } from './app.js';
 import type { ReadinessProbe } from './health.js';

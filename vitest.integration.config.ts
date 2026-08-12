@@ -1,9 +1,9 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 
-import { genchiResolve } from './vitest.config.js';
+import { raxComputeGatewayResolve } from './vitest.config.js';
 
 export default defineConfig({
-  resolve: genchiResolve,
+  resolve: raxComputeGatewayResolve,
   test: {
     exclude: configDefaults.exclude,
     include: ['packages/**/*.integration.test.ts'],

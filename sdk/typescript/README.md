@@ -1,15 +1,15 @@
-# Genchi TypeScript SDK preview
+# RAX Compute Gateway TypeScript SDK preview
 
 ```ts
-import { Genchi } from '@genchi-ai/sdk';
+import { RAX Compute Gateway } from '@rax-digital/compute-gateway-sdk';
 
-const client = new Genchi({
-  apiKey: process.env.GENCHI_API_KEY,
+const client = new RaxComputeGateway({
+  apiKey: process.env.RCG_API_KEY,
   baseUrl: 'http://localhost:8080/v1',
 });
 
 const completion = await client.chat.completions.create({
-  model: 'genchi/fast',
+  model: 'rax/fast',
   messages: [{ role: 'user', content: 'Hello' }],
 });
 ```

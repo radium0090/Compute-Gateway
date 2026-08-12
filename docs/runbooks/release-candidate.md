@@ -28,8 +28,8 @@ pnpm release:check
 This checks formatting, lint, types, coverage, datastore tests, network stream
 lifecycle, build output, OpenAPI generation/lint/compatibility, both SDKs, the
 stored p95 threshold, documentation, and deployment policy. PostgreSQL/Redis
-integration tests require `GENCHI_TEST_DATABASE_URL` and
-`GENCHI_TEST_REDIS_URL`; a skipped datastore suite is not release evidence.
+integration tests require `RCG_TEST_DATABASE_URL` and
+`RCG_TEST_REDIS_URL`; a skipped datastore suite is not release evidence.
 
 ## Protected and deployment gates
 

@@ -2,17 +2,17 @@
 
 ## Two credential layers
 
-1. **Genchi API keys** authenticate applications to the gateway.
+1. **RAX Compute Gateway API keys** authenticate applications to the gateway.
 2. **Provider credentials** authenticate the gateway to model providers.
 
 They are never interchangeable. Clients never receive provider credentials.
 
-## Genchi API keys
+## RAX Compute Gateway API keys
 
 Keys use this form:
 
 ```text
-gch_<environment>_<public-id>_<secret>
+rcg_<environment>_<public-id>_<secret>
 ```
 
 Only the public ID is searchable. The secret contains at least 256 bits of
@@ -26,14 +26,14 @@ Database storage includes:
 - allowed model patterns and rate/concurrency policy;
 - last-used timestamp updated asynchronously at coarse resolution.
 
-The key hash uses HMAC-SHA-256 with `GENCHI_KEY_HASH_PEPPER`. Verification is
+The key hash uses HMAC-SHA-256 with `RCG_KEY_HASH_PEPPER`. Verification is
 constant-time. The pepper comes from a secret manager and is not stored in the
 database. Key values MUST NOT be logged, traced, or placed in URLs.
 
 ## Request authentication
 
 ```http
-Authorization: Bearer gch_prod_...
+Authorization: Bearer rcg_prod_...
 ```
 
 Missing or invalid credentials return the same 401 shape to prevent key
@@ -71,12 +71,12 @@ Future encrypted database storage requires a separate ADR and external KMS.
 The release includes an operator CLI:
 
 ```bash
-genchi keys create --tenant-id 123e4567-e89b-42d3-a456-426614174000 \
-  --name local-app --environment dev --models 'genchi/*' --allow-streaming
-genchi keys revoke --id 223e4567-e89b-42d3-a456-426614174000
+rax-compute-gateway keys create --tenant-id 123e4567-e89b-42d3-a456-426614174000 \
+  --name local-app --environment dev --models 'rax/*' --allow-streaming
+rax-compute-gateway keys revoke --id 223e4567-e89b-42d3-a456-426614174000
 ```
 
-Key commands require `GENCHI_MASTER_KEY`, direct PostgreSQL connectivity, an
+Key commands require `RCG_MASTER_KEY`, direct PostgreSQL connectivity, an
 applied schema, and an existing tenant UUID. The master key is only an operator
 command gate; it is never sent to PostgreSQL or the public HTTP service. In
 production, execute the command as a short-lived approved job and remove the

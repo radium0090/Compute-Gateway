@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiKey, ApiKeyId, ApiKeyRepository } from '@genchi/domain';
+import type { ApiKey, ApiKeyId, ApiKeyRepository } from '@rax-digital/domain';
 
 import { executeKeyCommand } from './key-commands.js';
 
@@ -44,7 +44,7 @@ describe('API key operator commands', () => {
         '--environment',
         'dev',
         '--models',
-        'genchi/*,openai/gpt-test',
+        'rax/*,openai/gpt-test',
         '--allow-streaming',
       ],
       {
@@ -57,7 +57,7 @@ describe('API key operator commands', () => {
     );
     const credential = output.mock.calls[0]?.[0].trim();
     expect(output).toHaveBeenCalledTimes(1);
-    expect(credential).toMatch(/^gch_dev_/u);
+    expect(credential).toMatch(/^rcg_dev_/u);
     expect(repository.created).toMatchObject({
       id: keyId,
       tenantId: tenant,
@@ -65,7 +65,7 @@ describe('API key operator commands', () => {
       environment: 'development',
       status: 'active',
       policy: {
-        allowedModelPatterns: ['genchi/*', 'openai/gpt-test'],
+        allowedModelPatterns: ['rax/*', 'openai/gpt-test'],
         allowStreaming: true,
         allowTools: false,
       },

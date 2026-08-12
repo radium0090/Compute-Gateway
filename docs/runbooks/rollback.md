@@ -12,7 +12,7 @@ content exposure. Prefer a traffic stop over rushed mutation.
 1. Freeze further rollout and record the current image digest, configuration
    revision, migration versions, time, and symptoms.
 2. Remove the canary from traffic. Keep evidence but never capture request
-   content, provider credentials, or plaintext Genchi API keys.
+   content, provider credentials, or plaintext RAX Compute Gateway API keys.
 3. Restore the last verified image by immutable digest and its compatible
    configuration revision using the deployment system's normal rollout path.
 4. Wait for every prior-version replica to become ready. Verify live, ready,
@@ -37,5 +37,5 @@ schema state. Restore from backup only under an approved data-recovery plan.
 
 If rollback was triggered by possible secret exposure, restoring code is not
 sufficient. Follow [incident response](incident-response.md), revoke/rotate the
-affected Genchi and provider credentials, invalidate caches, and verify no
+affected RAX Compute Gateway and provider credentials, invalidate caches, and verify no
 secret appears in retained logs or artifacts.

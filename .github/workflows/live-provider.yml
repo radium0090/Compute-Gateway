@@ -34,23 +34,23 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GENCHI_LIVE_OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-          GENCHI_LIVE_ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
-          GENCHI_LIVE_GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          RCG_LIVE_OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          RCG_LIVE_ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          RCG_LIVE_GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         run: |
           test -n "$OPENAI_API_KEY"
           test -n "$ANTHROPIC_API_KEY"
           test -n "$GEMINI_API_KEY"
-          test -n "$GENCHI_LIVE_OPENAI_MODEL"
-          test -n "$GENCHI_LIVE_ANTHROPIC_MODEL"
-          test -n "$GENCHI_LIVE_GEMINI_MODEL"
+          test -n "$RCG_LIVE_OPENAI_MODEL"
+          test -n "$RCG_LIVE_ANTHROPIC_MODEL"
+          test -n "$RCG_LIVE_GEMINI_MODEL"
       - name: Run bounded live provider smoke
         env:
-          GENCHI_LIVE_ENABLED: 'true'
+          RCG_LIVE_ENABLED: 'true'
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GENCHI_LIVE_OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-          GENCHI_LIVE_ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
-          GENCHI_LIVE_GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          RCG_LIVE_OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          RCG_LIVE_ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          RCG_LIVE_GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         run: pnpm test:live

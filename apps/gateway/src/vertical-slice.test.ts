@@ -1,24 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
-import { CreateChatCompletionService } from '@genchi/application';
-import { loadConfig, parsePolicyConfig } from '@genchi/config';
+import { CreateChatCompletionService } from '@rax-digital/application';
+import { loadConfig, parsePolicyConfig } from '@rax-digital/config';
 import {
   apiKeyHash,
   apiKeyId,
   apiKeyPublicId,
   tenantId,
   type ApiKey,
-} from '@genchi/domain';
-import { createLogger } from '@genchi/observability';
-import { OpenAiAdapter } from '@genchi/provider-openai';
-import { StaticPolicyRouter } from '@genchi/router';
+} from '@rax-digital/domain';
+import { createLogger } from '@rax-digital/observability';
+import { OpenAiAdapter } from '@rax-digital/provider-openai';
+import { StaticPolicyRouter } from '@rax-digital/router';
 
 import { buildGateway } from './app.js';
 
 const config = loadConfig({
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 });
 
 const policy = parsePolicyConfig(
@@ -32,7 +32,7 @@ providers:
     models:
       gpt-test: { capabilities: [chat] }
 aliases:
-  genchi/fast:
+  rax/fast:
     candidates:
       - { provider: openai-primary, model: gpt-test, weight: 100 }
 routing:
@@ -51,7 +51,7 @@ const apiKey: ApiKey = {
   environment: 'test',
   status: 'active',
   policy: {
-    allowedModelPatterns: ['genchi/*'],
+    allowedModelPatterns: ['rax/*'],
     allowStreaming: false,
     allowTools: false,
     requestsPerMinute: 60,
@@ -127,7 +127,7 @@ describe('authenticated OpenAI vertical slice', () => {
       url: '/v1/chat/completions',
       headers: { authorization: 'Bearer fake-client-key' },
       payload: {
-        model: 'genchi/fast',
+        model: 'rax/fast',
         messages: [{ role: 'user', content: 'vertical prompt' }],
       },
     });
@@ -138,9 +138,9 @@ describe('authenticated OpenAI vertical slice', () => {
       messages: [{ role: 'user', content: 'vertical prompt' }],
     });
     expect(response.json()).toMatchObject({
-      model: 'genchi/fast',
+      model: 'rax/fast',
       choices: [{ message: { content: 'vertical answer' } }],
-      genchi: { provider: 'openai', provider_model: 'gpt-test', attempts: 1 },
+      rax: { provider: 'openai', provider_model: 'gpt-test', attempts: 1 },
     });
     await app.close();
   });

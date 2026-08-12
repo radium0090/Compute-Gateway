@@ -2,7 +2,7 @@ import type {
   ClientAuthenticator,
   ModelCatalog,
   PublicModel,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 export type ListModelsResult =
   | { readonly ok: true; readonly models: readonly PublicModel[] }

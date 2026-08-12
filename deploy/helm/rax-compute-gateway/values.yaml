@@ -18,7 +18,7 @@ serviceAccount:
 podAnnotations: {}
 podLabels: {}
 
-existingSecret: genchi-secrets
+existingSecret: rax-compute-gateway-secrets
 secretKeys:
   databaseUrl: database-url
   redisUrl: redis-url
@@ -64,7 +64,7 @@ policy:
         gemini-3.5-flash:
           capabilities: [chat, streaming]
   aliases:
-    genchi/fast:
+    rax/fast:
       candidates:
         - provider: openai-primary
           model: gpt-5-mini
@@ -100,7 +100,7 @@ ingress:
   className: ''
   annotations: {}
   hosts:
-    - host: genchi.example.com
+    - host: rax-compute-gateway.example.com
       paths:
         - path: /
           pathType: Prefix

@@ -3,13 +3,13 @@ requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
 
 [project]
-name = "genchi-ai"
+name = "rax-compute-gateway"
 version = "0.1.0"
-description = "Thin Python client for the Genchi API"
+description = "Thin Python client for the RAX Compute Gateway API"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
-authors = [{ name = "Genchi contributors" }]
+authors = [{ name = "RAX Digital" }]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -19,4 +19,4 @@ classifiers = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/genchi"]
+packages = ["src/rax_compute_gateway"]

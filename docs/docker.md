@@ -17,10 +17,10 @@ and writes no persistent application state to its filesystem.
 
 ```bash
 docker build --pull --build-arg VERSION=0.0.0-dev \
-  --build-arg REVISION=unknown --tag genchi:dev .
+  --build-arg REVISION=unknown --tag rcg:dev .
 docker run --rm --read-only --tmpfs /tmp --env-file .env \
-  --mount type=bind,src="$PWD/deploy/compose/genchi.yaml",dst=/etc/genchi/config.yaml,readonly \
-  genchi:dev --check-config
+  --mount type=bind,src="$PWD/deploy/compose/rax-compute-gateway.yaml",dst=/etc/rax-compute-gateway/config.yaml,readonly \
+  rcg:dev --check-config
 ```
 
 Build context excludes `.git`, test output, local environment files, and

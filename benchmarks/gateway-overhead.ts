@@ -64,9 +64,9 @@ const baseline = reference(
   ) as unknown,
 );
 const config = loadConfig({
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 });
 const app = await buildGateway({
   config,
@@ -100,7 +100,7 @@ try {
   }
   const target = `http://127.0.0.1:${String(address.port)}/v1/chat/completions`;
   const payload = JSON.stringify({
-    model: 'genchi/benchmark',
+    model: 'rax/benchmark',
     messages: [{ role: 'user', content: 'benchmark' }],
   });
   const request = async (): Promise<number> => {

@@ -12,7 +12,7 @@ import type {
   ProviderConcurrencyController,
   RequestAdmissionController,
   ResolvedRoute,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 export interface RedisCommandClient {
   eval(
@@ -228,7 +228,7 @@ export class RedisCoordination
       this.circuit.openDurationMs * 2,
     );
     await this.client.eval(circuitRecordScript, {
-      keys: [`genchi:circuit:${key}`, `genchi:circuit-failures:${key}`],
+      keys: [`rcg:circuit:${key}`, `rcg:circuit-failures:${key}`],
       arguments: [
         outcome,
         permit.probe ? '1' : '0',
@@ -267,8 +267,8 @@ export class RedisCoordination
     const now = this.clock();
     const bucket = Math.floor(now / 60_000);
     const key = safeKey(input.apiKeyId);
-    const concurrencyKey = `genchi:key-concurrency:${key}`;
-    const keys = [`genchi:rate:${key}:${String(bucket)}`, concurrencyKey];
+    const concurrencyKey = `rcg:key-concurrency:${key}`;
+    const keys = [`rcg:rate:${key}:${String(bucket)}`, concurrencyKey];
     const token = randomUUID();
     try {
       const value = await this.client.eval(requestAcquireScript, {
@@ -299,8 +299,8 @@ export class RedisCoordination
     readonly leaseTtlMs: number;
   }): Promise<AdmissionResult> {
     const keys = [
-      'genchi:provider-concurrency:global',
-      `genchi:provider-concurrency:${safeKey(input.route.providerRef)}`,
+      'rcg:provider-concurrency:global',
+      `rcg:provider-concurrency:${safeKey(input.route.providerRef)}`,
     ];
     const token = randomUUID();
     try {
@@ -330,7 +330,7 @@ export class RedisCoordination
     const key = routeKey(route);
     try {
       const value = await this.client.eval(circuitAcquireScript, {
-        keys: [`genchi:circuit:${key}`],
+        keys: [`rcg:circuit:${key}`],
         arguments: [
           String(this.clock()),
           String(this.circuit.halfOpenMaxCalls),

@@ -7,12 +7,12 @@ import Fastify, {
   type FastifyInstance,
 } from 'fastify';
 
-import type { RuntimeConfig } from '@genchi/config';
+import type { RuntimeConfig } from '@rax-digital/config';
 import type {
   CreateChatCompletionService,
   ListModelsService,
-} from '@genchi/application';
-import type { MetricsRequestHandler } from '@genchi/observability';
+} from '@rax-digital/application';
+import type { MetricsRequestHandler } from '@rax-digital/observability';
 
 import { registerChatCompletionRoute } from './chat-completion.js';
 import { registerErrorHandling } from './error-handling.js';

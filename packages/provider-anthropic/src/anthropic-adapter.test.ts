@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { defineProviderAdapterConformance } from '@genchi/testkit';
+import { defineProviderAdapterConformance } from '@rax-digital/testkit';
 
 import { AnthropicAdapter } from './anthropic-adapter.js';
 
@@ -20,7 +20,7 @@ defineProviderAdapterConformance({
   name: 'AnthropicAdapter',
   model: 'claude-test',
   request: {
-    model: 'genchi/fast',
+    model: 'rax/fast',
     messages: [
       { role: 'system', content: 'concise' },
       { role: 'user', content: 'private prompt text' },
@@ -117,7 +117,7 @@ describe('AnthropicAdapter provider-specific rules', () => {
     await expect(
       adapter.createChatCompletion(
         {
-          model: 'genchi/fast',
+          model: 'rax/fast',
           messages: [
             { role: 'user', content: 'hello' },
             { role: 'system', content: 'late instruction' },
@@ -149,7 +149,7 @@ describe('AnthropicAdapter provider-specific rules', () => {
 
     await expect(
       adapter.createChatCompletion(
-        { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+        { model: 'rax/fast', messages: [{ role: 'user', content: 'hi' }] },
         {
           requestId: 'req_bound_test',
           providerModel: 'claude-test',

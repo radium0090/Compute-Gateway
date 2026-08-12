@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadConfig } from '@genchi/config';
-import { createLogger, TelemetryLifecycle } from '@genchi/observability';
+import { loadConfig } from '@rax-digital/config';
+import { createLogger, TelemetryLifecycle } from '@rax-digital/observability';
 
 import { buildGateway } from './app.js';
 
 const config = loadConfig({
-  GENCHI_ENVIRONMENT: 'test',
-  GENCHI_DATABASE_URL: 'postgresql://genchi:fake@localhost:5432/genchi',
-  GENCHI_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
+  RCG_ENVIRONMENT: 'test',
+  RCG_DATABASE_URL: 'postgresql://rcg:fake@localhost:5432/compute_gateway',
+  RCG_KEY_HASH_PEPPER: 'fake-pepper-with-at-least-32-characters',
 });
 
 describe('metrics endpoint', () => {
@@ -32,7 +32,7 @@ describe('metrics endpoint', () => {
       const response = await app.inject({ method: 'GET', url: '/metrics' });
       expect(response.statusCode).toBe(200);
       expect(response.headers['content-type']).toContain('text/plain');
-      expect(response.body).toContain('genchi_build_info');
+      expect(response.body).toContain('rcg_build_info');
       expect(response.body).toContain('test-version');
       expect(response.body).not.toContain('authorization');
     } finally {

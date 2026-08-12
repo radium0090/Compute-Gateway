@@ -3,7 +3,7 @@
 ## Target structure
 
 ```text
-genchi/
+rax-compute-gateway/
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
 │   ├── workflows/
@@ -31,7 +31,7 @@ genchi/
 │   └── migrations/
 ├── deploy/
 │   ├── compose/
-│   ├── helm/genchi/
+│   ├── helm/rax-compute-gateway/
 │   └── kubernetes/             # examples and disposable CI fixtures
 ├── benchmarks/                 # repeatable scenarios and checked thresholds
 ├── examples/
@@ -43,7 +43,7 @@ genchi/
 │   └── runbooks/
 ├── scripts/                     # deterministic repository automation only
 ├── openapi/
-│   └── genchi.openapi.yaml      # generated and release-pinned contract
+│   └── compute-gateway.openapi.yaml          # generated and release-pinned contract
 ├── .env.example
 ├── docker-compose.yml
 ├── Dockerfile
@@ -69,9 +69,9 @@ genchi/
 
 ## Naming
 
-Packages use `@genchi/<name>`. Files use `kebab-case.ts`; exported types and
+Packages use `@rax-digital/<name>`. Files use `kebab-case.ts`; exported types and
 classes use `PascalCase`; functions and variables use `camelCase`; environment
-variables use `GENCHI_UPPER_SNAKE_CASE`. Test files live next to source as
+variables use `RCG_UPPER_SNAKE_CASE`. Test files live next to source as
 `*.test.ts`; integration tests use `*.integration.test.ts`.
 
 ## Build graph

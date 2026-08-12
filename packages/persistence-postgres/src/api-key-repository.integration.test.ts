@@ -8,19 +8,20 @@ import {
   apiKeyPublicId,
   tenantId,
   type ApiKey,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 import { PostgresApiKeyRepository } from './api-key-repository.js';
 import { runMigrations } from './migrations.js';
 import { createPostgresPool } from './postgres.js';
 
-const databaseUrl = process.env.GENCHI_TEST_DATABASE_URL;
+const databaseUrl = process.env.RCG_TEST_DATABASE_URL;
 const describeIntegration =
   databaseUrl === undefined ? describe.skip : describe;
 
 describeIntegration('PostgresApiKeyRepository integration', () => {
   const pool = createPostgresPool({
-    databaseUrl: databaseUrl ?? 'postgresql://integration-test.invalid/genchi',
+    databaseUrl:
+      databaseUrl ?? 'postgresql://integration-test.invalid/compute_gateway',
     connectTimeoutMs: 5_000,
     maxConnections: 2,
   });
@@ -35,7 +36,7 @@ describeIntegration('PostgresApiKeyRepository integration', () => {
     environment: 'test',
     status: 'active',
     policy: {
-      allowedModelPatterns: ['genchi/*'],
+      allowedModelPatterns: ['rax/*'],
       allowStreaming: true,
       allowTools: false,
       requestsPerMinute: 60,

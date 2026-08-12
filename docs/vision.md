@@ -13,13 +13,13 @@ operational work and make switching providers risky. Existing proxies often
 hide these differences without defining predictable failure, security, or
 observability behavior.
 
-## The Genchi promise
+## The RAX Compute Gateway promise
 
-An application integrates once with a stable API. Genchi translates requests,
+An application integrates once with a stable API. RAX Compute Gateway translates requests,
 selects an allowed route, invokes the provider, normalizes the response, and
 emits the operational evidence needed to understand the decision.
 
-Genchi should be:
+RAX Compute Gateway should be:
 
 - **Open:** self-hostable with inspectable routing and portable data.
 - **Predictable:** explicit policies take priority over opaque automation.
@@ -33,7 +33,7 @@ Genchi should be:
 
 ## Product boundaries
 
-Genchi is a gateway and control plane, not a model host. The open-source core
+RAX Compute Gateway is a gateway and control plane, not a model host. The open-source core
 owns protocol compatibility, provider adapters, routing, policies, and
 telemetry. A future hosted service may add managed operations, teams, billing,
 analytics, and enterprise support without making the core unusable alone.
@@ -54,7 +54,7 @@ The project succeeds when:
 - adding a provider does not modify the public handler;
 - route selection and fallback are reproducible from policy and telemetry;
 - a single gateway node can fail without losing durable configuration;
-- the open-source deployment works without a Genchi Cloud account.
+- the open-source deployment works without a RAX Compute Gateway Cloud account.
 
 ## Principles for decisions
 

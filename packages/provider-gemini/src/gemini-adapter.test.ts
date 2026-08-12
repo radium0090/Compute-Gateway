@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { defineProviderAdapterConformance } from '@genchi/testkit';
+import { defineProviderAdapterConformance } from '@rax-digital/testkit';
 
 import { GeminiAdapter } from './gemini-adapter.js';
 
@@ -20,7 +20,7 @@ defineProviderAdapterConformance({
   name: 'GeminiAdapter',
   model: 'gemini-2.5-flash',
   request: {
-    model: 'genchi/fast',
+    model: 'rax/fast',
     messages: [
       { role: 'system', content: 'concise' },
       { role: 'user', content: 'private prompt text' },
@@ -139,7 +139,7 @@ describe('GeminiAdapter provider-specific rules', () => {
     });
 
     const result = await adapter.createChatCompletion(
-      { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+      { model: 'rax/fast', messages: [{ role: 'user', content: 'hi' }] },
       {
         requestId: 'req_auth_test',
         providerModel: 'gemini-test',
@@ -180,7 +180,7 @@ describe('GeminiAdapter provider-specific rules', () => {
     });
 
     const result = await adapter.createChatCompletion(
-      { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+      { model: 'rax/fast', messages: [{ role: 'user', content: 'hi' }] },
       {
         requestId: 'req_precondition_test',
         providerModel: 'gemini-test',
@@ -221,7 +221,7 @@ describe('GeminiAdapter provider-specific rules', () => {
     });
 
     const result = await adapter.createChatCompletion(
-      { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+      { model: 'rax/fast', messages: [{ role: 'user', content: 'hi' }] },
       {
         requestId: 'req_leaked_key_test',
         providerModel: 'gemini-test',
@@ -262,7 +262,7 @@ describe('GeminiAdapter provider-specific rules', () => {
 
     await expect(
       adapter.createChatCompletion(
-        { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+        { model: 'rax/fast', messages: [{ role: 'user', content: 'hi' }] },
         {
           requestId: 'req_safety_test',
           providerModel: 'gemini-test',
@@ -309,7 +309,7 @@ describe('GeminiAdapter provider-specific rules', () => {
       signal: new AbortController().signal,
     };
     const request = {
-      model: 'genchi/fast',
+      model: 'rax/fast',
       messages: [{ role: 'user' as const, content: 'hi' }],
       maxTokens: 8,
     };
@@ -357,7 +357,7 @@ describe('GeminiAdapter provider-specific rules', () => {
 
     await expect(
       adapter.createChatCompletion(
-        { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+        { model: 'rax/fast', messages: [{ role: 'user', content: 'hi' }] },
         {
           requestId: 'req_missing_content_test',
           providerModel: 'gemini-test',
@@ -383,7 +383,7 @@ describe('GeminiAdapter provider-specific rules', () => {
 
     await expect(
       adapter.createChatCompletion(
-        { model: 'genchi/fast', messages: [{ role: 'user', content: 'hi' }] },
+        { model: 'rax/fast', messages: [{ role: 'user', content: 'hi' }] },
         {
           requestId: 'req_bound_test',
           providerModel: 'gemini-test',

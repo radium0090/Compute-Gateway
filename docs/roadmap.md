@@ -51,7 +51,7 @@ Subject to evidence and separate ADRs:
 - latency, price, region, and capacity-aware policies;
 - semantic cache with explicit privacy boundaries;
 - policy-as-code and enterprise identity/control integrations;
-- hosted Genchi Cloud for managed teams, analytics, and billing;
+- hosted RAX Compute Gateway Cloud for managed teams, analytics, and billing;
 - compute scheduling and portable compute credits.
 
 ## Prioritization criteria

@@ -1,7 +1,7 @@
 import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 
-import { ProviderStreamFailure } from '@genchi/domain';
+import { ProviderStreamFailure } from '@rax-digital/domain';
 import type {
   CanonicalChatChunk,
   CanonicalChatRequest,
@@ -12,7 +12,7 @@ import type {
   ProviderCapabilities,
   ProviderError,
   ProviderStreamCallResult,
-} from '@genchi/domain';
+} from '@rax-digital/domain';
 
 const UsageSchema = Type.Object({
   promptTokenCount: Type.Integer({ minimum: 0 }),

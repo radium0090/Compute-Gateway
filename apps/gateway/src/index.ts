@@ -5,8 +5,8 @@ import {
   loadConfig,
   loadPolicyConfig,
   loadProviderCredentials,
-} from '@genchi/config';
-import { createLogger, TelemetryLifecycle } from '@genchi/observability';
+} from '@rax-digital/config';
+import { createLogger, TelemetryLifecycle } from '@rax-digital/observability';
 
 import { stopTelemetrySafely } from './telemetry-shutdown.js';
 
@@ -72,7 +72,7 @@ main().catch((error: unknown) => {
     error instanceof ConfigValidationError ||
     error instanceof PolicyConfigValidationError
       ? error.message
-      : 'Genchi command failed; see structured logs for details';
+      : 'RAX Compute Gateway command failed; see structured logs for details';
   process.stderr.write(`${message}\n`);
   process.exitCode = 1;
 });
