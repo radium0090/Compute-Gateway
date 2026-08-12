@@ -26,7 +26,7 @@
     "openapi:check": "tsx scripts/generate-openapi.ts --check",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "openapi:lint": "tsx scripts/validate-openapi.ts",
-    "operations:check": "sh -n scripts/smoke-compose.sh && bash -n scripts/deploy-aws-staging.sh && bash -n scripts/verify-aws-staging.sh && tsx scripts/validate-operations.ts",
+    "operations:check": "sh -n scripts/smoke-compose.sh && bash -n scripts/deploy-aws-staging.sh && bash -n scripts/deploy-aws-production.sh && bash -n scripts/verify-aws-staging.sh && tsx scripts/validate-operations.ts",
     "performance:check": "tsx benchmarks/gateway-overhead.ts",
     "release:check": "corepack pnpm format:check && corepack pnpm identity:check && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test:coverage && corepack pnpm test:integration && corepack pnpm test:rc && corepack pnpm build && corepack pnpm openapi:check && corepack pnpm openapi:lint && corepack pnpm openapi:breaking --base origin/main && corepack pnpm sdk:check && corepack pnpm sdk:test && corepack pnpm sdk:test:openai-python && corepack pnpm performance:check && corepack pnpm docs:check && corepack pnpm examples:check && corepack pnpm operations:check",
     "sdk:check": "corepack pnpm sdk:generate && git diff --exit-code -- sdk/typescript/src/generated/schema.ts sdk/python/src/rax_compute_gateway/_generated/models.py",

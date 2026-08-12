@@ -65,6 +65,12 @@ review, resolved discussions, and CODEOWNERS approval for sensitive paths.
 
 Artifacts are never rebuilt for promotion; digest identity is preserved.
 
+The repository also contains a protected single-host production workflow for
+the RAX Digital operated service. It accepts only `main`, uses GitHub OIDC and
+SSM, and requires approval through the `aws-production` environment. The
+workflow consumes resource identifiers as environment variables and retrieves
+runtime secrets only from AWS Secrets Manager on the target instance.
+
 ## Versioning
 
 Gateway, Helm chart, and SDKs use Semantic Versioning. Before 1.0, minor
