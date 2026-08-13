@@ -67,6 +67,33 @@ graceful gateway restart, and API Key authentication after restart. The workflow
 uses a disposable key and reports only status markers. A successful deployment
 does not substitute for this provider and lifecycle verification.
 
+## AWS single-host production edge
+
+The protected `AWS production deploy` workflow supports the deliberately
+low-cost, single-host deployment at `api.rax-digital.com`. It deploys through
+GitHub OIDC and Systems Manager without SSH, starts an independently named
+production Compose project, and places Caddy in front of the gateway. Caddy
+terminates TLS, renews the public certificate automatically, preserves streamed
+responses, and keeps `/metrics` off the public route. PostgreSQL, Redis, the
+Collector, and the gateway publish no host ports in this mode.
+
+Required AWS/GitHub controls:
+
+- a protected `aws-production` GitHub environment restricted to `main`;
+- a production-only Secrets Manager secret below
+  `rax/compute-gateway/production/runtime-*`;
+- environment variables for the AWS role/instance, deployment path, secret ARN,
+  and public hostname;
+- an Elastic IP associated with the EC2 instance and an `A` record for the
+  public hostname;
+- inbound TCP 80/443 only, with administration through Systems Manager.
+
+This is an availability and cost tradeoff, not the multi-replica production
+topology above. The EC2 instance, Docker daemon, and local PostgreSQL volume are
+single points of failure. Before accepting general customer traffic, automate
+encrypted database backups, test restore and rollback, install host security
+updates, and configure external uptime and disk-space alarms.
+
 ## Health semantics
 
 - `/health/live` returns success when the event loop/process can serve; it does

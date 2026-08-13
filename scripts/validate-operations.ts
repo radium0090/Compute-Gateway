@@ -190,6 +190,33 @@ async function validateWorkflows(): Promise<void> {
     ),
     'AWS staging verification must not use long-lived cloud or SSH credentials',
   );
+
+  const awsProductionSource = await read(
+    '.github/workflows/aws-production-deploy.yml',
+  );
+  const awsProduction = parse(awsProductionSource) as Workflow | null;
+  const productionDeploy = awsProduction?.jobs?.deploy;
+  assert(
+    productionDeploy?.environment === 'aws-production',
+    'AWS production deploy must use the protected aws-production environment',
+  );
+  assert(
+    productionDeploy.permissions?.contents === 'read' &&
+      productionDeploy.permissions['id-token'] === 'write',
+    'AWS production deploy must grant only contents:read and id-token:write',
+  );
+  assert(
+    awsProductionSource.includes('[[ "$GITHUB_REF" == refs/heads/main ]]') &&
+      awsProductionSource.includes('scripts/deploy-aws-production.sh') &&
+      awsProductionSource.includes('vars.RCG_PUBLIC_HOST'),
+    'AWS production deploy must execute the protected main deployment for the configured host',
+  );
+  assert(
+    !/(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|EC2_SSH_PRIVATE_KEY)/u.test(
+      awsProductionSource,
+    ),
+    'AWS production workflow must not use long-lived cloud or SSH credentials',
+  );
 }
 
 async function validateHelm(): Promise<void> {
@@ -231,6 +258,7 @@ async function validateContainerReferences(): Promise<void> {
   const sources = await Promise.all([
     read('Dockerfile'),
     read('docker-compose.yml'),
+    read('deploy/compose/production.yaml'),
     read('deploy/helm/rax-compute-gateway/values.yaml'),
     read('deploy/kubernetes/examples/rax-compute-gateway.yaml'),
   ]);
@@ -247,6 +275,10 @@ async function validateContainerReferences(): Promise<void> {
       sources[0],
     ),
     'runtime image must use the pinned nonroot distroless image',
+  );
+  assert(
+    /image:\s*caddy:2\.11\.4-alpine@sha256:[a-f0-9]{64}/.test(sources[2]),
+    'production edge must use the pinned Caddy image digest',
   );
 }
 
