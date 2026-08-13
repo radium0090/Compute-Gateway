@@ -1,4 +1,9 @@
 export { PostgresApiKeyRepository } from './api-key-repository.js';
+export {
+  PostgresAdminAuditRepository,
+  PostgresAdminControlRepository,
+  PostgresAdminIdentityRepository,
+} from './admin-repository.js';
 export { runMigrations, type MigrationResult } from './migrations.js';
 export {
   PostgresReadinessProbe,

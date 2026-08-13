@@ -1,12 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 
 import type { FastifyInstance } from 'fastify';
 
 import {
+  AdminConsoleService,
   CreateChatCompletionService,
   ListModelsService,
 } from '@rax-digital/application';
-import { ApiKeyAuthenticator } from '@rax-digital/auth';
+import {
+  ApiKeyAuthenticator,
+  NodeAdminSecurity,
+  provisionApiKey,
+} from '@rax-digital/auth';
 import type { PolicyConfig, RuntimeConfig } from '@rax-digital/config';
 import { createRedisCoordination } from '@rax-digital/coordination-redis';
 import type {
@@ -17,6 +23,7 @@ import type {
   RequestAdmissionController,
   RoutingExecutionPolicy,
 } from '@rax-digital/domain';
+import { apiKeyId } from '@rax-digital/domain';
 import {
   createLogger,
   createRoutingObserver,
@@ -24,6 +31,9 @@ import {
 } from '@rax-digital/observability';
 import {
   PostgresApiKeyRepository,
+  PostgresAdminAuditRepository,
+  PostgresAdminControlRepository,
+  PostgresAdminIdentityRepository,
   PostgresReadinessProbe,
   createPostgresPool,
   runMigrations,
@@ -255,16 +265,63 @@ export async function runGateway(
     try {
       coordination = await coordinationRuntime(config, policy);
       const router = new StaticPolicyRouter(policy);
+      const apiKeyRepository = new PostgresApiKeyRepository(pool);
+      const probe = readinessProbe(
+        new PostgresReadinessProbe(pool),
+        coordination,
+      );
+      const admin = (() => {
+        if (!config.adminEnabled) return undefined;
+        if (
+          config.adminOrigin === undefined ||
+          config.adminSessionPepper === undefined
+        ) {
+          throw new TypeError(
+            'Validated administrator configuration is incomplete',
+          );
+        }
+        const security = new NodeAdminSecurity({
+          sessionPepper: config.adminSessionPepper,
+        });
+        return {
+          service: new AdminConsoleService(
+            new PostgresAdminIdentityRepository(pool),
+            new PostgresAdminControlRepository(pool),
+            apiKeyRepository,
+            new PostgresAdminAuditRepository(pool),
+            security,
+            {
+              provision: (input) =>
+                provisionApiKey(
+                  {
+                    id: apiKeyId(input.id),
+                    tenantId: input.tenantId,
+                    name: input.name,
+                    environment: input.environment,
+                    policy: input.policy,
+                    pepper: config.keyHashPepper,
+                    expiresAt: input.expiresAt,
+                  },
+                  input.now,
+                ),
+            },
+            {
+              sessionTtlMs: config.adminSessionTtlMs,
+              idGenerator: randomUUID,
+            },
+          ),
+          origin: config.adminOrigin,
+          sessionTtlMs: config.adminSessionTtlMs,
+        };
+      })();
       const app = await buildGateway({
         config,
         logger,
         ...(metricsRequestHandler === undefined
           ? {}
           : { metricsRequestHandler }),
-        readinessProbe: readinessProbe(
-          new PostgresReadinessProbe(pool),
-          coordination,
-        ),
+        readinessProbe: probe,
+        ...(admin === undefined ? {} : { admin }),
         chatCompletionService: new CreateChatCompletionService(
           authenticator,
           router,

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>RAX Compute Gateway · 管理后台</title>
+    <link rel="stylesheet" href="/admin/app.css" />
+  </head>
+  <body>
+    <main id="login-view" class="login-shell">
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="brand-mark" aria-hidden="true">R</div>
+        <p class="eyebrow">RAX DIGITAL</p>
+        <h1 id="login-title">Compute Gateway</h1>
+        <p class="muted">登录管理租户、API Key 与服务状态。</p>
+        <form id="login-form" class="stack">
+          <label>
+            <span>管理员邮箱</span>
+            <input
+              id="login-email"
+              type="email"
+              autocomplete="username"
+              required
+            />
+          </label>
+          <label>
+            <span>密码</span>
+            <input
+              id="login-password"
+              type="password"
+              autocomplete="current-password"
+              maxlength="128"
+              required
+            />
+          </label>
+          <p id="login-error" class="form-error" role="alert"></p>
+          <button class="button primary" type="submit">安全登录</button>
+        </form>
+      </section>
+    </main>
+
+    <div id="console-view" class="console hidden">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-mark small" aria-hidden="true">R</div>
+          <div>
+            <strong>RAX Compute</strong>
+            <span>Gateway Console</span>
+          </div>
+        </div>
+        <nav aria-label="管理后台导航">
+          <button class="nav-item active" data-section="overview">概览</button>
+          <button class="nav-item" data-section="tenants">租户</button>
+          <button class="nav-item" data-section="keys">API Keys</button>
+        </nav>
+        <div class="sidebar-foot">
+          <span id="admin-name"></span>
+          <span id="admin-email" class="muted-on-dark"></span>
+          <button id="logout-button" class="text-button" type="button">
+            退出登录
+          </button>
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">RAX DIGITAL / PRODUCTION</p>
+            <h1 id="section-title">服务概览</h1>
+          </div>
+          <div id="health-pill" class="health-pill pending">正在检查</div>
+        </header>
+
+        <div id="page-error" class="banner error hidden" role="alert"></div>
+
+        <section id="password-panel" class="panel warning-panel hidden">
+          <div>
+            <p class="eyebrow">首次登录</p>
+            <h2>请先更换临时密码</h2>
+            <p class="muted">新密码至少 15 个字符。修改后需要重新登录。</p>
+          </div>
+          <form id="password-form" class="inline-form password-form">
+            <input
+              id="current-password"
+              type="password"
+              placeholder="当前临时密码"
+              autocomplete="current-password"
+              required
+            />
+            <input
+              id="new-password"
+              type="password"
+              placeholder="新密码（至少 15 字符）"
+              autocomplete="new-password"
+              minlength="15"
+              maxlength="128"
+              required
+            />
+            <button class="button primary" type="submit">更换密码</button>
+          </form>
+        </section>
+
+        <section id="overview-section" class="section-view">
+          <div class="metric-grid">
+            <article class="metric-card">
+              <span>租户总数</span>
+              <strong id="metric-tenants">—</strong>
+              <small id="metric-active-tenants">— 个启用</small>
+            </article>
+            <article class="metric-card">
+              <span>API Keys</span>
+              <strong id="metric-keys">—</strong>
+              <small id="metric-active-keys">— 个有效</small>
+            </article>
+            <article class="metric-card accent">
+              <span>过去 24 小时活跃 Key</span>
+              <strong id="metric-used-keys">—</strong>
+              <small>只统计使用时间，不保存请求内容</small>
+            </article>
+          </div>
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">RUNTIME</p>
+                <h2>依赖状态</h2>
+              </div>
+              <button
+                id="refresh-button"
+                class="button secondary"
+                type="button"
+              >
+                刷新
+              </button>
+            </div>
+            <div id="dependency-list" class="dependency-list"></div>
+          </article>
+        </section>
+
+        <section id="tenants-section" class="section-view hidden">
+          <div class="section-heading">
+            <div>
+              <h2>租户</h2>
+              <p class="muted">租户是 API Key 与访问策略的隔离边界。</p>
+            </div>
+            <form id="tenant-form" class="inline-form">
+              <input
+                id="tenant-name"
+                placeholder="新租户名称"
+                maxlength="100"
+                required
+              />
+              <button class="button primary" type="submit">创建租户</button>
+            </form>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>名称</th>
+                  <th>状态</th>
+                  <th>ID</th>
+                  <th>创建时间</th>
+                </tr>
+              </thead>
+              <tbody id="tenant-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="keys-section" class="section-view hidden">
+          <div class="section-heading">
+            <div>
+              <h2>API Keys</h2>
+              <p class="muted">密钥仅在创建成功后显示一次。</p>
+            </div>
+            <button id="open-key-dialog" class="button primary" type="button">
+              创建 API Key
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>名称</th>
+                  <th>租户</th>
+                  <th>环境</th>
+                  <th>状态</th>
+                  <th>最近使用</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="key-table"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="key-dialog">
+      <form id="key-form" class="dialog-card">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">NEW CREDENTIAL</p>
+            <h2>创建 API Key</h2>
+          </div>
+          <button
+            id="close-key-dialog"
+            class="icon-button"
+            type="button"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </div>
+        <label
+          ><span>租户</span
+          ><select id="key-tenant" required></select
+        ></label>
+        <label
+          ><span>名称</span><input id="key-name" maxlength="100" required
+        /></label>
+        <div class="form-grid">
+          <label
+            ><span>环境</span
+            ><select id="key-environment">
+              <option value="production">Production</option>
+              <option value="staging">Staging</option>
+              <option value="development">Development</option>
+              <option value="test">Test</option>
+            </select></label
+          >
+          <label
+            ><span>每分钟请求数</span
+            ><input id="key-rpm" type="number" min="1" value="60" required
+          /></label>
+          <label
+            ><span>并发上限</span
+            ><input
+              id="key-concurrency"
+              type="number"
+              min="1"
+              value="10"
+              required
+          /></label>
+          <label
+            ><span>模型范围</span><input id="key-models" value="rax/*" required
+          /></label>
+        </div>
+        <label class="checkbox"
+          ><input id="key-streaming" type="checkbox" checked /><span
+            >允许流式响应</span
+          ></label
+        >
+        <p id="key-form-error" class="form-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button id="cancel-key-dialog" class="button secondary" type="button">
+            取消
+          </button>
+          <button class="button primary" type="submit">创建</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="credential-dialog">
+      <section class="dialog-card credential-card">
+        <p class="eyebrow">CREATED</p>
+        <h2>立即复制 API Key</h2>
+        <p class="muted">关闭窗口后无法再次查看。</p>
+        <code id="created-credential"></code>
+        <div class="dialog-actions">
+          <button id="copy-credential" class="button primary" type="button">
+            复制密钥
+          </button>
+          <button id="close-credential" class="button secondary" type="button">
+            我已保存
+          </button>
+        </div>
+      </section>
+    </dialog>
+
+    <script src="/admin/app.js" defer></script>
+  </body>
+</html>

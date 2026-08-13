@@ -20,6 +20,7 @@ documents.
 | [0010](0010-apache-2-license.md) | Apache-2.0 licensing intent | Accepted |
 | [0011](0011-node-24-runtime.md) | Node.js 24 runtime baseline | Accepted |
 | [0012](0012-rax-digital-product-identity.md) | RAX Digital product identity and tenant separation | Accepted |
+| [0013](0013-admin-control-plane.md) | Embedded administrative control plane | Accepted |
 
 ## Format and lifecycle
 

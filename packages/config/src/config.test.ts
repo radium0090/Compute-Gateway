@@ -29,6 +29,7 @@ describe('loadConfig', () => {
     expect(config.configFile).toBe('/etc/rax-compute-gateway/config.yaml');
     expect(config.serviceVersion).toBe('v0.1.0');
     expect(config.commitSha).toBe('abcdef1234567');
+    expect(config.adminEnabled).toBe(false);
   });
 
   it('rejects missing required settings without echoing secret values', () => {
@@ -90,6 +91,37 @@ describe('loadConfig', () => {
     expect(describeSecretPresence(config)).toEqual({
       RCG_KEY_HASH_PEPPER: '<set>',
       RCG_MASTER_KEY: '<set>',
+      RCG_ADMIN_SESSION_PEPPER: '<unset>',
     });
+  });
+
+  it('requires an origin and dedicated pepper when admin is enabled', () => {
+    expect(() =>
+      loadConfig({ ...validEnvironment, RCG_ADMIN_ENABLED: 'true' }),
+    ).toThrow(/RCG_ADMIN_ORIGIN|RCG_ADMIN_SESSION_PEPPER/);
+
+    expect(
+      loadConfig({
+        ...validEnvironment,
+        RCG_ADMIN_ENABLED: 'true',
+        RCG_ADMIN_ORIGIN: 'http://localhost:8080',
+        RCG_ADMIN_SESSION_PEPPER:
+          'fake-admin-session-pepper-with-at-least-32-characters',
+      }).adminEnabled,
+    ).toBe(true);
+  });
+
+  it('requires HTTPS for a production admin origin', () => {
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        RCG_ENVIRONMENT: 'production',
+        RCG_REDIS_URL: 'redis://redis:6379',
+        RCG_ADMIN_ENABLED: 'true',
+        RCG_ADMIN_ORIGIN: 'http://admin.example.com',
+        RCG_ADMIN_SESSION_PEPPER:
+          'fake-admin-session-pepper-with-at-least-32-characters',
+      }),
+    ).toThrow(/must use HTTPS/);
   });
 });

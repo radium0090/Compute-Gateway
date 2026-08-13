@@ -1,7 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["replicaCount", "image", "existingSecret", "runtime", "policy"],
+  "required": [
+    "replicaCount",
+    "image",
+    "existingSecret",
+    "runtime",
+    "admin",
+    "policy"
+  ],
   "properties": {
     "replicaCount": { "type": "integer", "minimum": 1 },
     "image": {
@@ -22,6 +29,19 @@
       }
     },
     "existingSecret": { "type": "string", "minLength": 1 },
+    "admin": {
+      "type": "object",
+      "required": ["enabled", "origin", "sessionTtlMs"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "origin": { "type": "string" },
+        "sessionTtlMs": {
+          "type": "integer",
+          "minimum": 900000,
+          "maximum": 86400000
+        }
+      }
+    },
     "terminationGracePeriodSeconds": { "type": "integer", "minimum": 1 },
     "preStopDelaySeconds": { "type": "integer", "minimum": 0 },
     "runtime": {
