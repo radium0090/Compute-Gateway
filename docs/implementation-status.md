@@ -6,8 +6,9 @@ status snapshot, not a new architecture decision.
 
 ## Current state
 
-The MVP implementation is feature-complete enough for infrastructure and
-release-candidate validation. The public chat and model APIs, three providers,
+The MVP implementation was published as signed
+[`v0.1.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0).
+The public chat and model APIs, three providers,
 streaming, authentication, deterministic routing, fallback, bounded retries,
 rate/concurrency coordination, circuit breaking, PostgreSQL migrations,
 OpenTelemetry, SDK previews, and Docker/Kubernetes delivery assets are present.
@@ -19,7 +20,8 @@ exercise, and protected staging provider/lifecycle verification have also
 passed for the candidate commit. The protected staging observability comparison
 passed with zero provider failures and HTTP 5xx responses, active requests
 returning to zero, and concurrent-stream memory below the accepted threshold.
-Signed immutable-image publication and digest deployment remain release gates.
+The signed multi-architecture image was deployed by digest, reverified on
+staging, and published with checksums, SBOM, signature, and provenance.
 
 ADR 0012 establishes RAX Digital as the operator and RAX Compute Gateway as the
 neutral platform identity. Source, packages, API extensions, credentials,
@@ -39,7 +41,7 @@ rollback target; the public production stack remains healthy.
 | Routing and resilience | Stable weighted primary selection, ordered fallback, bounded retry, deadlines, concurrency and circuit state implemented | Deployment-region and operator-disabled route filtering described in `docs/router.md` has no policy field yet |
 | PostgreSQL and Redis | Migration/repository and atomic Redis coordination implementations exist; the protected nightly suite passed against real services | Production remains a deliberate single-host PostgreSQL/Redis deployment until a managed-data-service migration is justified |
 | Observability | Structured content-free logs, metrics, traces, build identity and shutdown flushing implemented; protected staging outcome, latency, active-request, and stream-memory evidence passes | No bundled production dashboard; custom routing child spans are not part of `0.1` |
-| Docker and Kubernetes | Compose, hardened image, Helm chart, two-replica/rolling CI validation and an isolated empty-install staging deployment passed | Publish and deploy the signed immutable candidate digest |
+| Docker and Kubernetes | Compose, hardened signed image, Helm chart, two-replica/rolling CI validation, immutable-digest staging deployment, and published `v0.1.0` artifacts pass | Promote the release digest to each operator environment through its controlled deployment process |
 | SDKs and OpenAPI | TypeScript/Python clients, generated schemas, lint and compatibility gates implemented | Package registry publication is intentionally disabled for `0.1` |
 
 ## Known documentation-to-code gaps
@@ -65,15 +67,13 @@ These items require a scoped issue or ADR before behavior changes:
    routing, deadline budgets, and redaction. The current suite has deterministic
    examples and conformance tests for these paths, but no property-test harness.
 
-## Release blockers
+## Release evidence
 
-The repository must not be presented as a completed `v0.1.0` release until the
-evidence template in `docs/releases/0.1.0-rc.md` is complete. In particular:
-
-- complete the security and operator review before signing the release tag;
-- publish the signed candidate image and record its immutable digest;
-- deploy that exact digest to staging and repeat the final health/provider
-  smoke before publishing the draft GitHub Release.
+The completed first-release evidence, immutable digest, workflow links, and
+operator decision are recorded in `docs/releases/0.1.0-rc.md` and the public
+[`v0.1.0` release](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0).
+Future releases repeat the same signed-tag, artifact, digest-deployment, and
+protected-verification sequence rather than reusing this evidence.
 
 ## Intentionally deferred work
 
