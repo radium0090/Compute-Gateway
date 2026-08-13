@@ -36,7 +36,7 @@ const document = {
   info: {
     title: 'RAX Compute Gateway API',
     description: 'OpenAI-compatible API for RAX Compute Gateway.',
-    version: '0.1.0',
+    version: '0.2.0',
     license: { name: 'Apache-2.0', identifier: 'Apache-2.0' },
   },
   servers: [

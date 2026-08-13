@@ -131,6 +131,22 @@ app.kubernetes.io/instance: {{ .Release.Name }}
   value: {{ .Values.runtime.trustProxy | quote }}
 - name: RCG_METRICS_ENABLED
   value: {{ .Values.runtime.metricsEnabled | quote }}
+{{- if .Values.admin.enabled }}
+- name: RCG_ADMIN_ENABLED
+  value: "true"
+- name: RCG_ADMIN_ORIGIN
+  value: {{ required "admin.origin is required when admin.enabled=true" .Values.admin.origin | quote }}
+- name: RCG_ADMIN_SESSION_TTL_MS
+  value: {{ .Values.admin.sessionTtlMs | quote }}
+- name: RCG_ADMIN_SESSION_PEPPER
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.existingSecret | quote }}
+      key: {{ required "secretKeys.adminSessionPepper is required when admin.enabled=true" .Values.secretKeys.adminSessionPepper | quote }}
+{{- else }}
+- name: RCG_ADMIN_ENABLED
+  value: "false"
+{{- end }}
 {{- if .Values.runtime.otlpEndpoint }}
 - name: OTEL_EXPORTER_OTLP_ENDPOINT
   value: {{ .Values.runtime.otlpEndpoint | quote }}

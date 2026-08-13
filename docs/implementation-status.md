@@ -77,8 +77,9 @@ protected-verification sequence rather than reusing this evidence.
 
 ## Intentionally deferred work
 
-The web dashboard, hosted signup/billing, durable audit events, extra provider
-families, stronger cost/token budgets, package publication, and additional API
-surfaces belong to later roadmap phases. They are not missing `0.1` provider or
-routing logic and should not be added without the corresponding scope and ADR
-review.
+The `v0.2` operator console, browser authentication, tenant/API-key management,
+and durable content-free audit events are implemented under ADR 0013. Hosted
+signup/billing, end-user identity, MFA or federated operator identity, detailed
+token/cost accounting, extra provider families, package publication, and
+additional data-plane API surfaces remain deferred and require their own scope
+and decision review.

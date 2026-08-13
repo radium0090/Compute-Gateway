@@ -105,6 +105,14 @@ positives. Operators still need tested whole-instance recovery, host security
 updates, and an external notification recipient. See the
 `aws-single-host-recovery` runbook for evidence and recovery commands.
 
+Starting with `v0.2.0`, this single-host deployment also serves the authenticated
+operator console at `/admin/` from the gateway image. The production runtime
+secret must contain a distinct `RCG_ADMIN_SESSION_PEPPER` of at least 32
+characters. The deployment fixes `RCG_ADMIN_ORIGIN` to the configured HTTPS
+public host and enables the console without another container. Bootstrap an
+administrator through a reviewed SSM operator command; never place its temporary
+password in GitHub variables, workflow arguments, process arguments, or logs.
+
 ## Health semantics
 
 - `/health/live` returns success when the event loop/process can serve; it does

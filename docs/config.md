@@ -15,6 +15,9 @@ route policy. Environment variables override file values only where documented.
 | `RCG_DATABASE_URL` | yes | PostgreSQL connection URL |
 | `RCG_MASTER_KEY` | bootstrap | initial operator secret; disable after bootstrap |
 | `RCG_KEY_HASH_PEPPER` | yes | HMAC pepper for API key verification |
+| `RCG_ADMIN_ENABLED` | no | enables the `/admin` control plane; default `false` |
+| `RCG_ADMIN_ORIGIN` | conditional | exact browser origin; required when admin is enabled |
+| `RCG_ADMIN_SESSION_PEPPER` | conditional | dedicated session/CSRF HMAC pepper; required when admin is enabled |
 | `RCG_CONFIG_FILE` | no | route policy path; default `/etc/rax-compute-gateway/config.yaml` |
 | `RCG_REDIS_URL` | conditional | required in production for distributed limits/circuit state |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | no | OpenTelemetry Collector endpoint |
@@ -36,6 +39,7 @@ credential name; the value is never included in route YAML.
 | `RCG_SHUTDOWN_GRACE_MS` | `30000` | positive integer |
 | `RCG_TRUST_PROXY` | `false` | development only; must remain false in production for `0.1` |
 | `RCG_METRICS_ENABLED` | `true` | boolean |
+| `RCG_ADMIN_SESSION_TTL_MS` | `28800000` | 15 minutes..24 hours |
 | `RCG_SERVICE_VERSION` | `0.0.0` | build/release identifier, maximum 64 characters |
 | `RCG_COMMIT_SHA` | `unknown` | `unknown` or a 7..64 character lowercase Git SHA |
 

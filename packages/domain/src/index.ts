@@ -15,6 +15,28 @@ export {
   type TenantId,
 } from './api-key.js';
 export type { ApiKeyRepository } from './api-key-repository.js';
+export {
+  adminSessionId,
+  adminTokenHash,
+  adminUserId,
+  type AdminApiKeySummary,
+  type AdminAuditEvent,
+  type AdminDashboardSummary,
+  type AdminSession,
+  type AdminSessionId,
+  type AdminSessionWithUser,
+  type AdminTokenHash,
+  type AdminUser,
+  type AdminUserId,
+  type AdminUserStatus,
+  type Tenant,
+  type TenantStatus,
+} from './admin.js';
+export type {
+  AdminAuditRepository,
+  AdminControlRepository,
+  AdminIdentityRepository,
+} from './admin-repository.js';
 export { ProviderStreamFailure } from './chat-completion.js';
 export type {
   CanonicalChatMessage,

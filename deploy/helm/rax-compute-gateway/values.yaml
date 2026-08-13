@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: ghcr.io/radium0090/compute-gateway
-  tag: v0.1.0
+  tag: v0.2.0
   digest: ''
   pullPolicy: IfNotPresent
 
@@ -23,6 +23,7 @@ secretKeys:
   databaseUrl: database-url
   redisUrl: redis-url
   keyHashPepper: key-hash-pepper
+  adminSessionPepper: ''
   masterKey: ''
   openaiApiKey: openai-api-key
   anthropicApiKey: anthropic-api-key
@@ -38,6 +39,11 @@ runtime:
   trustProxy: false
   metricsEnabled: true
   otlpEndpoint: http://otel-collector.observability.svc.cluster.local:4318
+
+admin:
+  enabled: false
+  origin: ''
+  sessionTtlMs: 28800000
 
 policy:
   version: 1

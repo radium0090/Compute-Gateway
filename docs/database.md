@@ -12,6 +12,9 @@ content, provider raw responses, and full API keys are not stored in the MVP.
 | `tenants` | security and policy boundary | `id`, `name`, `status`, timestamps |
 | `api_keys` | client credentials | `id`, `public_id`, `key_hash`, `tenant_id`, policy, status, expiry |
 | `schema_migrations` | migration history | version, checksum, applied time |
+| `admin_users` | operator identities and password hashes | email, status, lock and password-change state |
+| `admin_sessions` | bounded browser sessions | keyed session/CSRF hashes and expiry |
+| `operator_audit_events` | content-free operator audit trail | actor, action, target, request ID, metadata |
 
 Database identifiers use UUIDs; the current operator command generates random
 UUIDv4 API-key IDs and accepts an operator-supplied tenant UUID. Timestamps use

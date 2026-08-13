@@ -8,6 +8,7 @@
   },
   "files": [
     "dist",
+    "public",
     "!dist/**/*.test.*",
     "!dist/**/*.tsbuildinfo"
   ],

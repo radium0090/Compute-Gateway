@@ -10,7 +10,7 @@ rax-compute-gateway/
 │   ├── CODEOWNERS
 │   └── dependabot.yml
 ├── apps/
-│   └── gateway/                 # Fastify composition root and process entry
+│   └── gateway/                 # Fastify composition root, data plane, and optional admin assets
 ├── packages/
 │   ├── api-contract/            # TypeBox schemas and generated OpenAPI source
 │   ├── domain/                  # provider ports, canonical types, routing rules

@@ -100,6 +100,22 @@ response = client.chat.completions.create(
 )
 ```
 
+## Operator console (`v0.2`)
+
+Set `RCG_ADMIN_ENABLED=true`, configure the exact `RCG_ADMIN_ORIGIN`, and use a
+dedicated `RCG_ADMIN_SESSION_PEPPER`. After migrations, create the first
+administrator with a temporary password supplied on standard input:
+
+```bash
+printf '%s\n' "$RCG_ADMIN_TEMPORARY_PASSWORD" | docker compose run --rm -T gateway \
+  admins create --email owner@example.com --display-name 'Gateway Owner'
+```
+
+Open `http://localhost:8080/admin/`. The temporary password must be replaced at
+first login. The console manages tenants and one-time-display API keys and
+shows bounded service/activity metadata. It never exposes provider credentials,
+password/session hashes, API-key hashes, prompts, or completions.
+
 ## Documentation
 
 Runnable [curl, Node.js, and Python examples](examples/README.md) are included
