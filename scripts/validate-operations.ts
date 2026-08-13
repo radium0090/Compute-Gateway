@@ -208,7 +208,8 @@ async function validateWorkflows(): Promise<void> {
   assert(
     awsProductionSource.includes('[[ "$GITHUB_REF" == refs/heads/main ]]') &&
       awsProductionSource.includes('scripts/deploy-aws-production.sh') &&
-      awsProductionSource.includes('vars.RCG_PUBLIC_HOST'),
+      awsProductionSource.includes('vars.RCG_PUBLIC_HOST') &&
+      awsProductionSource.includes('vars.RCG_BACKUP_BUCKET'),
     'AWS production deploy must execute the protected main deployment for the configured host',
   );
   assert(
@@ -216,6 +217,56 @@ async function validateWorkflows(): Promise<void> {
       awsProductionSource,
     ),
     'AWS production workflow must not use long-lived cloud or SSH credentials',
+  );
+}
+
+async function validateProductionRecovery(): Promise<void> {
+  const [backup, restore, monitor, deploy] = await Promise.all([
+    read('scripts/backup-aws-production.sh'),
+    read('scripts/verify-aws-production-backup.sh'),
+    read('scripts/monitor-aws-production.sh'),
+    read('scripts/deploy-aws-production.sh'),
+  ]);
+  assert(
+    backup.includes('pg_dump') &&
+      backup.includes('--server-side-encryption AES256') &&
+      backup.includes('sha256sum') &&
+      backup.includes('production/latest.json'),
+    'production backup must create, checksum, encrypt, and publish a latest manifest',
+  );
+  assert(
+    restore.includes('pg_restore') &&
+      restore.includes('--exit-on-error') &&
+      restore.includes('dropdb') &&
+      restore.includes('schema_migrations'),
+    'production restore verification must use a disposable database and verify the schema',
+  );
+  assert(
+    monitor.includes('/health/ready') &&
+      monitor.includes('ProductionDiskUsagePercent') &&
+      monitor.includes('ProductionServiceReady'),
+    'production monitoring must report disk usage and service readiness',
+  );
+  assert(
+    deploy.includes('rax-compute-gateway-backup.timer') &&
+      deploy.includes('rax-compute-gateway-restore-verify.timer') &&
+      deploy.includes('rax-compute-gateway-monitor.timer'),
+    'production deployment must enable backup, restore, and monitoring timers',
+  );
+
+  const unitDirectory = new URL('deploy/systemd/', root);
+  const units = (await readdir(unitDirectory)).sort();
+  assert(units.length === 6, 'expected six production systemd unit files');
+  const unitSources = await Promise.all(
+    units.map((unit) => read(join('deploy/systemd', unit))),
+  );
+  assert(
+    unitSources.every(
+      (source) =>
+        source.includes('[Unit]') &&
+        (source.includes('[Service]') || source.includes('[Timer]')),
+    ),
+    'every production systemd unit must declare its unit type',
   );
 }
 
@@ -283,6 +334,7 @@ async function validateContainerReferences(): Promise<void> {
 }
 
 await validateWorkflows();
+await validateProductionRecovery();
 await validateHelm();
 await validateContainerReferences();
 process.stdout.write('operations assets valid\n');

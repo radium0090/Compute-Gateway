@@ -3,8 +3,10 @@ set -Eeuo pipefail
 
 required_environment=(
   AWS_REGION
+  RCG_BACKUP_BUCKET
   RCG_COMMIT_SHA
   RCG_DEPLOY_PATH
+  RCG_EC2_INSTANCE_ID
   RCG_PUBLIC_HOST
   RCG_SECRET_ARN
 )
@@ -17,6 +19,14 @@ done
 
 if [[ ! "$RCG_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
   echo 'RCG_COMMIT_SHA must be a full lowercase Git SHA.' >&2
+  exit 1
+fi
+if [[ ! "$RCG_BACKUP_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
+  echo 'RCG_BACKUP_BUCKET is not a valid S3 bucket name.' >&2
+  exit 1
+fi
+if [[ ! "$RCG_EC2_INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]; then
+  echo 'RCG_EC2_INSTANCE_ID is not a valid EC2 instance ID.' >&2
   exit 1
 fi
 if [[ ! "$RCG_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]; then
@@ -32,7 +42,7 @@ if [[ "$(id -u)" -ne 0 ]]; then
   exit 1
 fi
 
-for command in aws curl docker git jq; do
+for command in aws curl docker git jq systemctl; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Required production command is unavailable: ${command}" >&2
     exit 1
@@ -52,6 +62,7 @@ fi
 
 shared_root="${RCG_DEPLOY_PATH}/shared"
 runtime_environment="${shared_root}/production.env"
+operations_environment="${shared_root}/production-operations.env"
 deployment_record="${shared_root}/production-deployment.json"
 deployment_log="/var/log/rax-compute-gateway-production-${RCG_COMMIT_SHA}.log"
 previous_release=''
@@ -92,9 +103,13 @@ if ! jq -e '
 fi
 
 temporary_environment="$(mktemp "${shared_root}/production.env.XXXXXX")"
+temporary_operations_environment=''
 cleanup_temporary_environment() {
   if [[ -f "$temporary_environment" ]]; then
     rm -f -- "$temporary_environment"
+  fi
+  if [[ -n "$temporary_operations_environment" && -f "$temporary_operations_environment" ]]; then
+    rm -f -- "$temporary_operations_environment"
   fi
 }
 trap cleanup_temporary_environment EXIT
@@ -138,6 +153,20 @@ unset secret_json
 chmod 0600 "$temporary_environment"
 mv -f -- "$temporary_environment" "$runtime_environment"
 ln -sfn "$runtime_environment" "${repository_root}/.env"
+
+temporary_operations_environment="$(
+  mktemp "${shared_root}/production-operations.env.XXXXXX"
+)"
+cat >"$temporary_operations_environment" <<EOF
+AWS_REGION=${AWS_REGION}
+RCG_BACKUP_BUCKET=${RCG_BACKUP_BUCKET}
+RCG_DEPLOY_PATH=${RCG_DEPLOY_PATH}
+RCG_EC2_INSTANCE_ID=${RCG_EC2_INSTANCE_ID}
+RCG_PUBLIC_HOST=${RCG_PUBLIC_HOST}
+RCG_RELEASE_ROOT=${repository_root}
+EOF
+chmod 0600 "$temporary_operations_environment"
+mv -f -- "$temporary_operations_environment" "$operations_environment"
 
 compose() {
   docker compose \
@@ -202,6 +231,31 @@ curl --fail --silent --show-error --max-time 10 \
   "https://${RCG_PUBLIC_HOST}/health/ready" \
   >/dev/null
 
+echo 'Installing production backup, restore-verification, and monitoring timers.'
+for unit_source in "${repository_root}"/deploy/systemd/*; do
+  unit_name="$(basename "$unit_source")"
+  sed \
+    -e "s|__RCG_DEPLOY_PATH__|${RCG_DEPLOY_PATH}|g" \
+    -e "s|__RCG_RELEASE_ROOT__|${repository_root}|g" \
+    -e "s|__RCG_OPERATIONS_ENV__|${operations_environment}|g" \
+    "$unit_source" \
+    >"/etc/systemd/system/${unit_name}"
+  chmod 0644 "/etc/systemd/system/${unit_name}"
+done
+systemctl daemon-reload
+systemctl enable --now \
+  rax-compute-gateway-backup.timer \
+  rax-compute-gateway-restore-verify.timer \
+  rax-compute-gateway-monitor.timer \
+  >>"$deployment_log" 2>&1
+
+# Each deployment proves the current release can back up and restore before it
+# is recorded as successful. The disposable restore database is always dropped.
+systemctl start rax-compute-gateway-monitor.service >>"$deployment_log" 2>&1
+systemctl start rax-compute-gateway-backup.service >>"$deployment_log" 2>&1
+systemctl start rax-compute-gateway-restore-verify.service \
+  >>"$deployment_log" 2>&1
+
 ln -sfn "$repository_root" "${RCG_DEPLOY_PATH}/current"
 jq -n \
   --arg commit "$RCG_COMMIT_SHA" \
@@ -219,4 +273,7 @@ echo "public_host=${RCG_PUBLIC_HOST}"
 echo "image_id=${image_id}"
 echo 'health_live=ok'
 echo 'health_ready=ok'
+echo 'production_backup=ok'
+echo 'production_restore_verification=ok'
+echo 'production_monitoring=ok'
 echo 'production_deployment=ok'

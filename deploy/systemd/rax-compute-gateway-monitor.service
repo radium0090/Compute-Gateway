@@ -1,0 +1,14 @@
+[Unit]
+Description=RAX Compute Gateway production host monitoring
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=__RCG_OPERATIONS_ENV__
+ExecStart=__RCG_RELEASE_ROOT__/scripts/monitor-aws-production.sh
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/docker /var/run/docker.sock
+NoNewPrivileges=true

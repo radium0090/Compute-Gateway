@@ -60,3 +60,12 @@ Production operators enable encrypted automated backups and point-in-time
 recovery. Restore tests occur at least quarterly. The initial targets are RPO
 15 minutes and RTO 60 minutes for managed deployments; self-hosted operators
 set their own targets. Backup data follows the same retention and access rules.
+
+The AWS single-host production edge uses a lower-cost recovery profile: an
+encrypted PostgreSQL custom-format dump every six hours, 35-day S3 retention,
+and an automated weekly restore into a disposable database. This establishes an
+RPO of up to six hours and a recovery objective of 60 minutes. It does not offer
+point-in-time recovery and must not be represented as equivalent to managed
+PostgreSQL. The restore verifier checks the object checksum, restores with
+`--exit-on-error`, validates required schema objects, and drops the disposable
+database on every exit path.

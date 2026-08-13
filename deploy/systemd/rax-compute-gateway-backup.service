@@ -1,0 +1,17 @@
+[Unit]
+Description=RAX Compute Gateway PostgreSQL production backup
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=__RCG_OPERATIONS_ENV__
+ExecStart=__RCG_RELEASE_ROOT__/scripts/backup-aws-production.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=__RCG_DEPLOY_PATH__ /var/run/docker.sock
+NoNewPrivileges=true

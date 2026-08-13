@@ -83,16 +83,18 @@ Required AWS/GitHub controls:
 - a production-only Secrets Manager secret below
   `rax/compute-gateway/production/runtime-*`;
 - environment variables for the AWS role/instance, deployment path, secret ARN,
-  and public hostname;
+  public hostname, and private backup bucket;
 - an Elastic IP associated with the EC2 instance and an `A` record for the
   public hostname;
 - inbound TCP 80/443 only, with administration through Systems Manager.
 
 This is an availability and cost tradeoff, not the multi-replica production
 topology above. The EC2 instance, Docker daemon, and local PostgreSQL volume are
-single points of failure. Before accepting general customer traffic, automate
-encrypted database backups, test restore and rollback, install host security
-updates, and configure external uptime and disk-space alarms.
+single points of failure. The repository automates encrypted six-hourly database
+backups, weekly disposable restore verification, and five-minute readiness and
+disk metrics. Operators still need tested whole-instance recovery, host security
+updates, and an external notification recipient. See the
+`aws-single-host-recovery` runbook for evidence and recovery commands.
 
 ## Health semantics
 
