@@ -14,10 +14,10 @@ OpenTelemetry, SDK previews, and Docker/Kubernetes delivery assets are present.
 
 The protected live-provider workflow has passed non-streaming and streaming
 requests for OpenAI, Anthropic, and Gemini. Real PostgreSQL and Redis tests,
-the empty-install staging deployment, and the production backup/disposable
-restore exercise have also passed for the candidate commit. Immutable-image
-publication and the final staging observability comparison remain release
-gates.
+the empty-install staging deployment, production backup/disposable restore
+exercise, and protected staging provider/lifecycle verification have also
+passed for the candidate commit. Immutable-image publication and the final
+staging observability comparison remain release gates.
 
 ADR 0012 establishes RAX Digital as the operator and RAX Compute Gateway as the
 neutral platform identity. Source, packages, API extensions, credentials,
@@ -69,7 +69,8 @@ The repository must not be presented as a completed `v0.1.0` release until the
 evidence template in `docs/releases/0.1.0-rc.md` is complete. In particular:
 
 - publish the signed candidate image and record its immutable digest;
-- deploy that digest and complete the staging provider/lifecycle verification;
+- deploy that digest while preserving the completed staging provider/lifecycle
+  evidence;
 - compare staging error rate, latency, provider outcomes, active requests, and
   memory per stream with the accepted reference;
 - complete the security and operator review before signing the release tag.
