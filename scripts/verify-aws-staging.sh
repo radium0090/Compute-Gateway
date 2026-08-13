@@ -14,6 +14,7 @@ if [[ "$(id -u)" -ne 0 ]]; then
   exit 1
 fi
 
+verification_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 runtime_root="$(readlink -f "${RCG_DEPLOY_PATH}/current")"
 runtime_environment="${RCG_DEPLOY_PATH}/shared/staging.env"
 if [[ ! -f "${runtime_root}/docker-compose.yml" ]]; then
@@ -35,6 +36,7 @@ compose() {
 
 temporary_root="$(mktemp -d)"
 smoke_tenant_id='123e4567-e89b-42d3-a456-426614174002'
+memory_probe_pids=()
 cleanup_smoke_key() {
   compose exec -T postgres psql \
     --username rcg \
@@ -44,6 +46,10 @@ cleanup_smoke_key() {
     >/dev/null 2>&1 || true
 }
 cleanup() {
+  if [[ "${#memory_probe_pids[@]}" -gt 0 ]]; then
+    kill "${memory_probe_pids[@]}" >/dev/null 2>&1 || true
+    wait "${memory_probe_pids[@]}" >/dev/null 2>&1 || true
+  fi
   cleanup_smoke_key
   rm -rf -- "$temporary_root"
 }
@@ -150,6 +156,48 @@ for alias in "${aliases[@]}"; do
   echo "provider_streaming_${safe_name}=ok"
 done
 
+provider_metrics="${temporary_root}/provider-metrics"
+curl --fail --silent --show-error --max-time 10 \
+  http://127.0.0.1:8080/metrics \
+  --output "$provider_metrics"
+provider_successes="$(
+  awk '/^rcg_provider_attempts_total\{.*outcome="success"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$provider_metrics"
+)"
+provider_failures="$(
+  awk '/^rcg_provider_attempts_total\{/ && $0 !~ /outcome="success"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$provider_metrics"
+)"
+http_5xx="$(
+  awk '/^rcg_http_requests_total\{.*status_class="5xx"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$provider_metrics"
+)"
+completion_latency_samples="$(
+  awk '/^rcg_http_request_duration_seconds_count\{route="\/v1\/chat\/completions"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$provider_metrics"
+)"
+inactive_requests="$(
+  awk '/^rcg_active_requests\{/ && $0 !~ /route="\/metrics"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$provider_metrics"
+)"
+if [[ "$provider_successes" -lt 6 || "$provider_failures" -ne 0 ]]; then
+  echo 'Provider outcome metrics do not match the successful smoke calls.' >&2
+  exit 1
+fi
+if [[ "$http_5xx" -ne 0 || "$completion_latency_samples" -lt 6 ]]; then
+  echo 'HTTP error-rate or latency metrics do not match the provider smoke.' >&2
+  exit 1
+fi
+if [[ "$inactive_requests" -ne 0 ]]; then
+  echo 'Active requests did not return to zero after provider smoke.' >&2
+  exit 1
+fi
+echo "provider_success_outcomes=${provider_successes}"
+echo "provider_failure_outcomes=${provider_failures}"
+echo "http_5xx_responses=${http_5xx}"
+echo "completion_latency_samples=${completion_latency_samples}"
+echo 'active_requests_after_provider_smoke=0'
+
 disconnect_body="$(
   jq -cn \
     '{model: "rax/fast", messages: [{role: "user", content: "Reply with several words."}], max_tokens: 32, stream: true}'
@@ -176,6 +224,103 @@ if [[ -z "$gateway_container" ]]; then
   echo 'The running gateway container could not be identified.' >&2
   exit 1
 fi
+memory_reference="${verification_root}/benchmarks/reference.json"
+stream_memory_concurrency="$(jq -er '.stream_memory_concurrency' "$memory_reference")"
+memory_per_stream_threshold_bytes="$(
+  jq -er '.memory_per_stream_threshold_bytes' "$memory_reference"
+)"
+if [[ ! "$stream_memory_concurrency" =~ ^[1-9][0-9]*$ ]] ||
+  [[ ! "$memory_per_stream_threshold_bytes" =~ ^[1-9][0-9]*$ ]]; then
+  echo 'The stream-memory reference is invalid.' >&2
+  exit 1
+fi
+gateway_pid="$(docker inspect --format '{{.State.Pid}}' "$gateway_container")"
+gateway_memory_file="/proc/${gateway_pid}/root/sys/fs/cgroup/memory.current"
+if [[ ! -r "$gateway_memory_file" ]]; then
+  echo 'The gateway cgroup memory counter is unavailable.' >&2
+  exit 1
+fi
+baseline_memory_bytes="$(<"$gateway_memory_file")"
+memory_stream_body="$(
+  jq -cn \
+    '{model: "rax/fast", messages: [{role: "user", content: "Return a numbered list of two hundred short words."}], max_tokens: 256, stream: true}'
+)"
+for _ in $(seq 1 "$stream_memory_concurrency"); do
+  curl --silent --show-error --no-buffer --limit-rate 1 --max-time 20 \
+    http://127.0.0.1:8080/v1/chat/completions \
+    --header "@${auth_header_file}" \
+    --header 'Content-Type: application/json' \
+    --data "$memory_stream_body" \
+    --output /dev/null \
+    >/dev/null 2>&1 &
+  memory_probe_pids+=("$!")
+done
+
+observed_active_streams=0
+for _ in $(seq 1 20); do
+  curl --fail --silent --show-error --max-time 10 \
+    http://127.0.0.1:8080/metrics \
+    --output "${temporary_root}/memory-metrics"
+  observed_active_streams="$(
+    awk '/^rcg_active_requests\{route="\/v1\/chat\/completions"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+      "${temporary_root}/memory-metrics"
+  )"
+  if [[ "$observed_active_streams" -ge "$stream_memory_concurrency" ]]; then
+    break
+  fi
+  sleep 0.25
+done
+if [[ "$observed_active_streams" -lt "$stream_memory_concurrency" ]]; then
+  echo 'The memory probe could not establish the reference stream concurrency.' >&2
+  exit 1
+fi
+
+peak_memory_bytes="$baseline_memory_bytes"
+for _ in $(seq 1 8); do
+  current_memory_bytes="$(<"$gateway_memory_file")"
+  if [[ "$current_memory_bytes" -gt "$peak_memory_bytes" ]]; then
+    peak_memory_bytes="$current_memory_bytes"
+  fi
+  sleep 0.25
+done
+kill "${memory_probe_pids[@]}" >/dev/null 2>&1 || true
+wait "${memory_probe_pids[@]}" >/dev/null 2>&1 || true
+memory_probe_pids=()
+memory_delta_bytes=$((peak_memory_bytes - baseline_memory_bytes))
+if [[ "$memory_delta_bytes" -lt 0 ]]; then
+  memory_delta_bytes=0
+fi
+memory_per_stream_bytes=$((
+  (memory_delta_bytes + stream_memory_concurrency - 1) / stream_memory_concurrency
+))
+if [[ "$memory_per_stream_bytes" -gt "$memory_per_stream_threshold_bytes" ]]; then
+  echo 'Memory per stream exceeds the accepted staging reference.' >&2
+  exit 1
+fi
+
+active_after_memory_probe=-1
+for _ in $(seq 1 20); do
+  curl --fail --silent --show-error --max-time 10 \
+    http://127.0.0.1:8080/metrics \
+    --output "${temporary_root}/memory-cleanup-metrics"
+  active_after_memory_probe="$(
+    awk '/^rcg_active_requests\{route="\/v1\/chat\/completions"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+      "${temporary_root}/memory-cleanup-metrics"
+  )"
+  if [[ "$active_after_memory_probe" -eq 0 ]]; then
+    break
+  fi
+  sleep 0.25
+done
+if [[ "$active_after_memory_probe" -ne 0 ]]; then
+  echo 'Active requests did not recover after the stream-memory probe.' >&2
+  exit 1
+fi
+echo "stream_memory_concurrency=${stream_memory_concurrency}"
+echo "memory_per_stream_bytes=${memory_per_stream_bytes}"
+echo "memory_per_stream_threshold_bytes=${memory_per_stream_threshold_bytes}"
+echo 'active_requests_after_memory_probe=0'
+
 docker kill --signal TERM "$gateway_container" >/dev/null
 for _ in $(seq 1 60); do
   if [[ "$(docker inspect --format '{{.State.Running}}' "$gateway_container")" == false ]]; then
