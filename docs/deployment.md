@@ -68,6 +68,12 @@ graceful gateway restart, and API Key authentication after restart. The workflow
 uses a disposable key and reports only status markers. A successful deployment
 does not substitute for this provider and lifecycle verification.
 
+For release-candidate promotion, dispatch `AWS staging deploy` from `main` with
+the published `sha256:...` digest. The workflow derives the semantic image tag
+from the chart, pulls that exact immutable GHCR reference instead of rebuilding
+it, and records both the digest reference and local image ID. Leave the digest
+input empty for the normal commit-built staging rehearsal.
+
 ## AWS single-host production edge
 
 The protected `AWS production deploy` workflow supports the deliberately

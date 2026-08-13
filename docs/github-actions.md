@@ -12,7 +12,7 @@
 | `live-provider.yml` | manual | protected OpenAI/Anthropic/Gemini smoke through OpenAI SDK |
 | `aws-staging.yml` | manual | protected AWS OIDC, EC2, and SSM connectivity evidence |
 | `aws-staging-bootstrap.yml` | manual | approved, idempotent staging host prerequisite installation |
-| `aws-staging-deploy.yml` | manual | approved deployment of the exact protected `main` commit |
+| `aws-staging-deploy.yml` | manual | approved `main` deployment from source or an immutable release digest |
 | `aws-staging-verify.yml` | manual | approved real-provider, streaming, disconnect, and restart verification |
 | `release.yml` | signed `v*` tag | publish signed artifacts and create a draft release |
 

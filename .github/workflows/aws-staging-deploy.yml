@@ -2,6 +2,11 @@ name: AWS staging deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      image_digest:
+        description: Optional published release digest (sha256:...)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -26,6 +31,7 @@ jobs:
       EC2_IAM_ROLE_NAME: ${{ vars.EC2_IAM_ROLE_NAME }}
       RCG_SECRET_ARN: ${{ vars.RCG_SECRET_ARN }}
       RCG_DEPLOY_PATH: ${{ vars.RCG_DEPLOY_PATH }}
+      RCG_IMAGE_DIGEST: ${{ inputs.image_digest }}
     steps:
       - name: Validate protected deployment context
         shell: bash
@@ -52,6 +58,9 @@ jobs:
           [[ "$AWS_ROLE_ARN" == "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ComputeGatewayGitHubDeployRole" ]]
           [[ "$RCG_SECRET_ARN" == "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:rax/compute-gateway/staging/runtime-"* ]]
           [[ "$RCG_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]
+          if [[ -n "$RCG_IMAGE_DIGEST" ]]; then
+            [[ "$RCG_IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          fi
 
       - name: Assume the protected AWS deployment role
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
@@ -97,6 +106,7 @@ jobs:
           commit_sha="$2"
           secret_arn="$3"
           aws_region="$4"
+          image_digest="$5"
           repository_url='https://github.com/radium0090/Compute-Gateway.git'
           release_root="${deploy_path}/releases/${commit_sha}"
 
@@ -117,6 +127,10 @@ jobs:
           export RCG_COMMIT_SHA="$commit_sha"
           export RCG_DEPLOY_PATH="$deploy_path"
           export RCG_SECRET_ARN="$secret_arn"
+          if [[ -n "$image_digest" ]]; then
+            release_version="v$(sed -n 's/^appVersion: //p' "${release_root}/deploy/helm/rax-compute-gateway/Chart.yaml")"
+            export RCG_RELEASE_IMAGE="ghcr.io/radium0090/compute-gateway:${release_version}@${image_digest}"
+          fi
           exec "$release_root/scripts/deploy-aws-staging.sh"
           SCRIPT
           )"
@@ -128,7 +142,8 @@ jobs:
               --arg commit "$GITHUB_SHA" \
               --arg secret "$RCG_SECRET_ARN" \
               --arg region "$AWS_REGION" \
-              '{commands: ["printf %s " + ($script | @sh) + " | base64 -d | bash -s -- " + ($path | @sh) + " " + ($commit | @sh) + " " + ($secret | @sh) + " " + ($region | @sh)]}'
+              --arg digest "$RCG_IMAGE_DIGEST" \
+              '{commands: ["printf %s " + ($script | @sh) + " | base64 -d | bash -s -- " + ($path | @sh) + " " + ($commit | @sh) + " " + ($secret | @sh) + " " + ($region | @sh) + " " + ($digest | @sh)]}'
           )"
           command_id="$(
             aws ssm send-command \
