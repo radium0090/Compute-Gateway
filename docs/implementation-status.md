@@ -24,8 +24,8 @@ neutral platform identity. Source, packages, API extensions, credentials,
 telemetry, deployment assets, and SDKs use the new identity. The public
 `https://api.rax-digital.com` endpoint, DNS, HTTPS, single-host operations,
 backup/restore timers, monitoring, and protected AWS deployment are active. The
-former Genchi staging stack is stopped with its volume retained only as a
-temporary rollback target.
+retired staging stack is stopped with its volume retained only as a temporary
+rollback target.
 
 ## Specification mapping
 
