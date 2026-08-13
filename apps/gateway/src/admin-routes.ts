@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 
+import rateLimit from '@fastify/rate-limit';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import {
@@ -36,6 +37,16 @@ const adminCsp = [
   "base-uri 'none'",
   "form-action 'self'",
 ].join('; ');
+const adminApiRateLimit = {
+  max: 300,
+  timeWindow: '1 minute',
+  groupId: 'admin-api',
+} as const;
+const adminLoginRateLimit = {
+  max: 30,
+  timeWindow: '1 minute',
+  groupId: 'admin-login',
+} as const;
 
 export type AdminRouteService = Pick<
   AdminConsoleService,
@@ -196,6 +207,18 @@ export async function registerAdminRoutes(
   ]);
   const loginLimiter = dependencies.loginLimiter ?? new AdminLoginLimiter();
 
+  // Keep control-plane throttling independent from customer inference traffic.
+  // The plugin provides per-client limits; AdminLoginLimiter additionally caps
+  // total password hashing work across all clients in this process.
+  await app.register(rateLimit, {
+    global: false,
+    errorResponseBuilder: () => ({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: 'The administrative request limit was exceeded.',
+    }),
+  });
+
   app.addHook('onSend', async (request, reply) => {
     if (!request.raw.url?.startsWith('/admin')) return;
     reply.headers({
@@ -223,7 +246,10 @@ export async function registerAdminRoutes(
 
   app.post<{ Body: AdminLoginRequest }>(
     '/admin/api/login',
-    { schema: { body: AdminLoginRequestSchema } },
+    {
+      schema: { body: AdminLoginRequestSchema },
+      config: { rateLimit: adminLoginRateLimit },
+    },
     async (request, reply) => {
       if (!checkOrigin(request, reply, dependencies.origin)) return reply;
       const admission = loginLimiter.consume();
@@ -264,33 +290,54 @@ export async function registerAdminRoutes(
     },
   );
 
-  app.get('/admin/api/session', async (request, reply) => {
-    const actor = await requirePrincipal(request, reply, dependencies.service, {
-      mutation: false,
-      allowPasswordChange: true,
-    });
-    if (actor === null) return reply;
-    return { user: serializePrincipal(actor) };
-  });
+  app.get(
+    '/admin/api/session',
+    { config: { rateLimit: adminApiRateLimit } },
+    async (request, reply) => {
+      const actor = await requirePrincipal(
+        request,
+        reply,
+        dependencies.service,
+        {
+          mutation: false,
+          allowPasswordChange: true,
+        },
+      );
+      if (actor === null) return reply;
+      return { user: serializePrincipal(actor) };
+    },
+  );
 
-  app.post('/admin/api/logout', async (request, reply) => {
-    if (!checkOrigin(request, reply, dependencies.origin)) return reply;
-    const actor = await requirePrincipal(request, reply, dependencies.service, {
-      mutation: true,
-      allowPasswordChange: true,
-    });
-    if (actor === null) return reply;
-    const session = cookieValue(request.headers.cookie);
-    if (session !== null) {
-      await dependencies.service.logout(session, actor, request.id);
-    }
-    reply.header('set-cookie', clearSessionCookie());
-    return reply.code(204).send();
-  });
+  app.post(
+    '/admin/api/logout',
+    { config: { rateLimit: adminApiRateLimit } },
+    async (request, reply) => {
+      if (!checkOrigin(request, reply, dependencies.origin)) return reply;
+      const actor = await requirePrincipal(
+        request,
+        reply,
+        dependencies.service,
+        {
+          mutation: true,
+          allowPasswordChange: true,
+        },
+      );
+      if (actor === null) return reply;
+      const session = cookieValue(request.headers.cookie);
+      if (session !== null) {
+        await dependencies.service.logout(session, actor, request.id);
+      }
+      reply.header('set-cookie', clearSessionCookie());
+      return reply.code(204).send();
+    },
+  );
 
   app.post<{ Body: AdminPasswordChangeRequest }>(
     '/admin/api/password',
-    { schema: { body: AdminPasswordChangeRequestSchema } },
+    {
+      schema: { body: AdminPasswordChangeRequestSchema },
+      config: { rateLimit: adminApiRateLimit },
+    },
     async (request, reply) => {
       if (!checkOrigin(request, reply, dependencies.origin)) return reply;
       const actor = await requirePrincipal(
@@ -322,52 +369,73 @@ export async function registerAdminRoutes(
     },
   );
 
-  app.get('/admin/api/dashboard', async (request, reply) => {
-    const actor = await requirePrincipal(request, reply, dependencies.service, {
-      mutation: false,
-    });
-    if (actor === null) return reply;
-    const [summary, readiness] = await Promise.all([
-      dependencies.service.dashboardSummary(),
-      dependencies.readinessProbe.check().catch(() => ({
-        ready: false,
-        checks: { postgres: 'error' as const },
-      })),
-    ]);
-    return {
-      health: {
-        ready: readiness.ready,
-        checks: readiness.checks ?? { postgres: 'error' },
-      },
-      summary: {
-        tenant_count: summary.tenantCount,
-        active_tenant_count: summary.activeTenantCount,
-        api_key_count: summary.apiKeyCount,
-        active_api_key_count: summary.activeApiKeyCount,
-        api_keys_used_24h: summary.apiKeysUsedSince,
-      },
-    };
-  });
+  app.get(
+    '/admin/api/dashboard',
+    { config: { rateLimit: adminApiRateLimit } },
+    async (request, reply) => {
+      const actor = await requirePrincipal(
+        request,
+        reply,
+        dependencies.service,
+        {
+          mutation: false,
+        },
+      );
+      if (actor === null) return reply;
+      const [summary, readiness] = await Promise.all([
+        dependencies.service.dashboardSummary(),
+        dependencies.readinessProbe.check().catch(() => ({
+          ready: false,
+          checks: { postgres: 'error' as const },
+        })),
+      ]);
+      return {
+        health: {
+          ready: readiness.ready,
+          checks: readiness.checks ?? { postgres: 'error' },
+        },
+        summary: {
+          tenant_count: summary.tenantCount,
+          active_tenant_count: summary.activeTenantCount,
+          api_key_count: summary.apiKeyCount,
+          active_api_key_count: summary.activeApiKeyCount,
+          api_keys_used_24h: summary.apiKeysUsedSince,
+        },
+      };
+    },
+  );
 
-  app.get('/admin/api/tenants', async (request, reply) => {
-    const actor = await requirePrincipal(request, reply, dependencies.service, {
-      mutation: false,
-    });
-    if (actor === null) return reply;
-    const tenants = await dependencies.service.listTenants();
-    return {
-      data: tenants.map((tenant) => ({
-        id: tenant.id,
-        name: tenant.name,
-        status: tenant.status,
-        created_at: tenant.createdAt.toISOString(),
-      })),
-    };
-  });
+  app.get(
+    '/admin/api/tenants',
+    { config: { rateLimit: adminApiRateLimit } },
+    async (request, reply) => {
+      const actor = await requirePrincipal(
+        request,
+        reply,
+        dependencies.service,
+        {
+          mutation: false,
+        },
+      );
+      if (actor === null) return reply;
+      const tenants = await dependencies.service.listTenants();
+      return {
+        data: tenants.map((tenant) => ({
+          id: tenant.id,
+          name: tenant.name,
+          status: tenant.status,
+          created_at: tenant.createdAt.toISOString(),
+        })),
+      };
+    },
+  );
 
   app.post<{ Body: AdminTenantCreateRequest }>(
     '/admin/api/tenants',
-    { schema: { body: AdminTenantCreateRequestSchema } },
+    {
+      schema: { body: AdminTenantCreateRequestSchema },
+      config: { rateLimit: adminApiRateLimit },
+    },
     async (request, reply) => {
       if (!checkOrigin(request, reply, dependencies.origin)) return reply;
       const actor = await requirePrincipal(
@@ -395,7 +463,10 @@ export async function registerAdminRoutes(
 
   app.get<{ Querystring: AdminApiKeyQuery }>(
     '/admin/api/api-keys',
-    { schema: { querystring: AdminApiKeyQuerySchema } },
+    {
+      schema: { querystring: AdminApiKeyQuerySchema },
+      config: { rateLimit: adminApiRateLimit },
+    },
     async (request, reply) => {
       const actor = await requirePrincipal(
         request,
@@ -434,7 +505,10 @@ export async function registerAdminRoutes(
 
   app.post<{ Body: AdminApiKeyCreateRequest }>(
     '/admin/api/api-keys',
-    { schema: { body: AdminApiKeyCreateRequestSchema } },
+    {
+      schema: { body: AdminApiKeyCreateRequestSchema },
+      config: { rateLimit: adminApiRateLimit },
+    },
     async (request, reply) => {
       if (!checkOrigin(request, reply, dependencies.origin)) return reply;
       const actor = await requirePrincipal(
@@ -482,7 +556,10 @@ export async function registerAdminRoutes(
 
   app.post<{ Params: AdminApiKeyPath }>(
     '/admin/api/api-keys/:id/revoke',
-    { schema: { params: AdminApiKeyPathSchema } },
+    {
+      schema: { params: AdminApiKeyPathSchema },
+      config: { rateLimit: adminApiRateLimit },
+    },
     async (request, reply) => {
       if (!checkOrigin(request, reply, dependencies.origin)) return reply;
       const actor = await requirePrincipal(

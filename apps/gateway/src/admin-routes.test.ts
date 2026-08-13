@@ -364,6 +364,27 @@ describe('administrator routes', () => {
     expect(response.body).toContain('cannot be shown again');
     await gateway.close();
   });
+
+  it('rate-limits authenticated control-plane routes independently of inference traffic', async () => {
+    const gateway = await app();
+    let response = await gateway.inject({
+      method: 'GET',
+      url: '/admin/api/session',
+    });
+
+    expect(response.statusCode).toBe(401);
+    for (let attempt = 1; attempt <= 300; attempt += 1) {
+      response = await gateway.inject({
+        method: 'GET',
+        url: '/admin/api/session',
+      });
+    }
+
+    expect(response.statusCode).toBe(429);
+    expect(response.headers['retry-after']).toBeDefined();
+    expect(response.body).toContain('The request rate limit was exceeded.');
+    await gateway.close();
+  });
 });
 
 describe('AdminLoginLimiter', () => {
