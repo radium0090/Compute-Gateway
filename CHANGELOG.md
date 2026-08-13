@@ -5,6 +5,8 @@ Semantic Versioning and keeps release dates in UTC.
 
 ## Unreleased
 
+## 0.1.0 - 2026-08-13
+
 ### Changed
 
 - Renamed the platform to RAX Compute Gateway under RAX Digital ownership,
