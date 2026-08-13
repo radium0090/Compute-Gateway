@@ -124,7 +124,7 @@ jobs:
           syft-version: v1.44.0
           upload-release-assets: false
           upload-artifact: false
-      - name: Publish immutable release assets
+      - name: Create draft release with immutable assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -133,5 +133,6 @@ jobs:
           sha256sum ./* > checksums.txt
           gh release create "$GITHUB_REF_NAME" ./* \
             --verify-tag \
+            --draft \
             --generate-notes \
             --title "RAX Compute Gateway $GITHUB_REF_NAME"

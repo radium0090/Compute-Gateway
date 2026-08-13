@@ -14,7 +14,7 @@
 | `aws-staging-bootstrap.yml` | manual | approved, idempotent staging host prerequisite installation |
 | `aws-staging-deploy.yml` | manual | approved deployment of the exact protected `main` commit |
 | `aws-staging-verify.yml` | manual | approved real-provider, streaming, disconnect, and restart verification |
-| `release.yml` | signed `v*` tag | publish signed release artifacts |
+| `release.yml` | signed `v*` tag | publish signed artifacts and create a draft release |
 
 The CI workflow also verifies both SDK previews, OpenAPI compatibility, network
 stream cancellation, and the stored p95 performance threshold. SDK publication

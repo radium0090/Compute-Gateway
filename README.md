@@ -16,10 +16,11 @@ RAX Compute Gateway is in release-candidate validation for the MVP. The gateway,
 provider/routing core, operations baseline, SDK previews, contract gates, and
 repeatable performance checks are implemented. The protected three-provider
 smoke, real PostgreSQL/Redis suite, empty-install staging deployment, and
-production backup/restore verification have passed. Signed immutable-image
-publication and the final staging observability comparison remain before
-`v0.1.0`. The documents in this repository are normative for the first release
-unless an accepted Architecture Decision Record (ADR) supersedes them.
+production backup/restore verification have passed. The final protected staging
+observability and concurrent-stream memory comparison also passed. Signed
+immutable-image publication and digest deployment remain before `v0.1.0`. The
+documents in this repository are normative for the first release unless an
+accepted Architecture Decision Record (ADR) supersedes them.
 
 ## MVP capabilities
 

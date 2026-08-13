@@ -34,8 +34,9 @@ The `release.yml` workflow accepts an annotated signed `v*.*.*` tag whose
 commit is on `main` and whose version matches the chart `appVersion`. It refuses
 an existing registry tag, publishes a multi-architecture image and chart,
 generates checksums and SPDX SBOMs, and attaches keyless image signature and
-provenance. It publishes artifacts only; environment deployment remains an
-operator-controlled action.
+provenance. It creates a draft GitHub Release so the published digest can be
+verified before the release becomes public. Environment deployment and final
+release publication remain operator-controlled actions.
 
 ## Deployment sequence
 
