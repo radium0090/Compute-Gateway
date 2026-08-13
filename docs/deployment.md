@@ -92,7 +92,9 @@ This is an availability and cost tradeoff, not the multi-replica production
 topology above. The EC2 instance, Docker daemon, and local PostgreSQL volume are
 single points of failure. The repository automates encrypted six-hourly database
 backups, weekly disposable restore verification, and five-minute readiness and
-disk metrics. Operators still need tested whole-instance recovery, host security
+disk metrics. The monitor also reports the age of the latest successful restore
+verification so weekly evidence can be alarmed without sparse-metric false
+positives. Operators still need tested whole-instance recovery, host security
 updates, and an external notification recipient. See the
 `aws-single-host-recovery` runbook for evidence and recovery commands.
 

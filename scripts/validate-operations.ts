@@ -238,14 +238,16 @@ async function validateProductionRecovery(): Promise<void> {
     restore.includes('pg_restore') &&
       restore.includes('--exit-on-error') &&
       restore.includes('dropdb') &&
-      restore.includes('schema_migrations'),
-    'production restore verification must use a disposable database and verify the schema',
+      restore.includes('schema_migrations') &&
+      restore.includes('restore-verification-success.epoch'),
+    'production restore verification must use a disposable database, verify the schema, and persist success evidence',
   );
   assert(
     monitor.includes('/health/ready') &&
       monitor.includes('ProductionDiskUsagePercent') &&
-      monitor.includes('ProductionServiceReady'),
-    'production monitoring must report disk usage and service readiness',
+      monitor.includes('ProductionServiceReady') &&
+      monitor.includes('ProductionRestoreVerificationAgeSeconds'),
+    'production monitoring must report disk usage, service readiness, and restore evidence age',
   );
   assert(
     deploy.includes('rax-compute-gateway-backup.timer') &&
