@@ -67,7 +67,7 @@ function service(): AdminRouteService {
       Promise.resolve([
         {
           id: tenantId('00000000-0000-4000-8000-000000000010'),
-          name: 'Genchi',
+          name: 'Customer Alpha',
           status: 'active' as const,
           createdAt: new Date('2026-08-13T00:00:00.000Z'),
           updatedAt: new Date('2026-08-13T00:00:00.000Z'),
@@ -89,7 +89,7 @@ function service(): AdminRouteService {
           id: apiKeyId('00000000-0000-4000-8000-000000000020'),
           publicId: apiKeyPublicId('public-id-1234'),
           tenantId: tenantId('00000000-0000-4000-8000-000000000010'),
-          tenantName: 'Genchi',
+          tenantName: 'Customer Alpha',
           name: 'production app',
           environment: 'production' as const,
           status: 'active' as const,
@@ -281,7 +281,7 @@ describe('administrator routes', () => {
 
     expect(session.statusCode).toBe(200);
     expect(session.body).toContain(actor.email);
-    expect(tenants.body).toContain('Genchi');
+    expect(tenants.body).toContain('Customer Alpha');
     expect(keys.body).toContain('public-id-1234');
     expect(keys.body).not.toContain('key_hash');
     expect(keys.body).not.toContain('credential');

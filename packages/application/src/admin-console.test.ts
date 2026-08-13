@@ -422,7 +422,7 @@ describe('AdminConsoleService', () => {
     const login = await bootstrapAndLogin(value);
     const tenant = await value.service.createTenant({
       actor: login.principal,
-      name: 'Genchi',
+      name: 'Customer Alpha',
       requestId: 'req_tenant',
     });
     const created = await value.service.createApiKey({
