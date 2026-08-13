@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import {
   getCorrelationContext,
@@ -21,11 +21,22 @@ export function registerRequestTelemetry(app: FastifyInstance): void {
   const activeRequests = meter.createUpDownCounter('rcg_active_requests', {
     description: 'Currently active gateway HTTP requests',
   });
+  const active = new WeakMap<FastifyRequest, () => void>();
 
-  app.addHook('onRequest', (request) => {
-    activeRequests.add(1, {
-      route: request.routeOptions.url ?? 'unmatched',
-    });
+  app.addHook('onRequest', (request, reply) => {
+    const route = request.routeOptions.url ?? 'unmatched';
+    let counted = true;
+    const finish = (): void => {
+      if (!counted) return;
+      counted = false;
+      activeRequests.add(-1, { route });
+    };
+    active.set(request, finish);
+    activeRequests.add(1, { route });
+    // onResponse is not guaranteed after a downstream disconnect. Tracking
+    // the raw lifecycle keeps the gauge accurate without counting twice.
+    request.raw.once('aborted', finish);
+    reply.raw.once('close', finish);
     return Promise.resolve();
   });
 
@@ -35,7 +46,8 @@ export function registerRequestTelemetry(app: FastifyInstance): void {
     const durationSeconds = reply.elapsedTime / 1_000;
     const labels = { route, method: request.method, status_class: statusClass };
 
-    activeRequests.add(-1, { route });
+    active.get(request)?.();
+    active.delete(request);
     requestCount.add(1, labels);
     requestDuration.record(durationSeconds, { route });
 
