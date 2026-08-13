@@ -61,11 +61,37 @@ assert_ready() {
     >/dev/null
 }
 
+provider_success_total() {
+  awk '/^rcg_provider_attempts_total\{.*outcome="success"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$1"
+}
+
+provider_failure_total() {
+  awk '/^rcg_provider_attempts_total\{/ && $0 !~ /outcome="success"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$1"
+}
+
+http_5xx_total() {
+  awk '/^rcg_http_requests_total\{.*status_class="5xx"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$1"
+}
+
+completion_latency_sample_total() {
+  awk '/^rcg_http_request_duration_seconds_count\{route="\/v1\/chat\/completions"/ { total += $NF } END { printf "%.0f", total + 0 }' \
+    "$1"
+}
+
 assert_ready
 curl --fail --silent --show-error --max-time 10 \
   http://127.0.0.1:8080/metrics \
   --output "${temporary_root}/metrics"
 grep -q '^rcg_build_info' "${temporary_root}/metrics"
+provider_successes_before="$(provider_success_total "${temporary_root}/metrics")"
+provider_failures_before="$(provider_failure_total "${temporary_root}/metrics")"
+http_5xx_before="$(http_5xx_total "${temporary_root}/metrics")"
+completion_latency_samples_before="$(
+  completion_latency_sample_total "${temporary_root}/metrics"
+)"
 
 cleanup_smoke_key
 compose exec -T postgres psql \
@@ -160,22 +186,16 @@ provider_metrics="${temporary_root}/provider-metrics"
 curl --fail --silent --show-error --max-time 10 \
   http://127.0.0.1:8080/metrics \
   --output "$provider_metrics"
-provider_successes="$(
-  awk '/^rcg_provider_attempts_total\{.*outcome="success"/ { total += $NF } END { printf "%.0f", total + 0 }' \
-    "$provider_metrics"
-)"
-provider_failures="$(
-  awk '/^rcg_provider_attempts_total\{/ && $0 !~ /outcome="success"/ { total += $NF } END { printf "%.0f", total + 0 }' \
-    "$provider_metrics"
-)"
-http_5xx="$(
-  awk '/^rcg_http_requests_total\{.*status_class="5xx"/ { total += $NF } END { printf "%.0f", total + 0 }' \
-    "$provider_metrics"
-)"
-completion_latency_samples="$(
-  awk '/^rcg_http_request_duration_seconds_count\{route="\/v1\/chat\/completions"/ { total += $NF } END { printf "%.0f", total + 0 }' \
-    "$provider_metrics"
-)"
+provider_successes=$((
+  $(provider_success_total "$provider_metrics") - provider_successes_before
+))
+provider_failures=$((
+  $(provider_failure_total "$provider_metrics") - provider_failures_before
+))
+http_5xx=$(($(http_5xx_total "$provider_metrics") - http_5xx_before))
+completion_latency_samples=$((
+  $(completion_latency_sample_total "$provider_metrics") - completion_latency_samples_before
+))
 inactive_requests="$(
   awk '/^rcg_active_requests\{/ && $0 !~ /route="\/metrics"/ { total += $NF } END { printf "%.0f", total + 0 }' \
     "$provider_metrics"
