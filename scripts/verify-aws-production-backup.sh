@@ -24,6 +24,7 @@ runtime_environment="${RCG_DEPLOY_PATH}/shared/production.env"
 verification_root="${RCG_DEPLOY_PATH}/restore-verification"
 manifest_file="${verification_root}/latest.json"
 dump_file="${verification_root}/latest.dump"
+success_marker="${RCG_DEPLOY_PATH}/shared/restore-verification-success.epoch"
 database_name="rcg_restore_verify_$(date -u +%Y%m%d%H%M%S)"
 
 install -d -m 0700 "$verification_root"
@@ -100,6 +101,14 @@ if [[ "$schema_check" != 3 ]]; then
   echo 'The restored database is missing required schema objects.' >&2
   exit 1
 fi
+
+# Persist the evidence separately from the release directory so the monitor can
+# report its age after future deployments. The atomic rename prevents readers
+# from observing a partially written timestamp.
+temporary_success_marker="$(mktemp "${success_marker}.XXXXXX")"
+date -u +%s >"$temporary_success_marker"
+chmod 0600 "$temporary_success_marker"
+mv -f -- "$temporary_success_marker" "$success_marker"
 
 aws cloudwatch put-metric-data \
   --region "$AWS_REGION" \

@@ -33,6 +33,8 @@ CloudWatch metrics use namespace `RAX/ComputeGateway`:
 
 - `ProductionBackupSuccess`;
 - `ProductionRestoreVerificationSuccess`;
+- `ProductionRestoreVerificationAgeSeconds` (reported every five minutes;
+  alarms after eight days without a successful verification);
 - `ProductionDiskUsagePercent`;
 - `ProductionServiceReady`.
 
