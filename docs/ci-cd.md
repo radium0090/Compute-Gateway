@@ -58,10 +58,10 @@ review, resolved discussions, and CODEOWNERS approval for sensitive paths.
 2. CI runs the full suite and compatibility matrix.
 3. A signed annotated tag triggers artifact build once.
 4. The workflow publishes the OCI image, chart, checksums, SBOM, provenance,
-   OpenAPI artifact, and GitHub Release notes. SDK publication remains disabled
-   until npm and PyPI ownership is verified.
+   and OpenAPI artifact, then creates a draft GitHub Release. SDK publication
+   remains disabled until npm and PyPI ownership is verified.
 5. A clean environment installs only published artifacts and runs smoke tests.
-6. Maintainer promotes the release from pre-release after verification.
+6. Maintainer publishes the draft GitHub Release after verification.
 
 Artifacts are never rebuilt for promotion; digest identity is preserved.
 
