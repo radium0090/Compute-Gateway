@@ -24,7 +24,7 @@ ENV NODE_ENV=production \
     RCG_COMMIT_SHA=$REVISION
 WORKDIR /app
 
-LABEL org.opencontainers.image.title="RAX Compute Gateway Compute Gateway" \
+LABEL org.opencontainers.image.title="RAX Compute Gateway" \
       org.opencontainers.image.description="Open-source AI compute gateway" \
       org.opencontainers.image.version="$VERSION" \
       org.opencontainers.image.revision="$REVISION" \
