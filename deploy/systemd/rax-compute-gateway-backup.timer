@@ -1,0 +1,11 @@
+[Unit]
+Description=Six-hourly RAX Compute Gateway PostgreSQL production backup
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:15:00 Asia/Tokyo
+RandomizedDelaySec=15m
+Persistent=true
+Unit=rax-compute-gateway-backup.service
+
+[Install]
+WantedBy=timers.target

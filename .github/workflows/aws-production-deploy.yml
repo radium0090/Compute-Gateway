@@ -25,6 +25,7 @@ jobs:
       EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
       EC2_IAM_ROLE_NAME: ${{ vars.EC2_IAM_ROLE_NAME }}
       RCG_DEPLOY_PATH: ${{ vars.RCG_DEPLOY_PATH }}
+      RCG_BACKUP_BUCKET: ${{ vars.RCG_BACKUP_BUCKET }}
       RCG_PUBLIC_HOST: ${{ vars.RCG_PUBLIC_HOST }}
       RCG_SECRET_ARN: ${{ vars.RCG_SECRET_ARN }}
     steps:
@@ -39,6 +40,7 @@ jobs:
             EC2_INSTANCE_ID
             EC2_IAM_ROLE_NAME
             RCG_DEPLOY_PATH
+            RCG_BACKUP_BUCKET
             RCG_PUBLIC_HOST
             RCG_SECRET_ARN
           )
@@ -54,6 +56,7 @@ jobs:
           [[ "$AWS_ROLE_ARN" == "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ComputeGatewayGitHubDeployRole" ]]
           [[ "$RCG_SECRET_ARN" == "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:rax/compute-gateway/production/runtime-"* ]]
           [[ "$RCG_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]
+          [[ "$RCG_BACKUP_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]
           [[ "$RCG_PUBLIC_HOST" == api.rax-digital.com ]]
 
       - name: Assume the protected AWS deployment role
@@ -103,6 +106,8 @@ jobs:
           secret_arn="$3"
           aws_region="$4"
           public_host="$5"
+          instance_id="$6"
+          backup_bucket="$7"
           repository_url='https://github.com/radium0090/Compute-Gateway.git'
           release_root="${deploy_path}/releases/${commit_sha}"
 
@@ -122,6 +127,8 @@ jobs:
           export AWS_REGION="$aws_region"
           export RCG_COMMIT_SHA="$commit_sha"
           export RCG_DEPLOY_PATH="$deploy_path"
+          export RCG_EC2_INSTANCE_ID="$instance_id"
+          export RCG_BACKUP_BUCKET="$backup_bucket"
           export RCG_PUBLIC_HOST="$public_host"
           export RCG_SECRET_ARN="$secret_arn"
           exec "$release_root/scripts/deploy-aws-production.sh"
@@ -136,7 +143,9 @@ jobs:
               --arg secret "$RCG_SECRET_ARN" \
               --arg region "$AWS_REGION" \
               --arg host "$RCG_PUBLIC_HOST" \
-              '{commands: ["printf %s " + ($script | @sh) + " | base64 -d | bash -s -- " + ($path | @sh) + " " + ($commit | @sh) + " " + ($secret | @sh) + " " + ($region | @sh) + " " + ($host | @sh)]}'
+              --arg instance "$EC2_INSTANCE_ID" \
+              --arg backup "$RCG_BACKUP_BUCKET" \
+              '{commands: ["printf %s " + ($script | @sh) + " | base64 -d | bash -s -- " + ($path | @sh) + " " + ($commit | @sh) + " " + ($secret | @sh) + " " + ($region | @sh) + " " + ($host | @sh) + " " + ($instance | @sh) + " " + ($backup | @sh)]}'
           )"
           command_id="$(
             aws ssm send-command \
