@@ -22,6 +22,11 @@ if [[ ! "$RCG_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]; then
   echo 'RCG_DEPLOY_PATH must be a normalized path below /opt.' >&2
   exit 1
 fi
+release_image="${RCG_RELEASE_IMAGE:-}"
+if [[ -n "$release_image" && ! "$release_image" =~ ^ghcr\.io/radium0090/compute-gateway:v[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}$ ]]; then
+  echo 'RCG_RELEASE_IMAGE must be the immutable RAX Compute Gateway release reference.' >&2
+  exit 1
+fi
 if [[ "$(id -u)" -ne 0 ]]; then
   echo 'The staging deployment script must run as root through SSM.' >&2
   exit 1
@@ -50,6 +55,7 @@ runtime_environment="${shared_root}/staging.env"
 deployment_record="${shared_root}/deployment.json"
 deployment_log="/var/log/rax-compute-gateway-deploy-${RCG_COMMIT_SHA}.log"
 previous_release=''
+previous_runtime_environment=''
 if [[ -L "${RCG_DEPLOY_PATH}/current" ]]; then
   previous_release="$(readlink -f "${RCG_DEPLOY_PATH}/current")"
 fi
@@ -91,12 +97,25 @@ cleanup_temporary_environment() {
   if [[ -f "$temporary_environment" ]]; then
     rm -f -- "$temporary_environment"
   fi
+  if [[ -n "$previous_runtime_environment" && -f "$previous_runtime_environment" ]]; then
+    rm -f -- "$previous_runtime_environment"
+  fi
 }
 trap cleanup_temporary_environment EXIT
 
+if [[ -f "$runtime_environment" ]]; then
+  previous_runtime_environment="$(mktemp "${shared_root}/staging.previous.env.XXXXXX")"
+  install -m 0600 "$runtime_environment" "$previous_runtime_environment"
+fi
+
+image_reference="rax-compute-gateway:${RCG_COMMIT_SHA}"
+if [[ -n "$release_image" ]]; then
+  image_reference="$release_image"
+fi
+
 jq -r \
   --arg commit "$RCG_COMMIT_SHA" \
-  --arg image "rax-compute-gateway:${RCG_COMMIT_SHA}" \
+  --arg image "$image_reference" \
   '
     def env_quote:
       "\u0027" + (gsub("\u0027"; "\\\u0027")) + "\u0027";
@@ -156,6 +175,9 @@ rollback_on_error() {
   cleanup_smoke_key
   if [[ -n "$previous_release" && -f "${previous_release}/docker-compose.yml" ]]; then
     echo 'Deployment failed; attempting the previous release.' >&2
+    if [[ -n "$previous_runtime_environment" ]]; then
+      install -m 0600 "$previous_runtime_environment" "$runtime_environment"
+    fi
     docker compose \
       --project-directory "$previous_release" \
       --env-file "$runtime_environment" \
@@ -171,9 +193,14 @@ trap rollback_on_error ERR
 echo 'Validating the staging Compose model.'
 compose config --quiet >>"$deployment_log" 2>&1
 
-echo 'Building the gateway image from the approved commit.'
-compose build --pull gateway >>"$deployment_log" 2>&1
-image_id="$(docker image inspect "rax-compute-gateway:${RCG_COMMIT_SHA}" --format '{{.Id}}')"
+if [[ -n "$release_image" ]]; then
+  echo 'Pulling the approved immutable gateway image.'
+  docker pull "$image_reference" >>"$deployment_log" 2>&1
+else
+  echo 'Building the gateway image from the approved commit.'
+  compose build --pull gateway >>"$deployment_log" 2>&1
+fi
+image_id="$(docker image inspect "$image_reference" --format '{{.Id}}')"
 
 echo 'Validating runtime configuration without starting the gateway.'
 compose run --rm --no-deps gateway --check-config >>"$deployment_log" 2>&1
@@ -227,15 +254,20 @@ ln -sfn "$repository_root" "${RCG_DEPLOY_PATH}/current"
 jq -n \
   --arg commit "$RCG_COMMIT_SHA" \
   --arg image_id "$image_id" \
+  --arg image_reference "$image_reference" \
   --arg deployed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{commit: $commit, image_id: $image_id, deployed_at: $deployed_at}' \
+  '{commit: $commit, image_id: $image_id, image_reference: $image_reference, deployed_at: $deployed_at}' \
   >"$deployment_record"
 chmod 0640 "$deployment_record"
 
+if [[ -n "$previous_runtime_environment" ]]; then
+  rm -f -- "$previous_runtime_environment"
+fi
 trap - ERR
 trap - EXIT
 echo "deployed_commit=${RCG_COMMIT_SHA}"
 echo "image_id=${image_id}"
+echo "image_reference=${image_reference}"
 echo 'migration=ok'
 echo 'health_live=ok'
 echo 'health_ready=ok'
