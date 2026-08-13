@@ -92,10 +92,12 @@ aliases=(rax/fast rax/anthropic rax/gemini)
 for alias in "${aliases[@]}"; do
   safe_name="${alias#rax/}"
   response_file="${temporary_root}/${safe_name}.json"
+  # Keep the cross-provider probe to the common request subset. In particular,
+  # reasoning-oriented OpenAI models can reject an explicit temperature.
   request_body="$(
     jq -cn \
       --arg model "$alias" \
-      '{model: $model, messages: [{role: "user", content: "Reply with OK."}], max_tokens: 8, temperature: 0}'
+      '{model: $model, messages: [{role: "user", content: "Reply with OK."}], max_tokens: 8}'
   )"
   if ! http_code="$(
     curl --silent --show-error --max-time 90 \
@@ -127,7 +129,7 @@ for alias in "${aliases[@]}"; do
   stream_body="$(
     jq -cn \
       --arg model "$alias" \
-      '{model: $model, messages: [{role: "user", content: "Reply with OK."}], max_tokens: 8, temperature: 0, stream: true}'
+      '{model: $model, messages: [{role: "user", content: "Reply with OK."}], max_tokens: 8, stream: true}'
   )"
   if ! stream_code="$(
     curl --silent --show-error --no-buffer --max-time 90 \
