@@ -12,14 +12,13 @@ Application -> RAX Compute Gateway -> OpenAI | Anthropic | Gemini | future provi
 
 ## Status
 
-RAX Compute Gateway is in release-candidate validation for the MVP. The gateway,
-provider/routing core, operations baseline, SDK previews, contract gates, and
-repeatable performance checks are implemented. The protected three-provider
-smoke, real PostgreSQL/Redis suite, empty-install staging deployment, and
-production backup/restore verification have passed. Signed immutable-image
-publication and the final staging observability comparison remain before
-`v0.1.0`. The documents in this repository are normative for the first release
-unless an accepted Architecture Decision Record (ADR) supersedes them.
+[RAX Compute Gateway v0.1.0](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0)
+is released. The signed multi-architecture image, Helm chart, OpenAPI contract,
+checksums, SBOM, and provenance are public. The exact image digest passed the
+protected three-provider, streaming, lifecycle, observability, and concurrent-
+stream memory gates on staging. The documents in this repository remain
+normative unless an accepted Architecture Decision Record (ADR) supersedes
+them.
 
 ## MVP capabilities
 
@@ -100,6 +99,22 @@ response = client.chat.completions.create(
     messages=[{"role": "user", "content": "Hello"}],
 )
 ```
+
+## Operator console (`v0.2`)
+
+Set `RCG_ADMIN_ENABLED=true`, configure the exact `RCG_ADMIN_ORIGIN`, and use a
+dedicated `RCG_ADMIN_SESSION_PEPPER`. After migrations, create the first
+administrator with a temporary password supplied on standard input:
+
+```bash
+printf '%s\n' "$RCG_ADMIN_TEMPORARY_PASSWORD" | docker compose run --rm -T gateway \
+  admins create --email owner@example.com --display-name 'Gateway Owner'
+```
+
+Open `http://localhost:8080/admin/`. The temporary password must be replaced at
+first login. The console manages tenants and one-time-display API keys and
+shows bounded service/activity metadata. It never exposes provider credentials,
+password/session hashes, API-key hashes, prompts, or completions.
 
 ## Documentation
 

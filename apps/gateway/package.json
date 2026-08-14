@@ -8,6 +8,7 @@
   },
   "files": [
     "dist",
+    "public",
     "!dist/**/*.test.*",
     "!dist/**/*.tsbuildinfo"
   ],
@@ -17,6 +18,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@fastify/rate-limit": "11.0.0",
     "@rax-digital/api-contract": "workspace:*",
     "@rax-digital/application": "workspace:*",
     "@rax-digital/auth": "workspace:*",
@@ -29,11 +31,11 @@
     "@rax-digital/provider-gemini": "workspace:*",
     "@rax-digital/provider-openai": "workspace:*",
     "@rax-digital/router": "workspace:*",
-    "fastify": "5.11.0",
+    "fastify": "5.11.3",
     "pg": "8.22.0"
   },
   "devDependencies": {
     "@types/pg": "8.20.3",
-    "tsx": "4.20.6"
+    "tsx": "4.23.12"
   }
 }

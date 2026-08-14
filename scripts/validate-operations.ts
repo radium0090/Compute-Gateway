@@ -155,8 +155,10 @@ async function validateWorkflows(): Promise<void> {
   );
   assert(
     awsDeploySource.includes('[[ "$GITHUB_REF" == refs/heads/main ]]') &&
-      awsDeploySource.includes('scripts/deploy-aws-staging.sh'),
-    'AWS staging deploy must execute the exact protected main deployment script',
+      awsDeploySource.includes('scripts/deploy-aws-staging.sh') &&
+      awsDeploySource.includes('^sha256:[0-9a-f]{64}$') &&
+      awsDeploySource.includes('RCG_RELEASE_IMAGE'),
+    'AWS staging deploy must execute the exact protected main deployment script and accept only immutable release digests',
   );
   assert(
     !/(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|EC2_SSH_PRIVATE_KEY)/u.test(

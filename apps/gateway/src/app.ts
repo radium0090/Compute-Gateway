@@ -15,6 +15,7 @@ import type {
 import type { MetricsRequestHandler } from '@rax-digital/observability';
 
 import { registerChatCompletionRoute } from './chat-completion.js';
+import { registerAdminRoutes, type AdminRouteService } from './admin-routes.js';
 import { registerErrorHandling } from './error-handling.js';
 import { registerHealthRoutes, type ReadinessProbe } from './health.js';
 import { registerMetricsRoute } from './metrics.js';
@@ -32,6 +33,11 @@ export interface GatewayDependencies {
   readonly listModelsService?: Pick<ListModelsService, 'execute'>;
   readonly metricsRequestHandler?: MetricsRequestHandler;
   readonly requestTimeoutSignalFactory?: (timeoutMs: number) => AbortSignal;
+  readonly admin?: {
+    readonly service: AdminRouteService;
+    readonly origin: string;
+    readonly sessionTtlMs: number;
+  };
 }
 
 function requestId(request: IncomingMessage): string {
@@ -87,6 +93,12 @@ export async function buildGateway(
   }
   if (dependencies.listModelsService !== undefined) {
     registerModelsRoute(app, { service: dependencies.listModelsService });
+  }
+  if (dependencies.admin !== undefined) {
+    await registerAdminRoutes(app, {
+      ...dependencies.admin,
+      readinessProbe: dependencies.readinessProbe,
+    });
   }
   return app;
 }

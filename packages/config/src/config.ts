@@ -33,6 +33,10 @@ export const RuntimeConfigSchema = Type.Object(
     shutdownGraceMs: Type.Integer({ minimum: 1 }),
     trustProxy: Type.Boolean(),
     metricsEnabled: Type.Boolean(),
+    adminEnabled: Type.Boolean(),
+    adminOrigin: Type.Optional(Type.String({ minLength: 1 })),
+    adminSessionPepper: Type.Optional(Type.String({ minLength: 32 })),
+    adminSessionTtlMs: Type.Integer({ minimum: 900_000, maximum: 86_400_000 }),
     serviceVersion: Type.String({
       minLength: 1,
       maxLength: 64,
@@ -66,6 +70,10 @@ const fieldToEnvironmentVariable: Readonly<Record<string, string>> = {
   shutdownGraceMs: 'RCG_SHUTDOWN_GRACE_MS',
   trustProxy: 'RCG_TRUST_PROXY',
   metricsEnabled: 'RCG_METRICS_ENABLED',
+  adminEnabled: 'RCG_ADMIN_ENABLED',
+  adminOrigin: 'RCG_ADMIN_ORIGIN',
+  adminSessionPepper: 'RCG_ADMIN_SESSION_PEPPER',
+  adminSessionTtlMs: 'RCG_ADMIN_SESSION_TTL_MS',
   serviceVersion: 'RCG_SERVICE_VERSION',
   commitSha: 'RCG_COMMIT_SHA',
 };
@@ -140,6 +148,17 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     shutdownGraceMs: parseInteger(source.RCG_SHUTDOWN_GRACE_MS, 30_000),
     trustProxy: parseBoolean(source.RCG_TRUST_PROXY, false),
     metricsEnabled: parseBoolean(source.RCG_METRICS_ENABLED, true),
+    adminEnabled: parseBoolean(source.RCG_ADMIN_ENABLED, false),
+    ...(source.RCG_ADMIN_ORIGIN === undefined
+      ? {}
+      : { adminOrigin: source.RCG_ADMIN_ORIGIN }),
+    ...(source.RCG_ADMIN_SESSION_PEPPER === undefined
+      ? {}
+      : { adminSessionPepper: source.RCG_ADMIN_SESSION_PEPPER }),
+    adminSessionTtlMs: parseInteger(
+      source.RCG_ADMIN_SESSION_TTL_MS,
+      8 * 60 * 60 * 1_000,
+    ),
     serviceVersion: source.RCG_SERVICE_VERSION ?? '0.0.0',
     commitSha: source.RCG_COMMIT_SHA ?? 'unknown',
   };
@@ -192,6 +211,32 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     );
   }
 
+  if (candidate.adminEnabled) {
+    if (candidate.adminOrigin === undefined) {
+      issues.push(
+        'RCG_ADMIN_ORIGIN is required when the admin console is enabled',
+      );
+    } else if (!isUrlWithProtocol(candidate.adminOrigin, ['http:', 'https:'])) {
+      issues.push('RCG_ADMIN_ORIGIN must be an HTTP(S) origin');
+    } else {
+      const origin = new URL(candidate.adminOrigin);
+      if (origin.origin !== candidate.adminOrigin || origin.pathname !== '/') {
+        issues.push('RCG_ADMIN_ORIGIN must contain only scheme and authority');
+      }
+      if (
+        candidate.environment === 'production' &&
+        origin.protocol !== 'https:'
+      ) {
+        issues.push('RCG_ADMIN_ORIGIN must use HTTPS in production');
+      }
+    }
+    if (candidate.adminSessionPepper === undefined) {
+      issues.push(
+        'RCG_ADMIN_SESSION_PEPPER is required when the admin console is enabled',
+      );
+    }
+  }
+
   if (issues.length > 0 || !Value.Check(RuntimeConfigSchema, candidate)) {
     throw new ConfigValidationError([...new Set(issues)]);
   }
@@ -203,10 +248,15 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
 export function describeSecretPresence(
   config: RuntimeConfig,
 ): Readonly<
-  Record<'RCG_KEY_HASH_PEPPER' | 'RCG_MASTER_KEY', '<set>' | '<unset>'>
+  Record<
+    'RCG_KEY_HASH_PEPPER' | 'RCG_MASTER_KEY' | 'RCG_ADMIN_SESSION_PEPPER',
+    '<set>' | '<unset>'
+  >
 > {
   return {
     RCG_KEY_HASH_PEPPER: '<set>',
     RCG_MASTER_KEY: config.masterKey === undefined ? '<unset>' : '<set>',
+    RCG_ADMIN_SESSION_PEPPER:
+      config.adminSessionPepper === undefined ? '<unset>' : '<set>',
   };
 }

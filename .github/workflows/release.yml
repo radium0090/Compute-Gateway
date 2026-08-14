@@ -110,7 +110,7 @@ jobs:
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
         run: cosign sign --yes "ghcr.io/radium0090/compute-gateway@${IMAGE_DIGEST}"
       - name: Attest image provenance
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/radium0090/compute-gateway
           subject-digest: ${{ steps.image.outputs.digest }}
@@ -124,7 +124,7 @@ jobs:
           syft-version: v1.44.0
           upload-release-assets: false
           upload-artifact: false
-      - name: Publish immutable release assets
+      - name: Create draft release with immutable assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -133,5 +133,6 @@ jobs:
           sha256sum ./* > checksums.txt
           gh release create "$GITHUB_REF_NAME" ./* \
             --verify-tag \
+            --draft \
             --generate-notes \
             --title "RAX Compute Gateway $GITHUB_REF_NAME"

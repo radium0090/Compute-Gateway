@@ -8,3 +8,8 @@ export {
   type ProvisionApiKeyInput,
   type ProvisionedApiKey,
 } from './api-key-authenticator.js';
+export {
+  NodeAdminSecurity,
+  type AdminSecurityOptions,
+  type ScryptCost,
+} from './admin-security.js';

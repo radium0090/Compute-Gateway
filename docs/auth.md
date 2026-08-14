@@ -94,6 +94,21 @@ the gateway where the network is not trusted. `/metrics` and future operator
 endpoints MUST be private or separately authenticated. Forwarded headers are
 trusted only from configured proxies.
 
+## Administrator sessions
+
+The optional `v0.2` operator console uses separate administrator identities;
+gateway API keys and the master key can never log in to the browser. Passwords
+are stored as salted `scrypt` hashes. Opaque session and CSRF values are shown
+only to the browser and stored in PostgreSQL as keyed hashes using the dedicated
+`RCG_ADMIN_SESSION_PEPPER`.
+
+The session cookie is host-only, `Secure`, `HttpOnly`, and `SameSite=Strict`.
+Every mutation also verifies the exact `RCG_ADMIN_ORIGIN` and a per-session CSRF
+header. Sessions expire after the configured bounded lifetime, repeated login
+failures cause temporary account lockout, and anonymous password work is rate
+limited. Initial administrators are created with `admins create` using a
+temporary password supplied on standard input and must change it after login.
+
 ## Audit integration
 
 The `0.1` gateway emits content-free structured request and routing telemetry.
