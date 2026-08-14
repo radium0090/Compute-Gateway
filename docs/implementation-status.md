@@ -1,13 +1,15 @@
 # Implementation status
 
-This page records the code-to-specification review updated on 2026-08-14.
+This page records the code-to-specification review updated on 2026-08-15.
 Accepted ADRs and the normative documents remain authoritative; this page is a
 status snapshot, not a new architecture decision.
 
 ## Current state
 
 The MVP implementation was published as signed
-[`v0.1.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0).
+[`v0.1.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0),
+and the operator and evaluation additions are published as
+[`v0.2.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.2.0).
 The public chat and model APIs, three providers,
 streaming, authentication, deterministic routing, fallback, bounded retries,
 rate/concurrency coordination, circuit breaking, PostgreSQL migrations,
@@ -75,9 +77,10 @@ protected-verification sequence rather than reusing this evidence.
 
 The `v0.2` operator console, browser authentication, tenant/API-key management,
 and durable content-free audit events are implemented under ADR 0013. The
-optional GitHub-authenticated, five-minute evaluation flow is implemented under
-ADR 0014 and remains disabled until an operator supplies its dedicated OAuth
-and tenant configuration. General hosted signup/billing, permanent end-user
-identity, MFA or federated operator identity, detailed token/cost accounting,
-extra provider families, package publication, and additional data-plane API
-surfaces remain deferred and require their own scope and decision review.
+GitHub-authenticated, five-minute evaluation flow implemented under ADR 0014 is
+enabled at `https://api.rax-digital.com/demo/`; its production claim-to-response
+path was verified on 2026-08-15. General hosted signup/billing, permanent
+end-user identity, MFA or federated operator identity, detailed token/cost
+accounting, extra provider families, package publication, and additional
+data-plane API surfaces remain deferred and require their own scope and
+decision review.

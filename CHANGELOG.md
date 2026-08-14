@@ -5,22 +5,7 @@ Semantic Versioning and keeps release dates in UTC.
 
 ## Unreleased
 
-### Added
-
-- A one-command Docker quickstart that generates local gateway secrets,
-  provisions a client key, and sends the first provider request.
-- An optional GitHub-authenticated `/demo` flow that issues a unique,
-  five-minute, tightly scoped API key and ready-to-run `curl` without persisting
-  OAuth tokens or plaintext credentials.
-- PostgreSQL OAuth-state and pseudonymous claim-ledger tables through migration
-  `0003`, with transactional per-account cooldown and global daily claim caps.
-
-### Changed
-
-- API-key request ceilings now use a conservative tokenizer-independent input
-  bound, and output ceilings are capped before provider dispatch.
-
-## 0.2.0 - 2026-08-13
+## 0.2.0 - 2026-08-15
 
 ### Added
 
@@ -34,9 +19,18 @@ Semantic Versioning and keeps release dates in UTC.
   per-session CSRF checks, and hardened host-only cookies.
 - An `admins create` operator command that reads the temporary password only
   from standard input.
+- A one-command Docker quickstart that generates local gateway secrets,
+  provisions a client key, and sends the first provider request.
+- An optional GitHub-authenticated `/demo` flow that issues a unique,
+  five-minute, tightly scoped API key and ready-to-run `curl` without persisting
+  OAuth tokens or plaintext credentials.
+- PostgreSQL OAuth-state and pseudonymous claim-ledger tables through migration
+  `0003`, with transactional per-account cooldown and global daily claim caps.
 
 ### Changed
 
+- API-key request ceilings now use a conservative tokenizer-independent input
+  bound, and output ceilings are capped before provider dispatch.
 - The low-cost AWS single-host production deployment enables the embedded
   administrative control plane without adding another runtime service.
 
