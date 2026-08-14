@@ -16,6 +16,7 @@ import type { MetricsRequestHandler } from '@rax-digital/observability';
 
 import { registerChatCompletionRoute } from './chat-completion.js';
 import { registerAdminRoutes, type AdminRouteService } from './admin-routes.js';
+import { registerDemoRoutes, type DemoRouteService } from './demo-routes.js';
 import { registerErrorHandling } from './error-handling.js';
 import { registerHealthRoutes, type ReadinessProbe } from './health.js';
 import { registerMetricsRoute } from './metrics.js';
@@ -37,6 +38,10 @@ export interface GatewayDependencies {
     readonly service: AdminRouteService;
     readonly origin: string;
     readonly sessionTtlMs: number;
+  };
+  readonly demo?: {
+    readonly service: DemoRouteService;
+    readonly origin: string;
   };
 }
 
@@ -99,6 +104,9 @@ export async function buildGateway(
       ...dependencies.admin,
       readinessProbe: dependencies.readinessProbe,
     });
+  }
+  if (dependencies.demo !== undefined) {
+    await registerDemoRoutes(app, dependencies.demo);
   }
   return app;
 }

@@ -1,4 +1,5 @@
 export { PostgresApiKeyRepository } from './api-key-repository.js';
+export { PostgresDemoClaimRepository } from './demo-claim-repository.js';
 export {
   PostgresAdminAuditRepository,
   PostgresAdminControlRepository,

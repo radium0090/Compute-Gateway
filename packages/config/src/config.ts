@@ -37,6 +37,28 @@ export const RuntimeConfigSchema = Type.Object(
     adminOrigin: Type.Optional(Type.String({ minLength: 1 })),
     adminSessionPepper: Type.Optional(Type.String({ minLength: 32 })),
     adminSessionTtlMs: Type.Integer({ minimum: 900_000, maximum: 86_400_000 }),
+    demoEnabled: Type.Boolean(),
+    demoOrigin: Type.Optional(Type.String({ minLength: 1 })),
+    demoGithubClientId: Type.Optional(Type.String({ minLength: 1 })),
+    demoGithubClientSecret: Type.Optional(Type.String({ minLength: 1 })),
+    demoHashPepper: Type.Optional(Type.String({ minLength: 32 })),
+    demoTenantId: Type.Optional(
+      Type.String({
+        pattern:
+          '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+      }),
+    ),
+    demoModel: Type.String({ minLength: 1, maxLength: 200 }),
+    demoKeyTtlMs: Type.Integer({ minimum: 60_000, maximum: 300_000 }),
+    demoAccountMinimumAgeDays: Type.Integer({ minimum: 0, maximum: 3_650 }),
+    demoAccountCooldownMs: Type.Integer({
+      minimum: 60_000,
+      maximum: 2_592_000_000,
+    }),
+    demoMaximumDailyClaims: Type.Integer({ minimum: 1, maximum: 10_000 }),
+    demoRequestsPerMinute: Type.Integer({ minimum: 1, maximum: 60 }),
+    demoMaxRequestTokens: Type.Integer({ minimum: 1, maximum: 100_000 }),
+    demoMaxOutputTokens: Type.Integer({ minimum: 1, maximum: 4_096 }),
     serviceVersion: Type.String({
       minLength: 1,
       maxLength: 64,
@@ -74,6 +96,20 @@ const fieldToEnvironmentVariable: Readonly<Record<string, string>> = {
   adminOrigin: 'RCG_ADMIN_ORIGIN',
   adminSessionPepper: 'RCG_ADMIN_SESSION_PEPPER',
   adminSessionTtlMs: 'RCG_ADMIN_SESSION_TTL_MS',
+  demoEnabled: 'RCG_DEMO_ENABLED',
+  demoOrigin: 'RCG_DEMO_ORIGIN',
+  demoGithubClientId: 'RCG_DEMO_GITHUB_CLIENT_ID',
+  demoGithubClientSecret: 'RCG_DEMO_GITHUB_CLIENT_SECRET',
+  demoHashPepper: 'RCG_DEMO_HASH_PEPPER',
+  demoTenantId: 'RCG_DEMO_TENANT_ID',
+  demoModel: 'RCG_DEMO_MODEL',
+  demoKeyTtlMs: 'RCG_DEMO_KEY_TTL_MS',
+  demoAccountMinimumAgeDays: 'RCG_DEMO_ACCOUNT_MINIMUM_AGE_DAYS',
+  demoAccountCooldownMs: 'RCG_DEMO_ACCOUNT_COOLDOWN_MS',
+  demoMaximumDailyClaims: 'RCG_DEMO_MAXIMUM_DAILY_CLAIMS',
+  demoRequestsPerMinute: 'RCG_DEMO_REQUESTS_PER_MINUTE',
+  demoMaxRequestTokens: 'RCG_DEMO_MAX_REQUEST_TOKENS',
+  demoMaxOutputTokens: 'RCG_DEMO_MAX_OUTPUT_TOKENS',
   serviceVersion: 'RCG_SERVICE_VERSION',
   commitSha: 'RCG_COMMIT_SHA',
 };
@@ -159,6 +195,42 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
       source.RCG_ADMIN_SESSION_TTL_MS,
       8 * 60 * 60 * 1_000,
     ),
+    demoEnabled: parseBoolean(source.RCG_DEMO_ENABLED, false),
+    ...(source.RCG_DEMO_ORIGIN === undefined
+      ? {}
+      : { demoOrigin: source.RCG_DEMO_ORIGIN }),
+    ...(source.RCG_DEMO_GITHUB_CLIENT_ID === undefined
+      ? {}
+      : { demoGithubClientId: source.RCG_DEMO_GITHUB_CLIENT_ID }),
+    ...(source.RCG_DEMO_GITHUB_CLIENT_SECRET === undefined
+      ? {}
+      : { demoGithubClientSecret: source.RCG_DEMO_GITHUB_CLIENT_SECRET }),
+    ...(source.RCG_DEMO_HASH_PEPPER === undefined
+      ? {}
+      : { demoHashPepper: source.RCG_DEMO_HASH_PEPPER }),
+    ...(source.RCG_DEMO_TENANT_ID === undefined
+      ? {}
+      : { demoTenantId: source.RCG_DEMO_TENANT_ID }),
+    demoModel: source.RCG_DEMO_MODEL ?? 'rax/fast',
+    demoKeyTtlMs: parseInteger(source.RCG_DEMO_KEY_TTL_MS, 300_000),
+    demoAccountMinimumAgeDays: parseInteger(
+      source.RCG_DEMO_ACCOUNT_MINIMUM_AGE_DAYS,
+      7,
+    ),
+    demoAccountCooldownMs: parseInteger(
+      source.RCG_DEMO_ACCOUNT_COOLDOWN_MS,
+      86_400_000,
+    ),
+    demoMaximumDailyClaims: parseInteger(
+      source.RCG_DEMO_MAXIMUM_DAILY_CLAIMS,
+      50,
+    ),
+    demoRequestsPerMinute: parseInteger(source.RCG_DEMO_REQUESTS_PER_MINUTE, 2),
+    demoMaxRequestTokens: parseInteger(
+      source.RCG_DEMO_MAX_REQUEST_TOKENS,
+      2_048,
+    ),
+    demoMaxOutputTokens: parseInteger(source.RCG_DEMO_MAX_OUTPUT_TOKENS, 128),
     serviceVersion: source.RCG_SERVICE_VERSION ?? '0.0.0',
     commitSha: source.RCG_COMMIT_SHA ?? 'unknown',
   };
@@ -237,6 +309,47 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     }
   }
 
+  if (candidate.demoEnabled) {
+    if (candidate.demoOrigin === undefined) {
+      issues.push(
+        'RCG_DEMO_ORIGIN is required when the hosted demo is enabled',
+      );
+    } else if (!isUrlWithProtocol(candidate.demoOrigin, ['http:', 'https:'])) {
+      issues.push('RCG_DEMO_ORIGIN must be an HTTP(S) origin');
+    } else {
+      const origin = new URL(candidate.demoOrigin);
+      if (origin.origin !== candidate.demoOrigin || origin.pathname !== '/') {
+        issues.push('RCG_DEMO_ORIGIN must contain only scheme and authority');
+      }
+      if (
+        candidate.environment === 'production' &&
+        origin.protocol !== 'https:'
+      ) {
+        issues.push('RCG_DEMO_ORIGIN must use HTTPS in production');
+      }
+    }
+    if (candidate.demoGithubClientId === undefined) {
+      issues.push(
+        'RCG_DEMO_GITHUB_CLIENT_ID is required when the hosted demo is enabled',
+      );
+    }
+    if (candidate.demoGithubClientSecret === undefined) {
+      issues.push(
+        'RCG_DEMO_GITHUB_CLIENT_SECRET is required when the hosted demo is enabled',
+      );
+    }
+    if (candidate.demoHashPepper === undefined) {
+      issues.push(
+        'RCG_DEMO_HASH_PEPPER is required when the hosted demo is enabled',
+      );
+    }
+    if (candidate.demoTenantId === undefined) {
+      issues.push(
+        'RCG_DEMO_TENANT_ID is required when the hosted demo is enabled',
+      );
+    }
+  }
+
   if (issues.length > 0 || !Value.Check(RuntimeConfigSchema, candidate)) {
     throw new ConfigValidationError([...new Set(issues)]);
   }
@@ -249,7 +362,11 @@ export function describeSecretPresence(
   config: RuntimeConfig,
 ): Readonly<
   Record<
-    'RCG_KEY_HASH_PEPPER' | 'RCG_MASTER_KEY' | 'RCG_ADMIN_SESSION_PEPPER',
+    | 'RCG_KEY_HASH_PEPPER'
+    | 'RCG_MASTER_KEY'
+    | 'RCG_ADMIN_SESSION_PEPPER'
+    | 'RCG_DEMO_GITHUB_CLIENT_SECRET'
+    | 'RCG_DEMO_HASH_PEPPER',
     '<set>' | '<unset>'
   >
 > {
@@ -258,5 +375,9 @@ export function describeSecretPresence(
     RCG_MASTER_KEY: config.masterKey === undefined ? '<unset>' : '<set>',
     RCG_ADMIN_SESSION_PEPPER:
       config.adminSessionPepper === undefined ? '<unset>' : '<set>',
+    RCG_DEMO_GITHUB_CLIENT_SECRET:
+      config.demoGithubClientSecret === undefined ? '<unset>' : '<set>',
+    RCG_DEMO_HASH_PEPPER:
+      config.demoHashPepper === undefined ? '<unset>' : '<set>',
   };
 }

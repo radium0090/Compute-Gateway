@@ -30,6 +30,7 @@ retention policies.
 | malicious provider payload | schema validation, size limits, safe parsing, no evaluation |
 | forwarded-header spoofing | forwarded-header trust disabled in production |
 | timing/key enumeration | constant-time verification and uniform auth failures |
+| public-demo cost abuse | GitHub identity proof, account age/cooldown, global budget, five-minute scoped keys, provider spend alarms |
 
 ## Data handling
 
@@ -58,6 +59,11 @@ data transfer.
 Use maintained platform cryptography. TLS 1.2+ is required on public and
 untrusted internal links. API key hashing uses HMAC-SHA-256 with a separately
 managed high-entropy pepper. No custom encryption schemes are permitted.
+
+The hosted-demo identity HMAC uses a separate pepper and purpose-separated
+messages from API-key and administrator-session hashing. OAuth uses state,
+PKCE, an exact callback URI, short-lived Secure/HttpOnly cookies, and a
+no-scope GitHub app. OAuth tokens and plaintext trial keys are never persisted.
 
 ## Vulnerability management
 

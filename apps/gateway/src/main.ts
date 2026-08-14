@@ -6,11 +6,14 @@ import type { FastifyInstance } from 'fastify';
 import {
   AdminConsoleService,
   CreateChatCompletionService,
+  DemoClaimService,
   ListModelsService,
 } from '@rax-digital/application';
 import {
   ApiKeyAuthenticator,
+  GitHubOAuthClient,
   NodeAdminSecurity,
+  NodeDemoSecurity,
   provisionApiKey,
 } from '@rax-digital/auth';
 import type { PolicyConfig, RuntimeConfig } from '@rax-digital/config';
@@ -34,6 +37,7 @@ import {
   PostgresAdminAuditRepository,
   PostgresAdminControlRepository,
   PostgresAdminIdentityRepository,
+  PostgresDemoClaimRepository,
   PostgresReadinessProbe,
   createPostgresPool,
   runMigrations,
@@ -314,6 +318,62 @@ export async function runGateway(
           sessionTtlMs: config.adminSessionTtlMs,
         };
       })();
+      const demo = (() => {
+        if (!config.demoEnabled) return undefined;
+        if (
+          config.demoOrigin === undefined ||
+          config.demoGithubClientId === undefined ||
+          config.demoGithubClientSecret === undefined ||
+          config.demoHashPepper === undefined ||
+          config.demoTenantId === undefined
+        ) {
+          throw new TypeError(
+            'Validated hosted demo configuration is incomplete',
+          );
+        }
+        const security = new NodeDemoSecurity(config.demoHashPepper);
+        return {
+          service: new DemoClaimService(
+            new PostgresDemoClaimRepository(pool),
+            security,
+            new GitHubOAuthClient({
+              clientId: config.demoGithubClientId,
+              clientSecret: config.demoGithubClientSecret,
+              redirectUri: `${config.demoOrigin}/demo/callback`,
+            }),
+            {
+              provision: (input) =>
+                provisionApiKey(
+                  {
+                    id: apiKeyId(input.id),
+                    tenantId: input.tenantId,
+                    name: input.name,
+                    environment: input.environment,
+                    policy: input.policy,
+                    pepper: config.keyHashPepper,
+                    expiresAt: input.expiresAt,
+                  },
+                  input.now,
+                ),
+            },
+            {
+              tenantId: config.demoTenantId,
+              environment: config.environment,
+              model: config.demoModel,
+              keyTtlMs: config.demoKeyTtlMs,
+              stateTtlMs: 10 * 60 * 1_000,
+              accountMinimumAgeDays: config.demoAccountMinimumAgeDays,
+              accountCooldownMs: config.demoAccountCooldownMs,
+              maximumDailyClaims: config.demoMaximumDailyClaims,
+              requestsPerMinute: config.demoRequestsPerMinute,
+              maxRequestTokens: config.demoMaxRequestTokens,
+              maxOutputTokens: config.demoMaxOutputTokens,
+              idGenerator: randomUUID,
+            },
+          ),
+          origin: config.demoOrigin,
+        };
+      })();
       const app = await buildGateway({
         config,
         logger,
@@ -322,6 +382,7 @@ export async function runGateway(
           : { metricsRequestHandler }),
         readinessProbe: probe,
         ...(admin === undefined ? {} : { admin }),
+        ...(demo === undefined ? {} : { demo }),
         chatCompletionService: new CreateChatCompletionService(
           authenticator,
           router,

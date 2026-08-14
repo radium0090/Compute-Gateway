@@ -18,7 +18,8 @@ checksums, SBOM, and provenance are public. The exact image digest passed the
 protected three-provider, streaming, lifecycle, observability, and concurrent-
 stream memory gates on staging. The documents in this repository remain
 normative unless an accepted Architecture Decision Record (ADR) supersedes
-them.
+them. Version `0.2.0` is in development and adds the operator console and the
+optional, abuse-resistant hosted evaluation described below.
 
 ## MVP capabilities
 
@@ -32,26 +33,59 @@ them.
 - Docker Compose for local use and Kubernetes manifests/Helm for production
 - TypeScript and Python SDKs generated from the public contract
 
-Non-goals for the MVP include tool calling and structured outputs, a hosted
-billing system, a marketplace, GPU scheduling, multimodal generation, an admin
-dashboard, and autonomous quality-based model selection.
+Non-goals for the original MVP include tool calling and structured outputs, a
+hosted billing system, a marketplace, GPU scheduling, multimodal generation,
+and autonomous quality-based model selection. The operator console and hosted
+evaluation are narrowly scoped post-MVP additions governed by accepted ADRs.
 
-## Five-minute local start
+## Choose your first run
+
+### 60-second hosted trial
+
+The hosted trial is implemented for `v0.2.0` but is not public until the
+dedicated GitHub OAuth App and production budget controls are enabled. Once the
+rollout is complete, open
+[api.rax-digital.com/demo](https://api.rax-digital.com/demo/), verify with
+GitHub, and copy the generated `curl`.
+
+The service issues a unique API key that expires after five minutes; there is
+no shared public key in this repository. The trial is intentionally limited to
+one low-cost model, non-streaming calls, small input/output budgets, one
+concurrent request, per-account cooldown, and a global daily budget. See
+[hosted demo design and operation](docs/demo.md).
+
+The hosted service is for evaluation only. Applications should self-host or
+obtain a normal customer key rather than depend on trial availability.
+
+### 5–10 minute self-hosted start
 
 Prerequisites: Docker 26+ with Docker Compose, `curl`, and an OpenAI API key for
-the exact request below. To use a different provider, update its key and select
-its documented alias in the request.
+the first request. A fork is needed only when contributing code; to try the
+gateway, clone the upstream repository and run one command:
+
+```bash
+git clone https://github.com/radium0090/Compute-Gateway.git
+cd Compute-Gateway
+sh scripts/quickstart.sh
+```
+
+The script creates a private `.env`, generates local gateway secrets, prompts
+for the provider key without echoing it, starts PostgreSQL, Redis, telemetry,
+and the gateway, provisions a local client key, and prints the first model
+response. It never sends the OpenAI key anywhere except the configured OpenAI
+endpoint. Stop the stack with `docker compose down`.
+
+A successful run ends with a normalized JSON chat response and a local
+`rcg_dev_...` credential shown once. If the provider rejects the final request,
+the local stack remains running for diagnosis; check provider billing/model
+access, update `.env`, and rerun the script.
+
+To understand or run each operation manually instead:
 
 ```bash
 cp .env.example .env
-# Replace RCG_MASTER_KEY, RCG_KEY_HASH_PEPPER, and OPENAI_API_KEY in .env
+# Replace the fake RCG secrets and OPENAI_API_KEY in .env.
 docker compose up --build --wait
-curl http://localhost:8080/health/ready
-```
-
-Bootstrap a development tenant and create a client key after migrations finish:
-
-```bash
 docker compose exec postgres psql -U rcg -d compute_gateway -c \
   "INSERT INTO tenants (id, name, status) VALUES ('123e4567-e89b-42d3-a456-426614174000', 'local', 'active') ON CONFLICT DO NOTHING"
 RCG_API_KEY="$(docker compose run --rm gateway keys create \
@@ -185,6 +219,11 @@ behavior that changes the public contract.
 Use GitHub Issues for bugs and scoped features, Discussions for questions and
 design exploration, and pull requests for reviewed changes. Please read
 [CONTRIBUTING](docs/contributing.md) before submitting code.
+
+You do not need to fork merely to run the gateway. To contribute, first
+[fork the repository](https://github.com/radium0090/Compute-Gateway/fork), clone
+your fork, create a feature branch, and open a pull request as described in the
+contribution guide.
 
 ## License
 

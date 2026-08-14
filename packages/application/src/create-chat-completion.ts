@@ -29,6 +29,7 @@ import type {
 
 export type ChatCompletionFailure =
   | { readonly kind: 'authentication' }
+  | { readonly kind: 'policy'; readonly reason: 'request_too_large' }
   | {
       readonly kind: 'routing';
       readonly reason:
@@ -74,6 +75,11 @@ export interface CreateChatCompletionInput {
   readonly signal: AbortSignal;
 }
 
+type AuthenticatedChatCompletionInput = Omit<
+  CreateChatCompletionInput,
+  'credential'
+>;
+
 export interface ChatCompletionResilienceOptions {
   readonly requestAdmission: RequestAdmissionController;
   readonly providerConcurrency: ProviderConcurrencyController;
@@ -104,6 +110,58 @@ const unexpectedProviderError: ProviderError = {
 };
 
 const noopLease: CoordinationLease = { release: () => Promise.resolve() };
+
+function conservativeRequestTokenUpperBound(
+  request: CanonicalChatRequest,
+): number {
+  // A UTF-8 byte is a deliberately conservative upper bound for tokenizer
+  // input. The small fixed overhead accounts for message framing and roles.
+  return request.messages.reduce(
+    (total, message) =>
+      total +
+      4 +
+      Buffer.byteLength(message.role, 'utf8') +
+      Buffer.byteLength(message.content, 'utf8'),
+    2,
+  );
+}
+
+function applyApiKeyPolicy(
+  input: AuthenticatedChatCompletionInput,
+  apiKey: ApiKey,
+):
+  | { readonly ok: true; readonly input: AuthenticatedChatCompletionInput }
+  | { readonly ok: false; readonly result: ChatCompletionFailureResult } {
+  const requestLimit = apiKey.policy.maxRequestTokens;
+  if (
+    requestLimit !== undefined &&
+    conservativeRequestTokenUpperBound(input.request) > requestLimit
+  ) {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        failure: { kind: 'policy', reason: 'request_too_large' },
+      },
+    };
+  }
+
+  const outputLimit = apiKey.policy.maxOutputTokens;
+  if (outputLimit === undefined) return { ok: true, input };
+  return {
+    ok: true,
+    input: {
+      ...input,
+      request: {
+        ...input.request,
+        maxTokens: Math.min(
+          input.request.maxTokens ?? outputLimit,
+          outputLimit,
+        ),
+      },
+    },
+  };
+}
 
 async function defaultSleep(
   delayMs: number,
@@ -196,12 +254,21 @@ export class CreateChatCompletionService {
     if (!authentication.authenticated) {
       return { ok: false, failure: { kind: 'authentication' } };
     }
+    const policy = applyApiKeyPolicy(
+      {
+        requestId: input.requestId,
+        request: input.request,
+        signal: input.signal,
+      },
+      authentication.apiKey,
+    );
+    if (!policy.ok) return policy.result;
     const admission = await this.acquireRequest(authentication.apiKey);
     if (!admission.ok) return admission.result;
     try {
-      const plan = this.plan(input, authentication.apiKey, false);
+      const plan = this.plan(policy.input, authentication.apiKey, false);
       if (!plan.ok) return plan.result;
-      return await this.executePlan(input, plan.plan);
+      return await this.executePlan(policy.input, plan.plan);
     } finally {
       await releaseSafely(admission.lease);
     }
@@ -222,15 +289,24 @@ export class CreateChatCompletionService {
         failure: { kind: 'routing', reason: 'streaming_not_allowed' },
       };
     }
+    const policy = applyApiKeyPolicy(
+      {
+        requestId: input.requestId,
+        request: input.request,
+        signal: input.signal,
+      },
+      authentication.apiKey,
+    );
+    if (!policy.ok) return policy.result;
     const admission = await this.acquireRequest(authentication.apiKey);
     if (!admission.ok) return admission.result;
-    const plan = this.plan(input, authentication.apiKey, true);
+    const plan = this.plan(policy.input, authentication.apiKey, true);
     if (!plan.ok) {
       await releaseSafely(admission.lease);
       return plan.result;
     }
     const result = await this.executeStreamPlan(
-      input,
+      policy.input,
       plan.plan,
       admission.lease,
     );
@@ -239,7 +315,7 @@ export class CreateChatCompletionService {
   }
 
   private plan(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     apiKey: ApiKey,
     requireStreaming: boolean,
   ):
@@ -313,7 +389,7 @@ export class CreateChatCompletionService {
   }
 
   private async executePlan(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     plan: ResolvedRoutePlan,
   ): Promise<CreateChatCompletionResult> {
     if (this.resilience === undefined) {
@@ -416,7 +492,7 @@ export class CreateChatCompletionService {
   }
 
   private async executeStreamPlan(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     plan: ResolvedRoutePlan,
     requestLease: CoordinationLease,
   ): Promise<CreateChatCompletionStreamResult> {
@@ -703,7 +779,7 @@ export class CreateChatCompletionService {
   }
 
   private async executeSingle(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     plan: ResolvedRoutePlan,
   ): Promise<CreateChatCompletionResult> {
     const route = plan.routes[0];
@@ -729,7 +805,7 @@ export class CreateChatCompletionService {
   }
 
   private async executeSingleStream(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     plan: ResolvedRoutePlan,
   ): Promise<CreateChatCompletionStreamResult> {
     const route = plan.routes[0];

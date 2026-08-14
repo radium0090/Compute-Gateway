@@ -147,6 +147,45 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - name: RCG_ADMIN_ENABLED
   value: "false"
 {{- end }}
+{{- if .Values.demo.enabled }}
+- name: RCG_DEMO_ENABLED
+  value: "true"
+- name: RCG_DEMO_ORIGIN
+  value: {{ required "demo.origin is required when demo.enabled=true" .Values.demo.origin | quote }}
+- name: RCG_DEMO_GITHUB_CLIENT_ID
+  value: {{ required "demo.githubClientId is required when demo.enabled=true" .Values.demo.githubClientId | quote }}
+- name: RCG_DEMO_GITHUB_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.existingSecret | quote }}
+      key: {{ required "secretKeys.demoGithubClientSecret is required when demo.enabled=true" .Values.secretKeys.demoGithubClientSecret | quote }}
+- name: RCG_DEMO_HASH_PEPPER
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.existingSecret | quote }}
+      key: {{ required "secretKeys.demoHashPepper is required when demo.enabled=true" .Values.secretKeys.demoHashPepper | quote }}
+- name: RCG_DEMO_TENANT_ID
+  value: {{ required "demo.tenantId is required when demo.enabled=true" .Values.demo.tenantId | quote }}
+- name: RCG_DEMO_MODEL
+  value: {{ .Values.demo.model | quote }}
+- name: RCG_DEMO_KEY_TTL_MS
+  value: {{ .Values.demo.keyTtlMs | quote }}
+- name: RCG_DEMO_ACCOUNT_MINIMUM_AGE_DAYS
+  value: {{ .Values.demo.accountMinimumAgeDays | quote }}
+- name: RCG_DEMO_ACCOUNT_COOLDOWN_MS
+  value: {{ .Values.demo.accountCooldownMs | quote }}
+- name: RCG_DEMO_MAXIMUM_DAILY_CLAIMS
+  value: {{ .Values.demo.maximumDailyClaims | quote }}
+- name: RCG_DEMO_REQUESTS_PER_MINUTE
+  value: {{ .Values.demo.requestsPerMinute | quote }}
+- name: RCG_DEMO_MAX_REQUEST_TOKENS
+  value: {{ .Values.demo.maxRequestTokens | quote }}
+- name: RCG_DEMO_MAX_OUTPUT_TOKENS
+  value: {{ .Values.demo.maxOutputTokens | quote }}
+{{- else }}
+- name: RCG_DEMO_ENABLED
+  value: "false"
+{{- end }}
 {{- if .Values.runtime.otlpEndpoint }}
 - name: OTEL_EXPORTER_OTLP_ENDPOINT
   value: {{ .Values.runtime.otlpEndpoint | quote }}

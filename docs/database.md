@@ -15,6 +15,8 @@ content, provider raw responses, and full API keys are not stored in the MVP.
 | `admin_users` | operator identities and password hashes | email, status, lock and password-change state |
 | `admin_sessions` | bounded browser sessions | keyed session/CSRF hashes and expiry |
 | `operator_audit_events` | content-free operator audit trail | actor, action, target, request ID, metadata |
+| `demo_oauth_states` | one-time OAuth replay protection | keyed state hash, expiry, consumption time |
+| `demo_claims` | public-trial cooldown and daily budget ledger | keyed identity pseudonym, API key reference, claim/expiry times |
 
 Database identifiers use UUIDs; the current operator command generates random
 UUIDv4 API-key IDs and accepts an operator-supplied tenant UUID. Timestamps use
@@ -41,6 +43,9 @@ their addition requires a later migration with explicit retention rules.
 Repositories expose task-oriented operations, and HTTP handlers do not execute
 SQL. API key creation and revocation use parameterized statements. Successful
 authentication updates `last_used_at` no more than once per minute per key.
+Hosted-demo budget checks and API-key insertion use one transaction. The small,
+operator-capped claim volume permits an exclusive claim-ledger lock so replicas
+cannot race past per-identity or global limits.
 
 ## Connections
 

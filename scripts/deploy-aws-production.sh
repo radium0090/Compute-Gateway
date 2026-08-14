@@ -99,6 +99,15 @@ if ! jq -e '
     and ($secret.RCG_KEY_HASH_PEPPER | length >= 32)
     and ($secret.RCG_ADMIN_SESSION_PEPPER | length >= 32)
     and ($secret.RCG_MASTER_KEY | length >= 32)
+    and (
+      ($secret.RCG_DEMO_ENABLED // "false") != "true"
+      or (
+        ($secret.RCG_DEMO_GITHUB_CLIENT_ID | type == "string" and length > 0)
+        and ($secret.RCG_DEMO_GITHUB_CLIENT_SECRET | type == "string" and length > 0)
+        and ($secret.RCG_DEMO_HASH_PEPPER | type == "string" and length >= 32)
+        and ($secret.RCG_DEMO_TENANT_ID | type == "string" and test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"))
+      )
+    )
 ' >/dev/null <<<"$secret_json"; then
   echo 'The production secret is missing a required field or contains an invalid value.' >&2
   exit 1
@@ -123,7 +132,7 @@ jq -r \
   '
     def env_quote:
       "\u0027" + (gsub("\u0027"; "\\\u0027")) + "\u0027";
-    [
+    ([
       "POSTGRES_PASSWORD=" + (.POSTGRES_PASSWORD | env_quote),
       "RCG_ENVIRONMENT=production",
       "RCG_DATABASE_URL=" + ("postgresql://rcg:" + (.POSTGRES_PASSWORD | @uri) + "@postgres:5432/compute_gateway" | env_quote),
@@ -152,9 +161,26 @@ jq -r \
       "OPENAI_API_KEY=" + (.OPENAI_API_KEY | env_quote),
       "ANTHROPIC_API_KEY=" + (.ANTHROPIC_API_KEY | env_quote),
       "GEMINI_API_KEY=" + (.GEMINI_API_KEY | env_quote)
-    ]
+    ] + if (.RCG_DEMO_ENABLED // "false") == "true" then [
+      "RCG_DEMO_ENABLED=true",
+      "RCG_DEMO_ORIGIN=" + ("https://" + $host | env_quote),
+      "RCG_DEMO_GITHUB_CLIENT_ID=" + (.RCG_DEMO_GITHUB_CLIENT_ID | env_quote),
+      "RCG_DEMO_GITHUB_CLIENT_SECRET=" + (.RCG_DEMO_GITHUB_CLIENT_SECRET | env_quote),
+      "RCG_DEMO_HASH_PEPPER=" + (.RCG_DEMO_HASH_PEPPER | env_quote),
+      "RCG_DEMO_TENANT_ID=" + (.RCG_DEMO_TENANT_ID | env_quote),
+      "RCG_DEMO_MODEL=rax/fast",
+      "RCG_DEMO_KEY_TTL_MS=300000",
+      "RCG_DEMO_ACCOUNT_MINIMUM_AGE_DAYS=7",
+      "RCG_DEMO_ACCOUNT_COOLDOWN_MS=86400000",
+      "RCG_DEMO_MAXIMUM_DAILY_CLAIMS=50",
+      "RCG_DEMO_REQUESTS_PER_MINUTE=2",
+      "RCG_DEMO_MAX_REQUEST_TOKENS=2048",
+      "RCG_DEMO_MAX_OUTPUT_TOKENS=128"
+    ] else ["RCG_DEMO_ENABLED=false"] end)
     | .[]
   ' <<<"$secret_json" >"$temporary_environment"
+demo_enabled="$(jq -r '.RCG_DEMO_ENABLED // "false"' <<<"$secret_json")"
+demo_tenant_id="$(jq -r '.RCG_DEMO_TENANT_ID // empty' <<<"$secret_json")"
 unset secret_json
 chmod 0600 "$temporary_environment"
 mv -f -- "$temporary_environment" "$runtime_environment"
@@ -213,6 +239,15 @@ compose run --rm --no-deps gateway --check-config >>"$deployment_log" 2>&1
 
 echo 'Starting production services and HTTPS edge.'
 compose up --detach --wait --wait-timeout 300 >>"$deployment_log" 2>&1
+
+if [[ "$demo_enabled" == true ]]; then
+  compose exec -T postgres psql \
+    --username rcg \
+    --dbname compute_gateway \
+    --set ON_ERROR_STOP=1 \
+    --command "INSERT INTO tenants (id, name, status) VALUES ('${demo_tenant_id}', 'hosted-public-demo', 'active') ON CONFLICT (id) DO UPDATE SET status = 'active', updated_at = now()" \
+    >>"$deployment_log" 2>&1
+fi
 
 # Caddy obtains the first certificate asynchronously after it starts. Keep TLS
 # verification enabled and resolve the public hostname to loopback so this

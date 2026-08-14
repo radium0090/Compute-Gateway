@@ -18,6 +18,12 @@ route policy. Environment variables override file values only where documented.
 | `RCG_ADMIN_ENABLED` | no | enables the `/admin` control plane; default `false` |
 | `RCG_ADMIN_ORIGIN` | conditional | exact browser origin; required when admin is enabled |
 | `RCG_ADMIN_SESSION_PEPPER` | conditional | dedicated session/CSRF HMAC pepper; required when admin is enabled |
+| `RCG_DEMO_ENABLED` | no | enables the optional `/demo` GitHub claim flow; default `false` |
+| `RCG_DEMO_ORIGIN` | conditional | exact HTTPS browser origin; required when demo is enabled |
+| `RCG_DEMO_GITHUB_CLIENT_ID` | conditional | dedicated GitHub OAuth App client ID |
+| `RCG_DEMO_GITHUB_CLIENT_SECRET` | conditional | dedicated GitHub OAuth App secret |
+| `RCG_DEMO_HASH_PEPPER` | conditional | dedicated HMAC pepper for OAuth state and identity pseudonyms |
+| `RCG_DEMO_TENANT_ID` | conditional | UUID of the dedicated active demo tenant |
 | `RCG_CONFIG_FILE` | no | route policy path; default `/etc/rax-compute-gateway/config.yaml` |
 | `RCG_REDIS_URL` | conditional | required in production for distributed limits/circuit state |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | no | OpenTelemetry Collector endpoint |
@@ -40,6 +46,14 @@ credential name; the value is never included in route YAML.
 | `RCG_TRUST_PROXY` | `false` | development only; must remain false in production for `0.1` |
 | `RCG_METRICS_ENABLED` | `true` | boolean |
 | `RCG_ADMIN_SESSION_TTL_MS` | `28800000` | 15 minutes..24 hours |
+| `RCG_DEMO_MODEL` | `rax/fast` | one public model allowed by trial keys |
+| `RCG_DEMO_KEY_TTL_MS` | `300000` | 1..5 minutes |
+| `RCG_DEMO_ACCOUNT_MINIMUM_AGE_DAYS` | `7` | 0..3650 days |
+| `RCG_DEMO_ACCOUNT_COOLDOWN_MS` | `86400000` | 1 minute..30 days |
+| `RCG_DEMO_MAXIMUM_DAILY_CLAIMS` | `50` | 1..10000 successful claims per UTC day |
+| `RCG_DEMO_REQUESTS_PER_MINUTE` | `2` | 1..60 |
+| `RCG_DEMO_MAX_REQUEST_TOKENS` | `2048` | conservative request-token budget |
+| `RCG_DEMO_MAX_OUTPUT_TOKENS` | `128` | provider output cap |
 | `RCG_SERVICE_VERSION` | `0.0.0` | build/release identifier, maximum 64 characters |
 | `RCG_COMMIT_SHA` | `unknown` | `unknown` or a 7..64 character lowercase Git SHA |
 
@@ -121,6 +135,10 @@ rolling restart so configuration changes apply atomically per replica.
 Production mode has no default database URL, key pepper, or provider
 credential, and rejects forwarded-header trust. Unknown environment variables
 are ignored, but unknown YAML keys fail validation to catch spelling errors.
+
+The hosted demo remains disabled unless every required setting validates. Its
+origin must be HTTPS in production and contain only scheme and authority. See
+[hosted demo](demo.md) for OAuth App and dedicated-tenant setup.
 
 ## Secret handling
 

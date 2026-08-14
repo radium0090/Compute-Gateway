@@ -18,3 +18,16 @@ export {
   type ApiKeyProvisionerPort,
   type CreateAdminApiKeyInput,
 } from './admin-console.js';
+export {
+  DemoClaimError,
+  DemoClaimService,
+  type DemoClaimCreateResult,
+  type DemoClaimErrorCode,
+  type DemoClaimRepository,
+  type DemoClaimServiceOptions,
+  type DemoClaimStart,
+  type DemoClaimSuccess,
+  type DemoIdentityProviderPort,
+  type DemoSecurityPort,
+  type DemoStateRecord,
+} from './demo-claim.js';
