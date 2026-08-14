@@ -75,6 +75,11 @@ export interface CreateChatCompletionInput {
   readonly signal: AbortSignal;
 }
 
+type AuthenticatedChatCompletionInput = Omit<
+  CreateChatCompletionInput,
+  'credential'
+>;
+
 export interface ChatCompletionResilienceOptions {
   readonly requestAdmission: RequestAdmissionController;
   readonly providerConcurrency: ProviderConcurrencyController;
@@ -122,10 +127,10 @@ function conservativeRequestTokenUpperBound(
 }
 
 function applyApiKeyPolicy(
-  input: CreateChatCompletionInput,
+  input: AuthenticatedChatCompletionInput,
   apiKey: ApiKey,
 ):
-  | { readonly ok: true; readonly input: CreateChatCompletionInput }
+  | { readonly ok: true; readonly input: AuthenticatedChatCompletionInput }
   | { readonly ok: false; readonly result: ChatCompletionFailureResult } {
   const requestLimit = apiKey.policy.maxRequestTokens;
   if (
@@ -249,7 +254,14 @@ export class CreateChatCompletionService {
     if (!authentication.authenticated) {
       return { ok: false, failure: { kind: 'authentication' } };
     }
-    const policy = applyApiKeyPolicy(input, authentication.apiKey);
+    const policy = applyApiKeyPolicy(
+      {
+        requestId: input.requestId,
+        request: input.request,
+        signal: input.signal,
+      },
+      authentication.apiKey,
+    );
     if (!policy.ok) return policy.result;
     const admission = await this.acquireRequest(authentication.apiKey);
     if (!admission.ok) return admission.result;
@@ -277,7 +289,14 @@ export class CreateChatCompletionService {
         failure: { kind: 'routing', reason: 'streaming_not_allowed' },
       };
     }
-    const policy = applyApiKeyPolicy(input, authentication.apiKey);
+    const policy = applyApiKeyPolicy(
+      {
+        requestId: input.requestId,
+        request: input.request,
+        signal: input.signal,
+      },
+      authentication.apiKey,
+    );
     if (!policy.ok) return policy.result;
     const admission = await this.acquireRequest(authentication.apiKey);
     if (!admission.ok) return admission.result;
@@ -296,7 +315,7 @@ export class CreateChatCompletionService {
   }
 
   private plan(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     apiKey: ApiKey,
     requireStreaming: boolean,
   ):
@@ -370,7 +389,7 @@ export class CreateChatCompletionService {
   }
 
   private async executePlan(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     plan: ResolvedRoutePlan,
   ): Promise<CreateChatCompletionResult> {
     if (this.resilience === undefined) {
@@ -473,7 +492,7 @@ export class CreateChatCompletionService {
   }
 
   private async executeStreamPlan(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     plan: ResolvedRoutePlan,
     requestLease: CoordinationLease,
   ): Promise<CreateChatCompletionStreamResult> {
@@ -760,7 +779,7 @@ export class CreateChatCompletionService {
   }
 
   private async executeSingle(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     plan: ResolvedRoutePlan,
   ): Promise<CreateChatCompletionResult> {
     const route = plan.routes[0];
@@ -786,7 +805,7 @@ export class CreateChatCompletionService {
   }
 
   private async executeSingleStream(
-    input: CreateChatCompletionInput,
+    input: AuthenticatedChatCompletionInput,
     plan: ResolvedRoutePlan,
   ): Promise<CreateChatCompletionStreamResult> {
     const route = plan.routes[0];
