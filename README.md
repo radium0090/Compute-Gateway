@@ -42,12 +42,17 @@ evaluation are narrowly scoped post-MVP additions governed by accepted ADRs.
 
 ### 60-second hosted trial
 
-Open [api.rax-digital.com/demo](https://api.rax-digital.com/demo/), verify with
-GitHub, and copy the generated `curl`. The service issues a unique API key that
-expires after five minutes; there is no shared public key in this repository.
-The trial is intentionally limited to one low-cost model, non-streaming calls,
-small input/output budgets, one concurrent request, per-account cooldown, and a
-global daily budget. See [hosted demo design and operation](docs/demo.md).
+The hosted trial is implemented for `v0.2.0` but is not public until the
+dedicated GitHub OAuth App and production budget controls are enabled. Once the
+rollout is complete, open
+[api.rax-digital.com/demo](https://api.rax-digital.com/demo/), verify with
+GitHub, and copy the generated `curl`.
+
+The service issues a unique API key that expires after five minutes; there is
+no shared public key in this repository. The trial is intentionally limited to
+one low-cost model, non-streaming calls, small input/output budgets, one
+concurrent request, per-account cooldown, and a global daily budget. See
+[hosted demo design and operation](docs/demo.md).
 
 The hosted service is for evaluation only. Applications should self-host or
 obtain a normal customer key rather than depend on trial availability.
@@ -55,7 +60,8 @@ obtain a normal customer key rather than depend on trial availability.
 ### 5–10 minute self-hosted start
 
 Prerequisites: Docker 26+ with Docker Compose, `curl`, and an OpenAI API key for
-the first request. Clone the repository and run one command:
+the first request. A fork is needed only when contributing code; to try the
+gateway, clone the upstream repository and run one command:
 
 ```bash
 git clone https://github.com/radium0090/Compute-Gateway.git
@@ -68,6 +74,11 @@ for the provider key without echoing it, starts PostgreSQL, Redis, telemetry,
 and the gateway, provisions a local client key, and prints the first model
 response. It never sends the OpenAI key anywhere except the configured OpenAI
 endpoint. Stop the stack with `docker compose down`.
+
+A successful run ends with a normalized JSON chat response and a local
+`rcg_dev_...` credential shown once. If the provider rejects the final request,
+the local stack remains running for diagnosis; check provider billing/model
+access, update `.env`, and rerun the script.
 
 To understand or run each operation manually instead:
 
