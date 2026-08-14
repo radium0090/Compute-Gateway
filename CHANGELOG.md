@@ -5,6 +5,28 @@ Semantic Versioning and keeps release dates in UTC.
 
 ## Unreleased
 
+## 0.2.0 - 2026-08-13
+
+### Added
+
+- A compact, responsive operator console at `/admin/` for service health,
+  tenant management, and API Key creation, listing, and revocation.
+- PostgreSQL administrator identities, bounded server-side sessions, and
+  content-free operator audit events through backward-compatible migration
+  `0002`.
+- Salted memory-hard administrator password hashing, forced temporary-password
+  replacement, account lockout, anonymous login throttling, exact-origin and
+  per-session CSRF checks, and hardened host-only cookies.
+- An `admins create` operator command that reads the temporary password only
+  from standard input.
+
+### Changed
+
+- The low-cost AWS single-host production deployment enables the embedded
+  administrative control plane without adding another runtime service.
+
+## 0.1.0 - 2026-08-13
+
 ### Changed
 
 - Renamed the platform to RAX Compute Gateway under RAX Digital ownership,

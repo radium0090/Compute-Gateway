@@ -86,6 +86,7 @@ if ! jq -e '
       "ANTHROPIC_API_KEY",
       "GEMINI_API_KEY",
       "RCG_KEY_HASH_PEPPER",
+      "RCG_ADMIN_SESSION_PEPPER",
       "RCG_MASTER_KEY",
       "OPENAI_API_KEY",
       "POSTGRES_PASSWORD"
@@ -96,6 +97,7 @@ if ! jq -e '
       ($secret[.] | type == "string" and length > 0 and (contains("\n") | not) and (contains("\r") | not))
     )
     and ($secret.RCG_KEY_HASH_PEPPER | length >= 32)
+    and ($secret.RCG_ADMIN_SESSION_PEPPER | length >= 32)
     and ($secret.RCG_MASTER_KEY | length >= 32)
 ' >/dev/null <<<"$secret_json"; then
   echo 'The production secret is missing a required field or contains an invalid value.' >&2
@@ -137,7 +139,11 @@ jq -r \
       "RCG_SHUTDOWN_GRACE_MS=30000",
       "RCG_TRUST_PROXY=false",
       "RCG_METRICS_ENABLED=true",
-      "RCG_SERVICE_VERSION=0.1.0-production",
+      "RCG_ADMIN_ENABLED=true",
+      "RCG_ADMIN_ORIGIN=" + ("https://" + $host | env_quote),
+      "RCG_ADMIN_SESSION_PEPPER=" + (.RCG_ADMIN_SESSION_PEPPER | env_quote),
+      "RCG_ADMIN_SESSION_TTL_MS=28800000",
+      "RCG_SERVICE_VERSION=0.2.0-production",
       "RCG_COMMIT_SHA=" + $commit,
       "RCG_REDIS_URL=redis://redis:6379",
       "OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318",

@@ -13,6 +13,8 @@ interface Reference {
   readonly measured_requests: number;
   readonly concurrency: number;
   readonly p95_threshold_ms: number;
+  readonly stream_memory_concurrency: number;
+  readonly memory_per_stream_threshold_bytes: number;
 }
 
 function positiveInteger(value: unknown, name: string): number {
@@ -48,6 +50,14 @@ function reference(value: unknown): Reference {
     p95_threshold_ms: positiveInteger(
       candidate.p95_threshold_ms,
       'p95_threshold_ms',
+    ),
+    stream_memory_concurrency: positiveInteger(
+      candidate.stream_memory_concurrency,
+      'stream_memory_concurrency',
+    ),
+    memory_per_stream_threshold_bytes: positiveInteger(
+      candidate.memory_per_stream_threshold_bytes,
+      'memory_per_stream_threshold_bytes',
     ),
   };
 }

@@ -21,3 +21,17 @@ export {
   type Model,
   type ModelList,
 } from './models.js';
+export {
+  AdminApiKeyCreateRequestSchema,
+  AdminApiKeyPathSchema,
+  AdminApiKeyQuerySchema,
+  AdminLoginRequestSchema,
+  AdminPasswordChangeRequestSchema,
+  AdminTenantCreateRequestSchema,
+  type AdminApiKeyCreateRequest,
+  type AdminApiKeyPath,
+  type AdminApiKeyQuery,
+  type AdminLoginRequest,
+  type AdminPasswordChangeRequest,
+  type AdminTenantCreateRequest,
+} from './admin.js';

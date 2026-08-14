@@ -4,5 +4,7 @@
   "warmup_requests": 100,
   "measured_requests": 500,
   "concurrency": 20,
-  "p95_threshold_ms": 50
+  "p95_threshold_ms": 50,
+  "stream_memory_concurrency": 4,
+  "memory_per_stream_threshold_bytes": 16777216
 }

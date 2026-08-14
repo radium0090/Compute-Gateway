@@ -44,6 +44,11 @@ async function main(): Promise<void> {
       await runKeyCommand(config, command.slice(1));
       return;
     }
+    if (command[0] === 'admins') {
+      const { runAdminCommand } = await import('./admin-commands.js');
+      await runAdminCommand(config, command.slice(1));
+      return;
+    }
     const policy = await loadPolicyConfig(
       config.configFile,
       config.environment,

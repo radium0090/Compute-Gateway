@@ -8,6 +8,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/generated/**',
       '**/node_modules/**',
+      'apps/gateway/public/**',
       'examples/**/*.mjs',
       'eslint.config.mjs',
     ],

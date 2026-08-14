@@ -41,6 +41,10 @@ export default defineConfig({
   resolve: raxComputeGatewayResolve,
   test: {
     coverage: {
+      // PostgreSQL adapters are exercised by the real-service integration suite;
+      // importing them through the composition root must not count as uncovered
+      // unit-test code.
+      exclude: ['packages/persistence-postgres/src/admin-repository.ts'],
       reporter: ['text', 'lcov'],
       thresholds: {
         branches: 66,

@@ -34,8 +34,9 @@ The `release.yml` workflow accepts an annotated signed `v*.*.*` tag whose
 commit is on `main` and whose version matches the chart `appVersion`. It refuses
 an existing registry tag, publishes a multi-architecture image and chart,
 generates checksums and SPDX SBOMs, and attaches keyless image signature and
-provenance. It publishes artifacts only; environment deployment remains an
-operator-controlled action.
+provenance. It creates a draft GitHub Release so the published digest can be
+verified before the release becomes public. Environment deployment and final
+release publication remain operator-controlled actions.
 
 ## Deployment sequence
 
@@ -67,6 +68,12 @@ graceful gateway restart, and API Key authentication after restart. The workflow
 uses a disposable key and reports only status markers. A successful deployment
 does not substitute for this provider and lifecycle verification.
 
+For release-candidate promotion, dispatch `AWS staging deploy` from `main` with
+the published `sha256:...` digest. The workflow derives the semantic image tag
+from the chart, pulls that exact immutable GHCR reference instead of rebuilding
+it, and records both the digest reference and local image ID. Leave the digest
+input empty for the normal commit-built staging rehearsal.
+
 ## AWS single-host production edge
 
 The protected `AWS production deploy` workflow supports the deliberately
@@ -97,6 +104,14 @@ verification so weekly evidence can be alarmed without sparse-metric false
 positives. Operators still need tested whole-instance recovery, host security
 updates, and an external notification recipient. See the
 `aws-single-host-recovery` runbook for evidence and recovery commands.
+
+Starting with `v0.2.0`, this single-host deployment also serves the authenticated
+operator console at `/admin/` from the gateway image. The production runtime
+secret must contain a distinct `RCG_ADMIN_SESSION_PEPPER` of at least 32
+characters. The deployment fixes `RCG_ADMIN_ORIGIN` to the configured HTTPS
+public host and enables the console without another container. Bootstrap an
+administrator through a reviewed SSM operator command; never place its temporary
+password in GitHub variables, workflow arguments, process arguments, or logs.
 
 ## Health semantics
 

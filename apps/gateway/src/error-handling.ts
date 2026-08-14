@@ -9,6 +9,13 @@ function errorCode(error: unknown): string | undefined {
   return typeof error.code === 'string' ? error.code : undefined;
 }
 
+function errorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null || !('statusCode' in error)) {
+    return undefined;
+  }
+  return typeof error.statusCode === 'number' ? error.statusCode : undefined;
+}
+
 function validationParam(error: unknown): {
   readonly validation: boolean;
   readonly param: string | null;
@@ -77,6 +84,18 @@ export function registerErrorHandling(app: FastifyInstance): void {
           code: 'request_too_large',
           param: null,
           retryable: false,
+        }),
+      );
+      return;
+    }
+    if (errorStatus(error) === 429) {
+      reply.code(429).send(
+        response(request.id, {
+          message: 'The request rate limit was exceeded.',
+          type: 'rate_limit_error',
+          code: 'rate_limit_exceeded',
+          param: null,
+          retryable: true,
         }),
       );
       return;
