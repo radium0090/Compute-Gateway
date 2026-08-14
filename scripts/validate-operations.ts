@@ -322,7 +322,7 @@ async function validateContainerReferences(): Promise<void> {
     'deployment assets must not use latest image tags',
   );
   assert(
-    /FROM node:24\.18\.0-bookworm-slim@sha256:[a-f0-9]{64}/.test(sources[0]),
+    /FROM node:24\.19\.0-bookworm-slim@sha256:[a-f0-9]{64}/.test(sources[0]),
     'build image must use the pinned Node.js image digest',
   );
   assert(
