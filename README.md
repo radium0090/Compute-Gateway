@@ -12,14 +12,12 @@ Application -> RAX Compute Gateway -> OpenAI | Anthropic | Gemini | future provi
 
 ## Status
 
-[RAX Compute Gateway v0.1.0](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0)
-is released. The signed multi-architecture image, Helm chart, OpenAPI contract,
-checksums, SBOM, and provenance are public. The exact image digest passed the
-protected three-provider, streaming, lifecycle, observability, and concurrent-
-stream memory gates on staging. The documents in this repository remain
-normative unless an accepted Architecture Decision Record (ADR) supersedes
-them. Version `0.2.0` is in development and adds the operator console and the
-optional, abuse-resistant hosted evaluation described below.
+[RAX Compute Gateway v0.2.0](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.2.0)
+adds the operator console, one-command self-hosted quickstart, and the public,
+abuse-resistant hosted evaluation described below. Release artifacts include a
+signed multi-architecture image, Helm chart, OpenAPI contract, checksums, SBOM,
+and provenance. The documents in this repository remain normative unless an
+accepted Architecture Decision Record (ADR) supersedes them.
 
 ## MVP capabilities
 
@@ -42,11 +40,10 @@ evaluation are narrowly scoped post-MVP additions governed by accepted ADRs.
 
 ### 60-second hosted trial
 
-The hosted trial is implemented for `v0.2.0` but is not public until the
-dedicated GitHub OAuth App and production budget controls are enabled. Once the
-rollout is complete, open
-[api.rax-digital.com/demo](https://api.rax-digital.com/demo/), verify with
-GitHub, and copy the generated `curl`.
+Open [api.rax-digital.com/demo](https://api.rax-digital.com/demo/), verify with
+GitHub, and copy the generated `curl`. The complete public path has been
+verified against the production gateway: claim a key, run the command, and
+receive a normalized model response.
 
 The service issues a unique API key that expires after five minutes; there is
 no shared public key in this repository. The trial is intentionally limited to
