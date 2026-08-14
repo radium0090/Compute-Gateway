@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import type { PolicyConfig } from '@rax-digital/config';
 import type {
   ApiKey,
@@ -14,6 +12,22 @@ import type {
 
 type ConfiguredCapability =
   PolicyConfig['providers'][string]['models'][string]['capabilities'][number];
+
+const fnvOffsetBasis = 14_695_981_039_346_656_037n;
+const fnvPrime = 1_099_511_628_211n;
+const uint64Mask = 0xffff_ffff_ffff_ffffn;
+
+function stableRoutingHash(value: string): bigint {
+  // This is deterministic load distribution, not a security boundary. A
+  // non-cryptographic hash makes that intent explicit and avoids treating the
+  // request ID as a password or credential.
+  let hash = fnvOffsetBasis;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= BigInt(byte);
+    hash = (hash * fnvPrime) & uint64Mask;
+  }
+  return hash;
+}
 
 function patternAllows(pattern: string, requestedModel: string): boolean {
   if (pattern.endsWith('*')) {
@@ -33,8 +47,7 @@ function selectStableWeighted<T extends { readonly weight: number }>(
   if (total <= 0) {
     return null;
   }
-  const digest = createHash('sha256').update(key, 'utf8').digest();
-  const target = Number(digest.readBigUInt64BE(0) % BigInt(total));
+  const target = Number(stableRoutingHash(key) % BigInt(total));
   let cursor = 0;
   for (const candidate of candidates) {
     cursor += candidate.weight;
