@@ -13,3 +13,9 @@ export {
   type AdminSecurityOptions,
   type ScryptCost,
 } from './admin-security.js';
+export {
+  GitHubOAuthClient,
+  NodeDemoSecurity,
+  type GitHubIdentity,
+  type GitHubOAuthClientOptions,
+} from './demo-security.js';

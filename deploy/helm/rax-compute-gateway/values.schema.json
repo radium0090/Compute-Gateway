@@ -7,6 +7,7 @@
     "existingSecret",
     "runtime",
     "admin",
+    "demo",
     "policy"
   ],
   "properties": {
@@ -40,6 +41,37 @@
           "minimum": 900000,
           "maximum": 86400000
         }
+      }
+    },
+    "demo": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "origin",
+        "githubClientId",
+        "tenantId",
+        "model",
+        "keyTtlMs",
+        "accountMinimumAgeDays",
+        "accountCooldownMs",
+        "maximumDailyClaims",
+        "requestsPerMinute",
+        "maxRequestTokens",
+        "maxOutputTokens"
+      ],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "origin": { "type": "string" },
+        "githubClientId": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "model": { "type": "string", "minLength": 1 },
+        "keyTtlMs": { "type": "integer", "minimum": 60000, "maximum": 300000 },
+        "accountMinimumAgeDays": { "type": "integer", "minimum": 0 },
+        "accountCooldownMs": { "type": "integer", "minimum": 60000 },
+        "maximumDailyClaims": { "type": "integer", "minimum": 1 },
+        "requestsPerMinute": { "type": "integer", "minimum": 1 },
+        "maxRequestTokens": { "type": "integer", "minimum": 1 },
+        "maxOutputTokens": { "type": "integer", "minimum": 1 }
       }
     },
     "terminationGracePeriodSeconds": { "type": "integer", "minimum": 1 },

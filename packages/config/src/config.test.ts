@@ -30,6 +30,8 @@ describe('loadConfig', () => {
     expect(config.serviceVersion).toBe('v0.1.0');
     expect(config.commitSha).toBe('abcdef1234567');
     expect(config.adminEnabled).toBe(false);
+    expect(config.demoEnabled).toBe(false);
+    expect(config.demoKeyTtlMs).toBe(300_000);
   });
 
   it('rejects missing required settings without echoing secret values', () => {
@@ -92,6 +94,8 @@ describe('loadConfig', () => {
       RCG_KEY_HASH_PEPPER: '<set>',
       RCG_MASTER_KEY: '<set>',
       RCG_ADMIN_SESSION_PEPPER: '<unset>',
+      RCG_DEMO_GITHUB_CLIENT_SECRET: '<unset>',
+      RCG_DEMO_HASH_PEPPER: '<unset>',
     });
   });
 
@@ -123,5 +127,50 @@ describe('loadConfig', () => {
           'fake-admin-session-pepper-with-at-least-32-characters',
       }),
     ).toThrow(/must use HTTPS/);
+  });
+
+  it('requires complete isolated configuration when the hosted demo is enabled', () => {
+    expect(() =>
+      loadConfig({ ...validEnvironment, RCG_DEMO_ENABLED: 'true' }),
+    ).toThrow(/RCG_DEMO_ORIGIN|RCG_DEMO_GITHUB_CLIENT_ID/);
+
+    const config = loadConfig({
+      ...validEnvironment,
+      RCG_DEMO_ENABLED: 'true',
+      RCG_DEMO_ORIGIN: 'http://localhost:8080',
+      RCG_DEMO_GITHUB_CLIENT_ID: 'github-client',
+      RCG_DEMO_GITHUB_CLIENT_SECRET: 'github-secret',
+      RCG_DEMO_HASH_PEPPER: 'demo-hash-pepper-with-at-least-32-characters',
+      RCG_DEMO_TENANT_ID: '123e4567-e89b-42d3-a456-426614174000',
+    });
+
+    expect(config).toMatchObject({
+      demoEnabled: true,
+      demoModel: 'rax/fast',
+      demoMaximumDailyClaims: 50,
+      demoRequestsPerMinute: 2,
+      demoMaxRequestTokens: 2_048,
+      demoMaxOutputTokens: 128,
+    });
+    expect(describeSecretPresence(config)).toMatchObject({
+      RCG_DEMO_GITHUB_CLIENT_SECRET: '<set>',
+      RCG_DEMO_HASH_PEPPER: '<set>',
+    });
+  });
+
+  it('requires HTTPS for the production hosted-demo origin', () => {
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        RCG_ENVIRONMENT: 'production',
+        RCG_REDIS_URL: 'redis://redis:6379',
+        RCG_DEMO_ENABLED: 'true',
+        RCG_DEMO_ORIGIN: 'http://api.example.com',
+        RCG_DEMO_GITHUB_CLIENT_ID: 'github-client',
+        RCG_DEMO_GITHUB_CLIENT_SECRET: 'github-secret',
+        RCG_DEMO_HASH_PEPPER: 'demo-hash-pepper-with-at-least-32-characters',
+        RCG_DEMO_TENANT_ID: '123e4567-e89b-42d3-a456-426614174000',
+      }),
+    ).toThrow(/RCG_DEMO_ORIGIN must use HTTPS/);
   });
 });

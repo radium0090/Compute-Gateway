@@ -36,4 +36,20 @@ describe('routing admission error mapping', () => {
       retryable: true,
     });
   });
+
+  it('maps an API key input ceiling to a safe client error', () => {
+    expect(
+      resultErrorMapping({
+        ok: false,
+        failure: { kind: 'policy', reason: 'request_too_large' },
+      }),
+    ).toEqual({
+      statusCode: 400,
+      type: 'invalid_request_error',
+      code: 'request_too_large',
+      message: 'The request exceeds this API key policy limit.',
+      param: 'messages',
+      retryable: false,
+    });
+  });
 });

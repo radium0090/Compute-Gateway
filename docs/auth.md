@@ -50,6 +50,13 @@ Authorization is deny-by-default. A key policy can allow:
 - requests per minute and concurrent requests;
 - maximum request/output tokens where enforceable.
 
+The application enforces `maxRequestTokens` with a tokenizer-independent,
+conservative UTF-8 upper bound before admission or routing. This can reject
+some valid prompts earlier than a provider tokenizer would, but cannot silently
+expand the configured cost boundary. `maxOutputTokens` is always forwarded as
+the lower of the caller request and key policy; when omitted by the caller, the
+key ceiling is supplied to the provider.
+
 Authentication success does not imply access to every configured model.
 `GET /v1/models` returns only authorized models.
 
@@ -108,6 +115,15 @@ header. Sessions expire after the configured bounded lifetime, repeated login
 failures cause temporary account lockout, and anonymous password work is rate
 limited. Initial administrators are created with `admins create` using a
 temporary password supplied on standard input and must change it after login.
+
+## Hosted demo identity
+
+The optional `/demo` surface uses a dedicated no-scope GitHub OAuth App only to
+prove a stable account identity and minimum account age. It is not accepted on
+`/v1`, does not create a permanent user account, and does not grant access to
+the operator console. OAuth state is one-time and PKCE-bound. GitHub access
+tokens are discarded after `/user`; only a domain-separated HMAC pseudonym is
+retained for cooldown enforcement. See [hosted demo](demo.md) and ADR 0014.
 
 ## Audit integration
 

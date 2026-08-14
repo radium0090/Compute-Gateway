@@ -113,6 +113,15 @@ public host and enables the console without another container. Bootstrap an
 administrator through a reviewed SSM operator command; never place its temporary
 password in GitHub variables, workflow arguments, process arguments, or logs.
 
+The optional `/demo` evaluation flow adds no container. It remains disabled
+unless the production Secrets Manager JSON contains a valid
+`RCG_DEMO_ENABLED=true` configuration, GitHub OAuth credentials, a dedicated
+identity pepper, and a dedicated tenant UUID. The deploy script runs migration
+`0003` and activates that tenant before serving claims. Keep provider-side hard
+spend limits and alerts enabled; application claim budgets are defense in depth,
+not a financial guarantee. Setup and emergency disable steps are in
+[hosted demo](demo.md).
+
 ## Health semantics
 
 - `/health/live` returns success when the event loop/process can serve; it does

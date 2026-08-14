@@ -24,6 +24,8 @@ secretKeys:
   redisUrl: redis-url
   keyHashPepper: key-hash-pepper
   adminSessionPepper: ''
+  demoGithubClientSecret: ''
+  demoHashPepper: ''
   masterKey: ''
   openaiApiKey: openai-api-key
   anthropicApiKey: anthropic-api-key
@@ -44,6 +46,20 @@ admin:
   enabled: false
   origin: ''
   sessionTtlMs: 28800000
+
+demo:
+  enabled: false
+  origin: ''
+  githubClientId: ''
+  tenantId: ''
+  model: rax/fast
+  keyTtlMs: 300000
+  accountMinimumAgeDays: 7
+  accountCooldownMs: 86400000
+  maximumDailyClaims: 50
+  requestsPerMinute: 2
+  maxRequestTokens: 2048
+  maxOutputTokens: 128
 
 policy:
   version: 1

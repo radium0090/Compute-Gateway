@@ -1,6 +1,6 @@
 # Implementation status
 
-This page records the code-to-specification review updated on 2026-08-13.
+This page records the code-to-specification review updated on 2026-08-14.
 Accepted ADRs and the normative documents remain authoritative; this page is a
 status snapshot, not a new architecture decision.
 
@@ -37,7 +37,7 @@ rollback target; the public production stack remains healthy.
 | --- | --- | --- |
 | Chat completions and SSE | Implemented; contract, client-disconnect, and graceful-shutdown staging tests pass | Re-run lifecycle evidence after stream/runtime changes |
 | OpenAI, Anthropic, Gemini | Implemented; shared conformance and protected live smoke pass | Re-run when provider model/API configuration changes |
-| API keys and model permissions | HMAC-backed keys, status/expiry/environment checks, model allow-list and streaming permission implemented | Per-key `maxRequestTokens` and `maxOutputTokens` are stored but not enforced |
+| API keys and model permissions | HMAC-backed keys, status/expiry/environment checks, model/stream permissions, conservative input ceilings, and provider output caps implemented | Provider-native tokenizer accounting and detailed cost reporting remain deferred |
 | Routing and resilience | Stable weighted primary selection, ordered fallback, bounded retry, deadlines, concurrency and circuit state implemented | Deployment-region and operator-disabled route filtering described in `docs/router.md` has no policy field yet |
 | PostgreSQL and Redis | Migration/repository and atomic Redis coordination implementations exist; the protected nightly suite passed against real services | Production remains a deliberate single-host PostgreSQL/Redis deployment until a managed-data-service migration is justified |
 | Observability | Structured content-free logs, metrics, traces, build identity and shutdown flushing implemented; protected staging outcome, latency, active-request, and stream-memory evidence passes | No bundled production dashboard; custom routing child spans are not part of `0.1` |
@@ -52,18 +52,14 @@ These items require a scoped issue or ADR before behavior changes:
    operator-disabled route state. The version 1 policy schema currently has no
    region or enabled/disabled fields; open-circuit filtering happens during
    execution instead of static plan construction.
-2. API-key token ceilings are accepted by the operator command and persisted,
-   but the application service does not enforce them. Input-token enforcement
-   needs an agreed tokenizer/estimation rule; output ceilings need a documented
-   reject-versus-cap rule.
-3. The provider capability domain supports `jsonObject`, `systemMessages`, and
+2. The provider capability domain supports `jsonObject`, `systemMessages`, and
    model token limits, while policy version 1 exposes only `chat`, `streaming`,
    `tools`, and `json_schema`. Tool and structured-output request fields remain
    explicit MVP non-goals.
-4. Runtime policy updates are described as atomic in `docs/router.md`, but the
+3. Runtime policy updates are described as atomic in `docs/router.md`, but the
    current process loads one validated policy at startup and does not hot
    reload it.
-5. `docs/coding-standards.md` calls for property tests covering weighted
+4. `docs/coding-standards.md` calls for property tests covering weighted
    routing, deadline budgets, and redaction. The current suite has deterministic
    examples and conformance tests for these paths, but no property-test harness.
 
@@ -78,8 +74,10 @@ protected-verification sequence rather than reusing this evidence.
 ## Intentionally deferred work
 
 The `v0.2` operator console, browser authentication, tenant/API-key management,
-and durable content-free audit events are implemented under ADR 0013. Hosted
-signup/billing, end-user identity, MFA or federated operator identity, detailed
-token/cost accounting, extra provider families, package publication, and
-additional data-plane API surfaces remain deferred and require their own scope
-and decision review.
+and durable content-free audit events are implemented under ADR 0013. The
+optional GitHub-authenticated, five-minute evaluation flow is implemented under
+ADR 0014 and remains disabled until an operator supplies its dedicated OAuth
+and tenant configuration. General hosted signup/billing, permanent end-user
+identity, MFA or federated operator identity, detailed token/cost accounting,
+extra provider families, package publication, and additional data-plane API
+surfaces remain deferred and require their own scope and decision review.

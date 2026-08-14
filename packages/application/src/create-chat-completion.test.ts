@@ -127,6 +127,78 @@ describe('CreateChatCompletionService', () => {
     });
   });
 
+  it('rejects requests above the API key input budget before routing', async () => {
+    let routed = false;
+    const service = new CreateChatCompletionService(
+      {
+        authenticate: () =>
+          Promise.resolve({
+            authenticated: true,
+            apiKey: {
+              policy: { maxRequestTokens: 10 },
+            } as ApiKey,
+          }),
+      },
+      {
+        resolve: () => (
+          (routed = true),
+          { ok: false, reason: 'model_not_found' }
+        ),
+      },
+      new Map(),
+    );
+
+    await expect(
+      service.execute({
+        credential: 'opaque credential',
+        requestId: 'req_input_budget',
+        request,
+        signal: new AbortController().signal,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      failure: { kind: 'policy', reason: 'request_too_large' },
+    });
+    expect(routed).toBe(false);
+  });
+
+  it('caps requested output to the API key output budget', async () => {
+    let forwardedMaxTokens: number | undefined;
+    const cappedProvider: ProviderAdapter = {
+      ...provider(),
+      createChatCompletion: (forwarded) => {
+        forwardedMaxTokens = forwarded.maxTokens;
+        return provider().createChatCompletion(forwarded, {
+          requestId: 'unused',
+          providerModel: 'unused',
+          signal: new AbortController().signal,
+        });
+      },
+    };
+    const service = new CreateChatCompletionService(
+      {
+        authenticate: () =>
+          Promise.resolve({
+            authenticated: true,
+            apiKey: {
+              policy: { maxOutputTokens: 64 },
+            } as ApiKey,
+          }),
+      },
+      router,
+      new Map([['openai-primary', cappedProvider]]),
+    );
+
+    await service.execute({
+      credential: 'opaque credential',
+      requestId: 'req_output_budget',
+      request: { ...request, maxTokens: 1_000 },
+      signal: new AbortController().signal,
+    });
+
+    expect(forwardedMaxTokens).toBe(64);
+  });
+
   it('rejects streaming before routing when the key policy denies it', async () => {
     let routed = false;
     const service = new CreateChatCompletionService(

@@ -35,3 +35,7 @@ export {
   type AdminPasswordChangeRequest,
   type AdminTenantCreateRequest,
 } from './admin.js';
+export {
+  DemoOAuthCallbackQuerySchema,
+  type DemoOAuthCallbackQuery,
+} from './demo.js';

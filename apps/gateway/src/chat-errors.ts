@@ -100,6 +100,16 @@ export function resultErrorMapping(
   if (result.failure.kind === 'provider') {
     return providerErrorMapping(result.failure.error);
   }
+  if (result.failure.kind === 'policy') {
+    return {
+      statusCode: 400,
+      type: 'invalid_request_error',
+      code: 'request_too_large',
+      message: 'The request exceeds this API key policy limit.',
+      param: 'messages',
+      retryable: false,
+    };
+  }
   if (result.failure.kind === 'admission') {
     switch (result.failure.reason) {
       case 'rate_limited':
