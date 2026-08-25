@@ -47,7 +47,12 @@ function pythonType(schema: Schema | undefined): string {
   if (schema.$ref !== undefined)
     return schema.$ref.split('/').at(-1) ?? 'object';
   if (schema.anyOf !== undefined) {
-    return schema.anyOf.map((item) => pythonType(item)).join(' | ');
+    // OpenAPI unions may contain several structurally different object
+    // variants. The preview SDK intentionally represents each as a generic
+    // mapping, so collapse duplicate rendered types for readable output.
+    return [...new Set(schema.anyOf.map((item) => pythonType(item)))].join(
+      ' | ',
+    );
   }
   if (schema.const !== undefined) return `Literal[${literal(schema.const)}]`;
   if (schema.enum !== undefined) {

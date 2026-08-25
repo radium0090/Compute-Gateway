@@ -26,7 +26,7 @@ providers:
     credential_env: OPENAI_API_KEY_B
     base_url: https://api.openai.com/v1
     models:
-      model-b: { capabilities: [chat, streaming] }
+      model-b: { capabilities: [chat, streaming, tools, strict_tools, parallel_tool_control, json_schema] }
   openai-c:
     adapter: openai
     credential_env: OPENAI_API_KEY_C
@@ -167,6 +167,35 @@ describe('StaticPolicyRouter', () => {
         requestId: 'req_streaming_qualified',
         apiKey: key(['openai/*']),
         requireStreaming: true,
+      }),
+    ).toEqual({ ok: false, reason: 'model_not_found' });
+  });
+
+  it('filters agent requests by every required capability', () => {
+    const router = new StaticPolicyRouter(policy);
+
+    expect(
+      router.resolve({
+        requestedModel: 'rax/fast',
+        requestId: 'req_agent',
+        apiKey: key(['rax/*']),
+        requiredCapabilities: [
+          'tools',
+          'strict_tools',
+          'parallel_tool_control',
+          'json_schema',
+        ],
+      }),
+    ).toMatchObject({
+      ok: true,
+      route: { providerRef: 'openai-b', providerModel: 'model-b' },
+    });
+    expect(
+      router.resolve({
+        requestedModel: 'openai/model-a',
+        requestId: 'req_agent_qualified',
+        apiKey: key(['openai/*']),
+        requiredCapabilities: ['tools'],
       }),
     ).toEqual({ ok: false, reason: 'model_not_found' });
   });

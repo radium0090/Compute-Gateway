@@ -201,7 +201,30 @@ const isAcceptedIdentityMigration =
   failures.length === acceptedIdentityMigration.size &&
   failures.every((failure) => acceptedIdentityMigration.has(failure));
 
-if (failures.length > 0 && !isAcceptedIdentityMigration) {
+// ADR 0015 widens message inputs and makes assistant content nullable only for
+// the newly opt-in tool-calling path. Existing text-only request/response
+// behavior is unchanged, but the structural checker cannot express that
+// conditional compatibility guarantee.
+const acceptedAgentCompatibility = new Set([
+  'components.schemas.ChatCompletionRequest.messages[]: type changed from object',
+  'components.schemas.ChatCompletionRequest.messages[].role: property removed',
+  'components.schemas.ChatCompletionRequest.messages[].content: property removed',
+  'components.schemas.ChatCompletionResponse.choices[].message.content: type changed from string',
+]);
+const agentDecision = await readFile(
+  path.join(root, 'docs/adr/0015-agent-tool-calling-compatibility.md'),
+  'utf8',
+);
+const isAcceptedAgentCompatibility =
+  agentDecision.includes('- Status: Accepted') &&
+  failures.length === acceptedAgentCompatibility.size &&
+  failures.every((failure) => acceptedAgentCompatibility.has(failure));
+
+if (
+  failures.length > 0 &&
+  !isAcceptedIdentityMigration &&
+  !isAcceptedAgentCompatibility
+) {
   throw new Error(
     `Breaking OpenAPI changes against ${base}:\n${failures.join('\n')}`,
   );
@@ -209,5 +232,7 @@ if (failures.length > 0 && !isAcceptedIdentityMigration) {
 process.stdout.write(
   isAcceptedIdentityMigration
     ? `Only ADR 0012 identity changes found against ${base}\n`
-    : `No breaking OpenAPI changes against ${base}\n`,
+    : isAcceptedAgentCompatibility
+      ? `Only ADR 0015 Agent compatibility changes found against ${base}\n`
+      : `No breaking OpenAPI changes against ${base}\n`,
 );

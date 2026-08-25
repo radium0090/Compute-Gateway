@@ -12,6 +12,10 @@ class ChatCompletionRequest(TypedDict, total=False):
     stream: bool
     n: Literal[1]
     user: str
+    tools: list[dict[str, object]]
+    tool_choice: Literal["none"] | Literal["auto"] | Literal["required"] | dict[str, object]
+    parallel_tool_calls: bool
+    response_format: dict[str, object]
 
 
 class ChatCompletionResponse(TypedDict, total=False):

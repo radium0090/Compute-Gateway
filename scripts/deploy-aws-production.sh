@@ -152,7 +152,7 @@ jq -r \
       "RCG_ADMIN_ORIGIN=" + ("https://" + $host | env_quote),
       "RCG_ADMIN_SESSION_PEPPER=" + (.RCG_ADMIN_SESSION_PEPPER | env_quote),
       "RCG_ADMIN_SESSION_TTL_MS=28800000",
-      "RCG_SERVICE_VERSION=0.2.0-production",
+      "RCG_SERVICE_VERSION=0.3.0-production",
       "RCG_COMMIT_SHA=" + $commit,
       "RCG_REDIS_URL=redis://redis:6379",
       "OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318",

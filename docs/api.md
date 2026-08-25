@@ -22,8 +22,8 @@ Request bodies are limited to 2 MiB by default.
 | `GET` | `/health/ready` | none | Dependency readiness, no secret detail |
 | `GET` | `/metrics` | operator policy | Prometheus metrics |
 
-Administrative key creation is a CLI/database bootstrap workflow in the MVP;
-there is no public admin HTTP API.
+The optional operator console uses a separate `/admin/api` contract that is
+not exposed to model clients or generated data-plane SDKs.
 
 ## Chat completions
 
@@ -43,12 +43,12 @@ there is no public admin HTTP API.
 }
 ```
 
-Supported MVP fields:
+Supported fields:
 
 | Field | Rule |
 | --- | --- |
 | `model` | required stable alias or allowed provider-qualified model |
-| `messages` | required, 1..1024 items; system/user/assistant roles |
+| `messages` | required, 1..1024 items; system/developer/user/assistant/tool roles in the documented text subset |
 | `temperature` | optional, 0..2; capability-validated per candidate |
 | `top_p` | optional, 0..1 |
 | `max_tokens` | optional positive integer; mapped to provider output limit |
@@ -56,11 +56,53 @@ Supported MVP fields:
 | `stream` | optional boolean, default false |
 | `n` | optional; only the value `1` is accepted |
 | `user` | optional opaque identifier; not emitted in normal telemetry |
+| `tools` | optional list of up to 128 function tools; requires key and model capability |
+| `tool_choice` | optional `none`, `auto`, `required`, or one named function |
+| `parallel_tool_calls` | optional boolean; candidates must preserve the requested behavior |
+| `response_format` | optional `text`, `json_object`, or bounded `json_schema`; capability-filtered |
 
-Tool calls, `response_format`, `logprobs`, `seed`, audio, modalities,
-prediction, provider-specific options, and provider beta fields are outside the
-`0.1` contract. Unknown fields return `invalid_request_error` instead of being
+`logprobs`, `seed`, audio, modalities, prediction, multimodal message parts,
+provider-specific options, and provider beta fields remain outside the
+contract. Unknown fields return `invalid_request_error` instead of being
 silently discarded.
+
+### Agent tool round trip
+
+Tools are declared using the OpenAI function-tool shape. The gateway selects
+only a candidate declaring `tools`; the Agent or harness executes the function.
+RAX never executes it.
+
+```json
+{
+  "model": "rax/agent",
+  "messages": [{"role": "user", "content": "Weather in Tokyo?"}],
+  "tools": [{
+    "type": "function",
+    "function": {
+      "name": "get_weather",
+      "description": "Get current weather",
+      "parameters": {
+        "type": "object",
+        "properties": {"city": {"type": "string"}},
+        "required": ["city"],
+        "additionalProperties": false
+      }
+    }
+  }],
+  "tool_choice": "auto"
+}
+```
+
+A model-selected call returns `content: null`, `finish_reason: "tool_calls"`,
+and one or more `message.tool_calls`. The client appends that assistant message,
+executes each function, then appends a result such as:
+
+```json
+{"role": "tool", "tool_call_id": "call_123", "content": "{\"temp_c\":28}"}
+```
+
+Tool arguments and results are opaque content. They are size-validated and
+processed in memory but never logged or persisted by default.
 
 ### Response
 
@@ -103,6 +145,8 @@ Rules:
 - no retry or fallback occurs after the first downstream byte;
 - client disconnect cancels the provider request;
 - normalized chunks use `chat.completion.chunk` and monotonic choice order;
+- tool calls use indexed `delta.tool_calls`; clients concatenate each
+  function `arguments` fragment in order;
 - an upstream failure after commitment closes the stream and emits telemetry;
 - optional SSE keepalive comments contain no application data.
 
@@ -144,6 +188,7 @@ Every JSON error uses one stable envelope:
 | 400 | `invalid_request_error` | `unsupported_parameter` | no |
 | 401 | `authentication_error` | `invalid_api_key` | no |
 | 403 | `permission_error` | `model_not_allowed` | no |
+| 403 | `permission_error` | `tools_not_allowed` | no |
 | 404 | `not_found_error` | `model_not_found` | no |
 | 408 | `timeout_error` | `request_deadline_exceeded` | yes |
 | 413 | `invalid_request_error` | `request_too_large` | no |

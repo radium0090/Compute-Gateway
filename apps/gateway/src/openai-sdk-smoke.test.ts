@@ -49,12 +49,29 @@ describe('OpenAI Node SDK compatibility', () => {
       logger: createLogger({ environment: 'test', level: 'error' }),
       readinessProbe: { check: () => Promise.resolve({ ready: true }) },
       chatCompletionService: {
-        execute: () =>
+        execute: (input) =>
           Promise.resolve({
             ok: true,
             response: {
-              content: 'SDK answer',
-              finishReason: 'stop',
+              content: input.request.tools === undefined ? 'SDK answer' : null,
+              ...(input.request.tools === undefined
+                ? {}
+                : {
+                    toolCalls: [
+                      {
+                        id: 'call_sdk',
+                        type: 'function' as const,
+                        function: {
+                          name: 'lookup',
+                          arguments: '{"id":42}',
+                        },
+                      },
+                    ],
+                  }),
+              finishReason:
+                input.request.tools === undefined
+                  ? ('stop' as const)
+                  : ('tool_calls' as const),
               usage: { promptTokens: 2, completionTokens: 2, totalTokens: 4 },
             },
             route: {
@@ -64,11 +81,39 @@ describe('OpenAI Node SDK compatibility', () => {
             },
             attempts: 1,
           }),
-        executeStream: () =>
+        executeStream: (input) =>
           Promise.resolve({
             ok: true,
             stream: (async function* () {
               await Promise.resolve();
+              if (input.request.tools !== undefined) {
+                yield {
+                  choice: {
+                    delta: {
+                      toolCalls: [
+                        {
+                          index: 0,
+                          id: 'call_stream_sdk',
+                          type: 'function' as const,
+                          function: { name: 'lookup', arguments: '' },
+                        },
+                      ],
+                    },
+                    finishReason: null,
+                  },
+                };
+                yield {
+                  choice: {
+                    delta: {
+                      toolCalls: [
+                        { index: 0, function: { arguments: '{"id":42}' } },
+                      ],
+                    },
+                    finishReason: 'tool_calls' as const,
+                  },
+                };
+                return;
+              }
               yield {
                 choice: { delta: { content: 'SDK' }, finishReason: null },
               };
@@ -102,6 +147,33 @@ describe('OpenAI Node SDK compatibility', () => {
     });
     expect(completion.choices[0]?.message.content).toBe('SDK answer');
 
+    const agentCompletion = await client.chat.completions.create({
+      model: 'rax/agent',
+      messages: [{ role: 'user', content: 'Look up 42' }],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'lookup',
+            parameters: {
+              type: 'object',
+              properties: { id: { type: 'integer' } },
+              required: ['id'],
+            },
+          },
+        },
+      ],
+      tool_choice: 'auto',
+    });
+    const toolCall = agentCompletion.choices[0]?.message.tool_calls?.[0];
+    if (toolCall?.type !== 'function') {
+      throw new Error('expected a function tool call');
+    }
+    expect(toolCall.function).toEqual({
+      name: 'lookup',
+      arguments: '{"id":42}',
+    });
+
     const stream = await client.chat.completions.create({
       model: 'rax/fast',
       messages: [{ role: 'user', content: 'SDK stream prompt' }],
@@ -112,6 +184,29 @@ describe('OpenAI Node SDK compatibility', () => {
       streamed += chunk.choices[0]?.delta.content ?? '';
     }
     expect(streamed).toBe('SDK stream');
+
+    const toolStream = await client.chat.completions.create({
+      model: 'rax/agent',
+      messages: [{ role: 'user', content: 'Look up 42' }],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'lookup',
+            parameters: { type: 'object' },
+          },
+        },
+      ],
+      stream: true,
+    });
+    let argumentFragments = '';
+    for await (const chunk of toolStream) {
+      const delta = chunk.choices[0]?.delta.tool_calls?.[0];
+      if (delta !== undefined && 'function' in delta) {
+        argumentFragments += delta.function.arguments ?? '';
+      }
+    }
+    expect(argumentFragments).toBe('{"id":42}');
 
     const models = await client.models.list();
     expect(models.data.map((model) => model.id)).toEqual(['rax/fast']);

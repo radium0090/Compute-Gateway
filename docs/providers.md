@@ -28,6 +28,8 @@ type ProviderCapabilities = {
   chat: true;
   streaming: boolean;
   tools: boolean;
+  strictTools?: boolean;
+  parallelToolControl?: boolean;
   jsonObject: boolean;
   jsonSchema: boolean;
   systemMessages: boolean;
@@ -101,7 +103,7 @@ Provider SDK versions are pinned through the lockfile. Direct HTTP clients MAY
 be preferred when an official SDK prevents cancellation, redaction, or stable
 error handling.
 
-## Current chat compatibility rules
+## Current chat and agent compatibility rules
 
 - Anthropic and Gemini map only leading `system` messages to their native
   system-instruction field. A system message after conversation turns is
@@ -110,5 +112,17 @@ error handling.
   metadata and does not send it upstream.
 - Anthropic temperatures above `1` are rejected because the native API cannot
   represent them without changing their meaning.
-- Tool calls and structured outputs remain later work even where a provider has
-  a native feature; the public `0.1` schema rejects those request fields.
+- Function tools are translated for OpenAI, Anthropic, and Gemini. Tool
+  execution remains the responsibility of the calling Agent/harness.
+- OpenAI tool-call argument strings pass through unchanged. Anthropic native
+  `tool_use`/`tool_result` blocks and Gemini
+  `functionCall`/`functionResponse` parts are normalized to the OpenAI wire
+  shape.
+- Streamed argument fragments remain ordered, opaque strings and are not
+  assembled or logged by the gateway.
+- `json_object` and `json_schema` are enabled only for configured models whose
+  adapters can represent those modes. Capability filtering happens before an
+  upstream request.
+- Gemini cannot represent an explicit `parallel_tool_calls: false`; that
+  combination is filtered through `parallel_tool_control` instead of silently
+  weakening the request. `strict: true` similarly requires `strict_tools`.

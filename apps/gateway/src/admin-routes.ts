@@ -492,6 +492,7 @@ export async function registerAdminRoutes(
           policy: {
             allowed_model_patterns: key.policy.allowedModelPatterns,
             allow_streaming: key.policy.allowStreaming,
+            allow_tools: key.policy.allowTools,
             requests_per_minute: key.policy.requestsPerMinute,
             max_concurrent_requests: key.policy.maxConcurrentRequests,
           },
@@ -530,6 +531,7 @@ export async function registerAdminRoutes(
             environment: request.body.environment,
             allowedModelPatterns: request.body.allowed_model_patterns,
             allowStreaming: request.body.allow_streaming,
+            allowTools: request.body.allow_tools ?? false,
             requestsPerMinute: request.body.requests_per_minute,
             maxConcurrentRequests: request.body.max_concurrent_requests,
             expiresAt:

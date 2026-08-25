@@ -298,6 +298,7 @@ byId('key-form').addEventListener('submit', async (event) => {
           .map((v) => v.trim())
           .filter(Boolean),
         allow_streaming: byId('key-streaming').checked,
+        allow_tools: byId('key-tools').checked,
         requests_per_minute: Number(byId('key-rpm').value),
         max_concurrent_requests: Number(byId('key-concurrency').value),
         expires_at: null,

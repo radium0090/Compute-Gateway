@@ -72,10 +72,17 @@ providers:
     base_url: https://api.openai.com/v1
     models:
       gpt-5-mini:
-        capabilities: [chat, streaming]
+        capabilities:
+          [chat, streaming, tools, strict_tools, parallel_tool_control, json_object, json_schema]
 
 aliases:
   rax/fast:
+    candidates:
+      - provider: openai-primary
+        model: gpt-5-mini
+        weight: 100
+  rax/agent:
+    required_capabilities: [chat, tools]
     candidates:
       - provider: openai-primary
         model: gpt-5-mini
@@ -106,6 +113,14 @@ the total timeout.
 less than `max_attempts`; the connect timeout must be less than the total
 timeout; and the minimum attempt budget cannot exceed the total timeout.
 Zero-weight alias candidates are fallback-only.
+
+Supported capability identifiers are `chat`, `streaming`, `tools`,
+`strict_tools`, `parallel_tool_control`, `json_object`, and `json_schema`.
+They describe a verified provider-model and adapter combination, not an
+assumption about an entire provider. `strict_tools` is required when a function
+sets `strict: true`; `parallel_tool_control` is required when a request
+explicitly disables parallel calls. Agent aliases SHOULD require `tools` so a
+policy edit cannot accidentally add a text-only candidate.
 
 When `RCG_REDIS_URL` is unset outside production, limits and circuit state
 are process-local and suitable only for development or a single replica. In

@@ -1,11 +1,65 @@
 import type { ApiKey } from './api-key.js';
 
-export type CanonicalMessageRole = 'system' | 'user' | 'assistant';
+export type CanonicalMessageRole =
+  'system' | 'developer' | 'user' | 'assistant' | 'tool';
 
-export interface CanonicalChatMessage {
-  readonly role: CanonicalMessageRole;
-  readonly content: string;
+export interface CanonicalToolCall {
+  readonly id: string;
+  readonly type: 'function';
+  readonly function: {
+    readonly name: string;
+    /** JSON-encoded arguments are kept opaque until the agent executes them. */
+    readonly arguments: string;
+  };
 }
+
+export type CanonicalChatMessage =
+  | {
+      readonly role: 'system' | 'developer' | 'user';
+      readonly content: string;
+    }
+  | {
+      readonly role: 'assistant';
+      readonly content: string | null;
+      readonly toolCalls?: readonly CanonicalToolCall[];
+    }
+  | {
+      readonly role: 'tool';
+      readonly content: string;
+      readonly toolCallId: string;
+    };
+
+export interface CanonicalFunctionTool {
+  readonly type: 'function';
+  readonly function: {
+    readonly name: string;
+    readonly description?: string;
+    readonly parameters?: Readonly<Record<string, unknown>>;
+    readonly strict?: boolean;
+  };
+}
+
+export type CanonicalToolChoice =
+  | 'none'
+  | 'auto'
+  | 'required'
+  | {
+      readonly type: 'function';
+      readonly function: { readonly name: string };
+    };
+
+export type CanonicalResponseFormat =
+  | { readonly type: 'text' }
+  | { readonly type: 'json_object' }
+  | {
+      readonly type: 'json_schema';
+      readonly jsonSchema: {
+        readonly name: string;
+        readonly description?: string;
+        readonly schema: Readonly<Record<string, unknown>>;
+        readonly strict?: boolean;
+      };
+    };
 
 export interface CanonicalChatRequest {
   readonly model: string;
@@ -15,6 +69,10 @@ export interface CanonicalChatRequest {
   readonly maxTokens?: number;
   readonly stop?: string | readonly string[];
   readonly user?: string;
+  readonly tools?: readonly CanonicalFunctionTool[];
+  readonly toolChoice?: CanonicalToolChoice;
+  readonly parallelToolCalls?: boolean;
+  readonly responseFormat?: CanonicalResponseFormat;
 }
 
 export type CanonicalFinishReason =
@@ -27,7 +85,8 @@ export interface CanonicalUsage {
 }
 
 export interface CanonicalChatResponse {
-  readonly content: string;
+  readonly content: string | null;
+  readonly toolCalls?: readonly CanonicalToolCall[];
   readonly finishReason: CanonicalFinishReason;
   readonly usage: CanonicalUsage;
 }
@@ -37,6 +96,15 @@ export interface CanonicalChatChunk {
     readonly delta: {
       readonly role?: 'assistant';
       readonly content?: string;
+      readonly toolCalls?: readonly {
+        readonly index: number;
+        readonly id?: string;
+        readonly type?: 'function';
+        readonly function?: {
+          readonly name?: string;
+          readonly arguments?: string;
+        };
+      }[];
     };
     readonly finishReason: CanonicalFinishReason;
   };
@@ -47,11 +115,82 @@ export interface ProviderCapabilities {
   readonly chat: true;
   readonly streaming: boolean;
   readonly tools: boolean;
+  readonly strictTools?: boolean;
+  readonly parallelToolControl?: boolean;
   readonly jsonObject: boolean;
   readonly jsonSchema: boolean;
   readonly systemMessages: boolean;
   readonly maxInputTokens?: number;
   readonly maxOutputTokens?: number;
+}
+
+export type ProviderCapability =
+  | 'chat'
+  | 'streaming'
+  | 'tools'
+  | 'strict_tools'
+  | 'parallel_tool_control'
+  | 'json_object'
+  | 'json_schema';
+
+/** Derives the provider features that must survive routing and translation. */
+export function requiredProviderCapabilities(
+  request: CanonicalChatRequest,
+  streaming: boolean,
+): readonly ProviderCapability[] {
+  const required: ProviderCapability[] = ['chat'];
+  if (streaming) required.push('streaming');
+  if (
+    request.tools !== undefined ||
+    request.messages.some(
+      (message) =>
+        message.role === 'tool' ||
+        (message.role === 'assistant' && message.toolCalls !== undefined),
+    )
+  ) {
+    required.push('tools');
+  }
+  if (request.tools?.some((tool) => tool.function.strict === true) === true) {
+    required.push('strict_tools');
+  }
+  if (request.parallelToolCalls === false) {
+    required.push('parallel_tool_control');
+  }
+  if (request.responseFormat?.type === 'json_object') {
+    required.push('json_object');
+  }
+  if (request.responseFormat?.type === 'json_schema') {
+    required.push('json_schema');
+  }
+  return required;
+}
+
+/** Checks declared model capabilities without importing provider code. */
+export function providerSupportsChatRequest(
+  capabilities: ProviderCapabilities,
+  request: CanonicalChatRequest,
+  streaming: boolean,
+): boolean {
+  return requiredProviderCapabilities(request, streaming).every(
+    (capability) => {
+      switch (capability) {
+        case 'chat':
+          return capabilities.chat;
+        case 'streaming':
+          return capabilities.streaming;
+        case 'tools':
+          return capabilities.tools;
+        case 'strict_tools':
+          return capabilities.strictTools === true;
+        case 'parallel_tool_control':
+          return capabilities.parallelToolControl === true;
+        case 'json_object':
+          return capabilities.jsonObject;
+        case 'json_schema':
+          return capabilities.jsonSchema;
+      }
+    },
+  );
 }
 
 export type ProviderErrorClass =
@@ -141,6 +280,7 @@ export interface RouteResolver {
     readonly requestId: string;
     readonly apiKey: ApiKey;
     readonly requireStreaming?: boolean;
+    readonly requiredCapabilities?: readonly ProviderCapability[];
   }): RouteResolutionResult;
 }
 
@@ -151,6 +291,7 @@ export interface RoutePlanner {
     readonly requestId: string;
     readonly apiKey: ApiKey;
     readonly requireStreaming?: boolean;
+    readonly requiredCapabilities?: readonly ProviderCapability[];
   }): RoutePlanResolutionResult;
 }
 

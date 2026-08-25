@@ -47,6 +47,7 @@ Authorization is deny-by-default. A key policy can allow:
 
 - public aliases or qualified models;
 - streaming;
+- Agent function tools (disabled unless explicitly granted);
 - requests per minute and concurrent requests;
 - maximum request/output tokens where enforceable.
 
@@ -79,7 +80,8 @@ The release includes an operator CLI:
 
 ```bash
 rax-compute-gateway keys create --tenant-id 123e4567-e89b-42d3-a456-426614174000 \
-  --name local-app --environment dev --models 'rax/*' --allow-streaming
+  --name local-agent --environment dev --models 'rax/*' \
+  --allow-streaming --allow-tools
 rax-compute-gateway keys revoke --id 223e4567-e89b-42d3-a456-426614174000
 ```
 

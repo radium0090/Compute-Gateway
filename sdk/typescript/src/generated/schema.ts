@@ -95,10 +95,32 @@ export interface components {
   schemas: {
     readonly ChatCompletionRequest: {
       readonly model: string;
-      readonly messages: readonly {
-        readonly role: 'system' | 'user' | 'assistant';
-        readonly content: string;
-      }[];
+      readonly messages: readonly (
+        | {
+            readonly role: 'system' | 'developer' | 'user';
+            readonly content: string;
+          }
+        | {
+            /** @constant */
+            readonly role: 'assistant';
+            readonly content?: string | null;
+            readonly tool_calls?: readonly {
+              readonly id: string;
+              /** @constant */
+              readonly type: 'function';
+              readonly function: {
+                readonly name: string;
+                readonly arguments: string;
+              };
+            }[];
+          }
+        | {
+            /** @constant */
+            readonly role: 'tool';
+            readonly content: string;
+            readonly tool_call_id: string;
+          }
+      )[];
       readonly temperature?: number;
       readonly top_p?: number;
       readonly max_tokens?: number;
@@ -111,6 +133,51 @@ export interface components {
        */
       readonly n?: 1;
       readonly user?: string;
+      readonly tools?: readonly {
+        /** @constant */
+        readonly type: 'function';
+        readonly function: {
+          readonly name: string;
+          readonly description?: string;
+          readonly parameters?: {
+            readonly [key: string]: unknown;
+          };
+          readonly strict?: boolean;
+        };
+      }[];
+      readonly tool_choice?:
+        | 'none'
+        | 'auto'
+        | 'required'
+        | {
+            /** @constant */
+            readonly type: 'function';
+            readonly function: {
+              readonly name: string;
+            };
+          };
+      readonly parallel_tool_calls?: boolean;
+      readonly response_format?:
+        | {
+            /** @constant */
+            readonly type: 'text';
+          }
+        | {
+            /** @constant */
+            readonly type: 'json_object';
+          }
+        | {
+            /** @constant */
+            readonly type: 'json_schema';
+            readonly json_schema: {
+              readonly name: string;
+              readonly description?: string;
+              readonly schema: {
+                readonly [key: string]: unknown;
+              };
+              readonly strict?: boolean;
+            };
+          };
     };
     readonly ChatCompletionResponse: {
       readonly id: string;
@@ -124,7 +191,16 @@ export interface components {
         readonly message: {
           /** @constant */
           readonly role: 'assistant';
-          readonly content: string;
+          readonly content: string | null;
+          readonly tool_calls?: readonly {
+            readonly id: string;
+            /** @constant */
+            readonly type: 'function';
+            readonly function: {
+              readonly name: string;
+              readonly arguments: string;
+            };
+          }[];
         };
         readonly finish_reason:
           'stop' | 'length' | 'tool_calls' | 'content_filter' | null;
@@ -154,6 +230,16 @@ export interface components {
           /** @constant */
           readonly role?: 'assistant';
           readonly content?: string;
+          readonly tool_calls?: readonly {
+            readonly index: number;
+            readonly id?: string;
+            /** @constant */
+            readonly type?: 'function';
+            readonly function?: {
+              readonly name?: string;
+              readonly arguments?: string;
+            };
+          }[];
         };
         readonly finish_reason:
           'stop' | 'length' | 'tool_calls' | 'content_filter' | null;

@@ -21,7 +21,7 @@ and the release candidate are approved.
 ## TypeScript example
 
 ```ts
-import { RAX Compute Gateway } from "@rax-digital/compute-gateway-sdk";
+import { RaxComputeGateway } from "@rax-digital/compute-gateway-sdk";
 
 const gateway = new RaxComputeGateway({
   apiKey: process.env.RCG_API_KEY!,
@@ -124,3 +124,8 @@ The deterministic suite exercises pinned current OpenAI Node and Python SDKs.
 A protected, manual workflow sends bounded completion and streaming requests
 through the Node SDK to each real provider adapter; the provider-independent
 wire format is also parsed by the Python SDK fixture.
+
+As of `v0.3.0`, generated request/response types include function tools,
+tool-result messages, streamed tool-call deltas, and structured output. Agent
+frameworks may use their OpenAI-compatible client directly; the RAX convenience
+SDK does not execute tools.

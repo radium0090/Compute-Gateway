@@ -1,7 +1,10 @@
 import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 
-import { ProviderStreamFailure } from '@rax-digital/domain';
+import {
+  ProviderStreamFailure,
+  providerSupportsChatRequest,
+} from '@rax-digital/domain';
 import type {
   CanonicalChatChunk,
   CanonicalChatRequest,
@@ -24,7 +27,15 @@ const UsageSchema = Type.Object({
 const ResponseSchema = Type.Object({
   role: Type.Literal('assistant'),
   content: Type.Array(
-    Type.Object({ type: Type.Literal('text'), text: Type.String() }),
+    Type.Union([
+      Type.Object({ type: Type.Literal('text'), text: Type.String() }),
+      Type.Object({
+        type: Type.Literal('tool_use'),
+        id: Type.String(),
+        name: Type.String(),
+        input: Type.Record(Type.String(), Type.Unknown()),
+      }),
+    ]),
   ),
   stop_reason: Type.String(),
   usage: UsageSchema,
@@ -227,15 +238,76 @@ function buildRequestBody(
     return { ok: false };
   }
   const system: string[] = [];
-  const messages: { role: 'user' | 'assistant'; content: string }[] = [];
+  const messages: {
+    role: 'user' | 'assistant';
+    content:
+      | string
+      | readonly (
+          | { readonly type: 'text'; readonly text: string }
+          | {
+              readonly type: 'tool_use';
+              readonly id: string;
+              readonly name: string;
+              readonly input: Readonly<Record<string, unknown>>;
+            }
+          | {
+              readonly type: 'tool_result';
+              readonly tool_use_id: string;
+              readonly content: string;
+            }
+        )[];
+  }[] = [];
   let conversationStarted = false;
   for (const message of request.messages) {
-    if (message.role === 'system') {
+    if (message.role === 'system' || message.role === 'developer') {
       if (conversationStarted) return { ok: false };
       system.push(message.content);
+    } else if (message.role === 'tool') {
+      conversationStarted = true;
+      messages.push({
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: message.toolCallId,
+            content: message.content,
+          },
+        ],
+      });
+    } else if (message.role === 'assistant') {
+      conversationStarted = true;
+      const blocks: (
+        | { readonly type: 'text'; readonly text: string }
+        | {
+            readonly type: 'tool_use';
+            readonly id: string;
+            readonly name: string;
+            readonly input: Readonly<Record<string, unknown>>;
+          }
+      )[] = [];
+      if (message.content !== null && message.content.length > 0) {
+        blocks.push({ type: 'text', text: message.content });
+      }
+      for (const toolCall of message.toolCalls ?? []) {
+        let input: unknown;
+        try {
+          input = JSON.parse(toolCall.function.arguments) as unknown;
+        } catch {
+          return { ok: false };
+        }
+        if (!isRecord(input)) return { ok: false };
+        blocks.push({
+          type: 'tool_use',
+          id: toolCall.id,
+          name: toolCall.function.name,
+          input,
+        });
+      }
+      if (blocks.length === 0) return { ok: false };
+      messages.push({ role: 'assistant', content: blocks });
     } else {
       conversationStarted = true;
-      messages.push({ role: message.role, content: message.content });
+      messages.push({ role: 'user', content: message.content });
     }
   }
   if (messages.length === 0) return { ok: false };
@@ -260,6 +332,49 @@ function buildRequestBody(
       ...(request.user === undefined
         ? {}
         : { metadata: { user_id: request.user } }),
+      ...(request.tools === undefined
+        ? {}
+        : {
+            tools: request.tools.map((tool) => ({
+              name: tool.function.name,
+              ...(tool.function.description === undefined
+                ? {}
+                : { description: tool.function.description }),
+              input_schema: tool.function.parameters ?? {
+                type: 'object',
+                properties: {},
+              },
+              ...(tool.function.strict === undefined
+                ? {}
+                : { strict: tool.function.strict }),
+            })),
+          }),
+      ...(request.toolChoice === undefined &&
+      request.parallelToolCalls !== false
+        ? {}
+        : {
+            tool_choice:
+              request.toolChoice === undefined
+                ? { type: 'auto', disable_parallel_tool_use: true }
+                : typeof request.toolChoice === 'string'
+                  ? {
+                      type:
+                        request.toolChoice === 'required'
+                          ? 'any'
+                          : request.toolChoice,
+                      ...(request.parallelToolCalls === false &&
+                      request.toolChoice !== 'none'
+                        ? { disable_parallel_tool_use: true }
+                        : {}),
+                    }
+                  : {
+                      type: 'tool',
+                      name: request.toolChoice.function.name,
+                      ...(request.parallelToolCalls === false
+                        ? { disable_parallel_tool_use: true }
+                        : {}),
+                    },
+          }),
       stream,
     }),
   };
@@ -349,8 +464,39 @@ function handleStreamEvent(
     }
     case 'content_block_start': {
       const block = data.content_block;
-      if (!isRecord(block) || block.type !== 'text') throw streamFailure();
-      if (typeof block.text !== 'string') throw streamFailure();
+      if (!isRecord(block)) throw streamFailure();
+      if (block.type === 'tool_use') {
+        if (
+          !Number.isInteger(data.index) ||
+          typeof block.id !== 'string' ||
+          typeof block.name !== 'string'
+        ) {
+          throw streamFailure();
+        }
+        return {
+          chunks: [
+            {
+              choice: {
+                delta: {
+                  toolCalls: [
+                    {
+                      index: data.index as number,
+                      id: block.id,
+                      type: 'function',
+                      function: { name: block.name, arguments: '' },
+                    },
+                  ],
+                },
+                finishReason: null,
+              },
+            },
+          ],
+          done: false,
+        };
+      }
+      if (block.type !== 'text' || typeof block.text !== 'string') {
+        throw streamFailure();
+      }
       return {
         chunks:
           block.text.length === 0
@@ -368,11 +514,34 @@ function handleStreamEvent(
     }
     case 'content_block_delta': {
       const delta = data.delta;
-      if (
-        !isRecord(delta) ||
-        delta.type !== 'text_delta' ||
-        typeof delta.text !== 'string'
-      ) {
+      if (!isRecord(delta)) throw streamFailure();
+      if (delta.type === 'input_json_delta') {
+        if (
+          !Number.isInteger(data.index) ||
+          typeof delta.partial_json !== 'string'
+        ) {
+          throw streamFailure();
+        }
+        return {
+          chunks: [
+            {
+              choice: {
+                delta: {
+                  toolCalls: [
+                    {
+                      index: data.index as number,
+                      function: { arguments: delta.partial_json },
+                    },
+                  ],
+                },
+                finishReason: null,
+              },
+            },
+          ],
+          done: false,
+        };
+      }
+      if (delta.type !== 'text_delta' || typeof delta.text !== 'string') {
         throw streamFailure();
       }
       return {
@@ -469,10 +638,17 @@ export class AnthropicAdapter implements ProviderAdapter {
     request: CanonicalChatRequest,
     context: ProviderCallContext,
   ): Promise<ProviderCallResult> {
-    if (this.capabilities(context.providerModel) === null) {
+    const capabilities = this.capabilities(context.providerModel);
+    if (capabilities === null) {
       return {
         ok: false,
         error: requestError('provider_model_not_configured'),
+      };
+    }
+    if (!providerSupportsChatRequest(capabilities, request, false)) {
+      return {
+        ok: false,
+        error: requestError('provider_parameter_unsupported'),
       };
     }
     const translated = buildRequestBody(
@@ -523,10 +699,25 @@ export class AnthropicAdapter implements ProviderAdapter {
       return this.protocolError();
     }
     const input = promptTokens(body.usage);
+    const text = body.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('');
+    const toolCalls = body.content
+      .filter((block) => block.type === 'tool_use')
+      .map((block) => ({
+        id: block.id,
+        type: 'function' as const,
+        function: {
+          name: block.name,
+          arguments: JSON.stringify(block.input),
+        },
+      }));
     return {
       ok: true,
       response: {
-        content: body.content.map((block) => block.text).join(''),
+        content: text.length === 0 && toolCalls.length > 0 ? null : text,
+        ...(toolCalls.length === 0 ? {} : { toolCalls }),
         finishReason: finishReason(body.stop_reason),
         usage: {
           promptTokens: input,
@@ -541,7 +732,11 @@ export class AnthropicAdapter implements ProviderAdapter {
     request: CanonicalChatRequest,
     context: ProviderCallContext,
   ): Promise<ProviderStreamCallResult> {
-    if (this.capabilities(context.providerModel)?.streaming !== true) {
+    const capabilities = this.capabilities(context.providerModel);
+    if (
+      capabilities === null ||
+      !providerSupportsChatRequest(capabilities, request, true)
+    ) {
       return {
         ok: false,
         error: requestError('provider_streaming_not_configured'),

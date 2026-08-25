@@ -434,6 +434,7 @@ describe('AdminConsoleService', () => {
         environment: 'production',
         allowedModelPatterns: ['rax/*'],
         allowStreaming: true,
+        allowTools: true,
         requestsPerMinute: 60,
         maxConcurrentRequests: 10,
         expiresAt: null,
@@ -441,6 +442,7 @@ describe('AdminConsoleService', () => {
     });
 
     expect(created.credential).toMatch(/^rcg_prod_/);
+    expect(created.apiKey.policy.allowTools).toBe(true);
     expect(JSON.stringify(value.controls.keys)).not.toContain(
       created.credential,
     );

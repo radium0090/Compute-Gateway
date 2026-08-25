@@ -173,13 +173,23 @@ async function closeWithinGrace(
 }
 
 function modelCapabilities(
-  capabilities: readonly ('chat' | 'streaming' | 'tools' | 'json_schema')[],
+  capabilities: readonly (
+    | 'chat'
+    | 'streaming'
+    | 'tools'
+    | 'strict_tools'
+    | 'parallel_tool_control'
+    | 'json_object'
+    | 'json_schema'
+  )[],
 ): ProviderCapabilities {
   return {
     chat: true,
     streaming: capabilities.includes('streaming'),
     tools: capabilities.includes('tools'),
-    jsonObject: false,
+    strictTools: capabilities.includes('strict_tools'),
+    parallelToolControl: capabilities.includes('parallel_tool_control'),
+    jsonObject: capabilities.includes('json_object'),
     jsonSchema: capabilities.includes('json_schema'),
     systemMessages: true,
   };

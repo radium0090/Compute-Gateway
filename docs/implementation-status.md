@@ -1,6 +1,6 @@
 # Implementation status
 
-This page records the code-to-specification review updated on 2026-08-15.
+This page records the code-to-specification review updated on 2026-08-25.
 Accepted ADRs and the normative documents remain authoritative; this page is a
 status snapshot, not a new architecture decision.
 
@@ -10,7 +10,8 @@ The MVP implementation was published as signed
 [`v0.1.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0),
 and the operator and evaluation additions are published as
 [`v0.2.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.2.0).
-The public chat and model APIs, three providers,
+The `v0.3.0` candidate adds the bounded Agent tool-calling contract governed by
+ADR 0015. The public chat and model APIs, three providers,
 streaming, authentication, deterministic routing, fallback, bounded retries,
 rate/concurrency coordination, circuit breaking, PostgreSQL migrations,
 OpenTelemetry, SDK previews, and Docker/Kubernetes delivery assets are present.
@@ -38,6 +39,7 @@ rollback target; the public production stack remains healthy.
 | Requirement | Implementation status | Remaining evidence or limitation |
 | --- | --- | --- |
 | Chat completions and SSE | Implemented; contract, client-disconnect, and graceful-shutdown staging tests pass | Re-run lifecycle evidence after stream/runtime changes |
+| Agent tools and structured output | Function tools, tool-result messages, streamed tool deltas, per-key permission, and capability-safe routing implemented for the three adapters | Protected live tool smoke and production promotion are required before the `v0.3.0` release |
 | OpenAI, Anthropic, Gemini | Implemented; shared conformance and protected live smoke pass | Re-run when provider model/API configuration changes |
 | API keys and model permissions | HMAC-backed keys, status/expiry/environment checks, model/stream permissions, conservative input ceilings, and provider output caps implemented | Provider-native tokenizer accounting and detailed cost reporting remain deferred |
 | Routing and resilience | Stable weighted primary selection, ordered fallback, bounded retry, deadlines, concurrency and circuit state implemented | Deployment-region and operator-disabled route filtering described in `docs/router.md` has no policy field yet |
@@ -54,14 +56,10 @@ These items require a scoped issue or ADR before behavior changes:
    operator-disabled route state. The version 1 policy schema currently has no
    region or enabled/disabled fields; open-circuit filtering happens during
    execution instead of static plan construction.
-2. The provider capability domain supports `jsonObject`, `systemMessages`, and
-   model token limits, while policy version 1 exposes only `chat`, `streaming`,
-   `tools`, and `json_schema`. Tool and structured-output request fields remain
-   explicit MVP non-goals.
-3. Runtime policy updates are described as atomic in `docs/router.md`, but the
+2. Runtime policy updates are described as atomic in `docs/router.md`, but the
    current process loads one validated policy at startup and does not hot
    reload it.
-4. `docs/coding-standards.md` calls for property tests covering weighted
+3. `docs/coding-standards.md` calls for property tests covering weighted
    routing, deadline budgets, and redaction. The current suite has deterministic
    examples and conformance tests for these paths, but no property-test harness.
 

@@ -10,6 +10,9 @@ const CapabilitySchema = Type.Union([
   Type.Literal('chat'),
   Type.Literal('streaming'),
   Type.Literal('tools'),
+  Type.Literal('strict_tools'),
+  Type.Literal('parallel_tool_control'),
+  Type.Literal('json_object'),
   Type.Literal('json_schema'),
 ]);
 

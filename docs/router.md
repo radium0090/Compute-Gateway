@@ -8,7 +8,8 @@ a route.
 
 ## Model identifiers
 
-- Public alias: `rax/fast`
+- Public aliases: `rax/fast` for general chat and `rax/agent` for tool-capable
+  Agent traffic
 - Provider-qualified model: `openai/gpt-5-mini`
 - Bare provider model names are rejected to avoid ambiguity.
 
@@ -29,6 +30,12 @@ aliases:
 
 A zero-weight candidate is fallback-only. Model names are examples and MUST be
 configured; code must not assume provider catalogs remain static.
+
+Every request derives additional requirements from its shape: streaming adds
+`streaming`, function definitions/history add `tools`, and structured output
+adds `json_object` or `json_schema`. The planner intersects those requirements
+with alias requirements before selecting or falling back. This prevents an
+Agent request from falling back to a text-only model.
 
 ## Selection algorithm
 

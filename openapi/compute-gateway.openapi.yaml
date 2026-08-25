@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: RAX Compute Gateway API
   description: OpenAI-compatible API for RAX Compute Gateway.
-  version: 0.2.0
+  version: 0.3.0
   license:
     name: Apache-2.0
     identifier: Apache-2.0
@@ -179,23 +179,88 @@ components:
           maxItems: 1024
           type: array
           items:
-            additionalProperties: false
-            type: object
-            required:
-              - role
-              - content
-            properties:
-              role:
-                anyOf:
-                  - const: system
+            anyOf:
+              - additionalProperties: false
+                type: object
+                required:
+                  - role
+                  - content
+                properties:
+                  role:
+                    anyOf:
+                      - const: system
+                        type: string
+                      - const: developer
+                        type: string
+                      - const: user
+                        type: string
+                  content:
+                    maxLength: 1000000
                     type: string
-                  - const: user
+              - additionalProperties: false
+                minProperties: 2
+                type: object
+                required:
+                  - role
+                properties:
+                  role:
+                    const: assistant
                     type: string
-                  - const: assistant
+                  content:
+                    anyOf:
+                      - maxLength: 1000000
+                        type: string
+                      - type: "null"
+                  tool_calls:
+                    minItems: 1
+                    maxItems: 128
+                    type: array
+                    items: &a2
+                      additionalProperties: false
+                      type: object
+                      required:
+                        - id
+                        - type
+                        - function
+                      properties:
+                        id:
+                          minLength: 1
+                          maxLength: 256
+                          type: string
+                        type:
+                          const: function
+                          type: string
+                        function:
+                          additionalProperties: false
+                          type: object
+                          required:
+                            - name
+                            - arguments
+                          properties:
+                            name:
+                              minLength: 1
+                              maxLength: 256
+                              type: string
+                            arguments:
+                              maxLength: 1000000
+                              type: string
+              - additionalProperties: false
+                type: object
+                required:
+                  - role
+                  - content
+                  - tool_call_id
+                properties:
+                  role:
+                    const: tool
                     type: string
-              content:
-                maxLength: 1000000
-                type: string
+                  content:
+                    maxLength: 1000000
+                    type: string
+                  tool_call_id:
+                    minLength: 1
+                    maxLength: 256
+                    type: string
         temperature:
           minimum: 0
           maximum: 2
@@ -228,6 +293,116 @@ components:
           minLength: 1
           maxLength: 256
           type: string
+        tools:
+          minItems: 1
+          maxItems: 128
+          type: array
+          items:
+            additionalProperties: false
+            type: object
+            required:
+              - type
+              - function
+            properties:
+              type:
+                const: function
+                type: string
+              function:
+                additionalProperties: false
+                type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    minLength: 1
+                    maxLength: 64
+                    pattern: ^[A-Za-z0-9_-]+$
+                    type: string
+                  description:
+                    maxLength: 8192
+                    type: string
+                  parameters:
+                    additionalProperties: true
+                    type: object
+                    properties: {}
+                  strict:
+                    type: boolean
+        tool_choice:
+          anyOf:
+            - const: none
+              type: string
+            - const: auto
+              type: string
+            - const: required
+              type: string
+            - additionalProperties: false
+              type: object
+              required:
+                - type
+                - function
+              properties:
+                type:
+                  const: function
+                  type: string
+                function:
+                  additionalProperties: false
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      minLength: 1
+                      maxLength: 64
+                      type: string
+        parallel_tool_calls:
+          type: boolean
+        response_format:
+          anyOf:
+            - additionalProperties: false
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  const: text
+                  type: string
+            - additionalProperties: false
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  const: json_object
+                  type: string
+            - additionalProperties: false
+              type: object
+              required:
+                - type
+                - json_schema
+              properties:
+                type:
+                  const: json_schema
+                  type: string
+                json_schema:
+                  additionalProperties: false
+                  type: object
+                  required:
+                    - name
+                    - schema
+                  properties:
+                    name:
+                      minLength: 1
+                      maxLength: 64
+                      type: string
+                    description:
+                      maxLength: 8192
+                      type: string
+                    schema:
+                      additionalProperties: true
+                      type: object
+                      properties: {}
+                    strict:
+                      type: boolean
     ChatCompletionResponse:
       additionalProperties: false
       type: object
@@ -276,7 +451,14 @@ components:
                     const: assistant
                     type: string
                   content:
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                  tool_calls:
+                    minItems: 1
+                    maxItems: 128
+                    type: array
+                    items: *a2
               finish_reason:
                 anyOf:
                   - const: stop
@@ -367,6 +549,32 @@ components:
                     type: string
                   content:
                     type: string
+                  tool_calls:
+                    minItems: 1
+                    maxItems: 128
+                    type: array
+                    items:
+                      additionalProperties: false
+                      type: object
+                      required:
+                        - index
+                      properties:
+                        index:
+                          minimum: 0
+                          type: integer
+                        id:
+                          type: string
+                        type:
+                          const: function
+                          type: string
+                        function:
+                          additionalProperties: false
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            arguments:
+                              type: string
               finish_reason:
                 anyOf:
                   - const: stop

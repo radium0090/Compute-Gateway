@@ -22,6 +22,7 @@ documents.
 | [0012](0012-rax-digital-product-identity.md) | RAX Digital product identity and tenant separation | Accepted |
 | [0013](0013-admin-control-plane.md) | Embedded administrative control plane | Accepted |
 | [0014](0014-github-authenticated-demo-claims.md) | GitHub-authenticated ephemeral demo claims | Accepted |
+| [0015](0015-agent-tool-calling-compatibility.md) | Bounded agent tool-calling compatibility | Accepted |
 
 ## Format and lifecycle
 

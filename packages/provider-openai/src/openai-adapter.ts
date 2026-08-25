@@ -1,7 +1,10 @@
 import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 
-import { ProviderStreamFailure } from '@rax-digital/domain';
+import {
+  ProviderStreamFailure,
+  providerSupportsChatRequest,
+} from '@rax-digital/domain';
 import type {
   CanonicalChatChunk,
   CanonicalChatRequest,
@@ -19,12 +22,34 @@ const OpenAiUsageSchema = Type.Object({
   total_tokens: Type.Integer({ minimum: 0 }),
 });
 
+const OpenAiToolCallSchema = Type.Object({
+  id: Type.String(),
+  type: Type.Literal('function'),
+  function: Type.Object({
+    name: Type.String(),
+    arguments: Type.String(),
+  }),
+});
+
+const OpenAiToolCallDeltaSchema = Type.Object({
+  index: Type.Integer({ minimum: 0 }),
+  id: Type.Optional(Type.String()),
+  type: Type.Optional(Type.Literal('function')),
+  function: Type.Optional(
+    Type.Object({
+      name: Type.Optional(Type.String()),
+      arguments: Type.Optional(Type.String()),
+    }),
+  ),
+});
+
 const OpenAiResponseSchema = Type.Object({
   choices: Type.Array(
     Type.Object({
       message: Type.Object({
         role: Type.Literal('assistant'),
-        content: Type.String(),
+        content: Type.Union([Type.String(), Type.Null()]),
+        tool_calls: Type.Optional(Type.Array(OpenAiToolCallSchema)),
       }),
       finish_reason: Type.Union([
         Type.Literal('stop'),
@@ -46,6 +71,7 @@ const OpenAiStreamChunkSchema = Type.Object({
       delta: Type.Object({
         role: Type.Optional(Type.Literal('assistant')),
         content: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+        tool_calls: Type.Optional(Type.Array(OpenAiToolCallDeltaSchema)),
       }),
       finish_reason: Type.Union([
         Type.Literal('stop'),
@@ -221,9 +247,28 @@ function requestBody(
   providerModel: string,
   stream: boolean,
 ): string {
+  const messages = request.messages.map((message) => {
+    if (message.role === 'tool') {
+      return {
+        role: message.role,
+        content: message.content,
+        tool_call_id: message.toolCallId,
+      };
+    }
+    if (message.role === 'assistant') {
+      return {
+        role: message.role,
+        content: message.content,
+        ...(message.toolCalls === undefined
+          ? {}
+          : { tool_calls: message.toolCalls }),
+      };
+    }
+    return message;
+  });
   return JSON.stringify({
     model: providerModel,
-    messages: request.messages,
+    messages,
     ...(request.temperature === undefined
       ? {}
       : { temperature: request.temperature }),
@@ -233,6 +278,24 @@ function requestBody(
       : { max_completion_tokens: request.maxTokens }),
     ...(request.stop === undefined ? {} : { stop: request.stop }),
     ...(request.user === undefined ? {} : { user: request.user }),
+    ...(request.tools === undefined ? {} : { tools: request.tools }),
+    ...(request.toolChoice === undefined
+      ? {}
+      : { tool_choice: request.toolChoice }),
+    ...(request.parallelToolCalls === undefined
+      ? {}
+      : { parallel_tool_calls: request.parallelToolCalls }),
+    ...(request.responseFormat === undefined
+      ? {}
+      : {
+          response_format:
+            request.responseFormat.type === 'json_schema'
+              ? {
+                  type: 'json_schema',
+                  json_schema: request.responseFormat.jsonSchema,
+                }
+              : request.responseFormat,
+        }),
     n: 1,
     stream,
     ...(stream ? { stream_options: { include_usage: true } } : {}),
@@ -293,6 +356,22 @@ function parseStreamEvent(event: string): ParsedStreamEvent {
                 ...(typeof choice.delta.content === 'string'
                   ? { content: choice.delta.content }
                   : {}),
+                ...(choice.delta.tool_calls === undefined
+                  ? {}
+                  : {
+                      toolCalls: choice.delta.tool_calls.map((toolCall) => ({
+                        index: toolCall.index,
+                        ...(toolCall.id === undefined
+                          ? {}
+                          : { id: toolCall.id }),
+                        ...(toolCall.type === undefined
+                          ? {}
+                          : { type: toolCall.type }),
+                        ...(toolCall.function === undefined
+                          ? {}
+                          : { function: toolCall.function }),
+                      })),
+                    }),
               },
               finishReason: choice.finish_reason,
             },
@@ -338,12 +417,23 @@ export class OpenAiAdapter implements ProviderAdapter {
     request: CanonicalChatRequest,
     context: ProviderCallContext,
   ): Promise<ProviderCallResult> {
-    if (this.capabilities(context.providerModel) === null) {
+    const capabilities = this.capabilities(context.providerModel);
+    if (capabilities === null) {
       return {
         ok: false,
         error: {
           class: 'request',
           code: 'provider_model_not_configured',
+          retryable: false,
+        },
+      };
+    }
+    if (!providerSupportsChatRequest(capabilities, request, false)) {
+      return {
+        ok: false,
+        error: {
+          class: 'request',
+          code: 'provider_parameter_unsupported',
           retryable: false,
         },
       };
@@ -396,6 +486,9 @@ export class OpenAiAdapter implements ProviderAdapter {
       ok: true,
       response: {
         content: firstChoice.message.content,
+        ...(firstChoice.message.tool_calls === undefined
+          ? {}
+          : { toolCalls: firstChoice.message.tool_calls }),
         finishReason: firstChoice.finish_reason,
         usage: {
           promptTokens: body.usage.prompt_tokens,
@@ -411,7 +504,10 @@ export class OpenAiAdapter implements ProviderAdapter {
     context: ProviderCallContext,
   ): Promise<ProviderStreamCallResult> {
     const capabilities = this.capabilities(context.providerModel);
-    if (capabilities?.streaming !== true) {
+    if (
+      capabilities === null ||
+      !providerSupportsChatRequest(capabilities, request, true)
+    ) {
       return {
         ok: false,
         error: {

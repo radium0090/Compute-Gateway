@@ -80,7 +80,25 @@ async function withinDeadline<Value>(
 function toCanonical(request: ChatCompletionRequest): CanonicalChatRequest {
   return {
     model: request.model,
-    messages: request.messages,
+    messages: request.messages.map((message) => {
+      if (message.role === 'tool') {
+        return {
+          role: message.role,
+          content: message.content,
+          toolCallId: message.tool_call_id,
+        };
+      }
+      if (message.role === 'assistant') {
+        return {
+          role: message.role,
+          content: message.content ?? null,
+          ...(message.tool_calls === undefined
+            ? {}
+            : { toolCalls: message.tool_calls }),
+        };
+      }
+      return message;
+    }),
     ...(request.temperature === undefined
       ? {}
       : { temperature: request.temperature }),
@@ -90,6 +108,24 @@ function toCanonical(request: ChatCompletionRequest): CanonicalChatRequest {
       : { maxTokens: request.max_tokens }),
     ...(request.stop === undefined ? {} : { stop: request.stop }),
     ...(request.user === undefined ? {} : { user: request.user }),
+    ...(request.tools === undefined ? {} : { tools: request.tools }),
+    ...(request.tool_choice === undefined
+      ? {}
+      : { toolChoice: request.tool_choice }),
+    ...(request.parallel_tool_calls === undefined
+      ? {}
+      : { parallelToolCalls: request.parallel_tool_calls }),
+    ...(request.response_format === undefined
+      ? {}
+      : {
+          responseFormat:
+            request.response_format.type === 'json_schema'
+              ? {
+                  type: 'json_schema' as const,
+                  jsonSchema: request.response_format.json_schema,
+                }
+              : request.response_format,
+        }),
   };
 }
 
@@ -108,6 +144,8 @@ function toPublicChunk(
   metadata: CompletionMetadata,
   includeRole: boolean,
 ): ChatCompletionChunk {
+  const toolCalls = chunk.choice?.delta.toolCalls;
+  const content = chunk.choice?.delta.content;
   return {
     id: metadata.id,
     object: 'chat.completion.chunk',
@@ -121,7 +159,14 @@ function toPublicChunk(
               index: 0,
               delta: {
                 ...(includeRole ? { role: 'assistant' as const } : {}),
-                ...chunk.choice.delta,
+                ...(content === undefined ? {} : { content }),
+                ...(toolCalls === undefined
+                  ? {}
+                  : {
+                      tool_calls: toolCalls.map((toolCall) => ({
+                        ...toolCall,
+                      })),
+                    }),
               },
               finish_reason: chunk.choice.finishReason,
             },
@@ -416,7 +461,17 @@ export function registerChatCompletionRoute(
           choices: [
             {
               index: 0,
-              message: { role: 'assistant', content: result.response.content },
+              message: {
+                role: 'assistant',
+                content: result.response.content,
+                ...(result.response.toolCalls === undefined
+                  ? {}
+                  : {
+                      tool_calls: result.response.toolCalls.map((toolCall) => ({
+                        ...toolCall,
+                      })),
+                    }),
+              },
               finish_reason: result.response.finishReason,
             },
           ],

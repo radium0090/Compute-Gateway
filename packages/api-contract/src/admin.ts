@@ -39,6 +39,7 @@ export const AdminApiKeyCreateRequestSchema = Type.Object(
       { minItems: 1, maxItems: 50 },
     ),
     allow_streaming: Type.Boolean(),
+    allow_tools: Type.Optional(Type.Boolean({ default: false })),
     requests_per_minute: Type.Integer({ minimum: 1, maximum: 1_000_000 }),
     max_concurrent_requests: Type.Integer({ minimum: 1, maximum: 10_000 }),
     expires_at: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),

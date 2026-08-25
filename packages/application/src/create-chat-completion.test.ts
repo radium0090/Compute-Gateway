@@ -102,6 +102,119 @@ describe('CreateChatCompletionService', () => {
     expect(routed).toBe(false);
   });
 
+  it('denies tool use before routing when the API key lacks permission', async () => {
+    let routed = false;
+    const service = new CreateChatCompletionService(
+      {
+        authenticate: () => Promise.resolve({ authenticated: true, apiKey }),
+      },
+      {
+        resolve: () => {
+          routed = true;
+          return { ok: false, reason: 'model_not_found' };
+        },
+      },
+      new Map(),
+    );
+    const result = await service.execute({
+      credential: 'opaque',
+      requestId: 'req_tools_denied',
+      request: {
+        ...request,
+        tools: [
+          {
+            type: 'function',
+            function: { name: 'lookup', parameters: { type: 'object' } },
+          },
+        ],
+      },
+      signal: new AbortController().signal,
+    });
+    expect(result).toEqual({
+      ok: false,
+      failure: { kind: 'routing', reason: 'tools_not_allowed' },
+    });
+    expect(routed).toBe(false);
+  });
+
+  it('passes requested agent capabilities into route planning', async () => {
+    let plannedCapabilities: readonly string[] | undefined;
+    const planner: RoutePlanner = {
+      plan: (input) => {
+        plannedCapabilities = input.requiredCapabilities;
+        return {
+          ok: true,
+          plan: {
+            routes: [
+              {
+                providerRef: 'openai-primary',
+                provider: 'openai',
+                providerModel: 'model-a',
+              },
+            ],
+            candidateCount: 1,
+            selectionReason: 'qualified_model',
+          },
+        };
+      },
+    };
+    const agentProvider = provider();
+    agentProvider.capabilities = () => ({
+      chat: true,
+      streaming: true,
+      tools: true,
+      strictTools: true,
+      parallelToolControl: true,
+      jsonObject: true,
+      jsonSchema: true,
+      systemMessages: true,
+    });
+    const service = new CreateChatCompletionService(
+      {
+        authenticate: () =>
+          Promise.resolve({
+            authenticated: true,
+            apiKey: {
+              ...apiKey,
+              policy: { ...apiKey.policy, allowTools: true },
+            },
+          }),
+      },
+      planner,
+      new Map([['openai-primary', agentProvider]]),
+    );
+    await service.execute({
+      credential: 'opaque',
+      requestId: 'req_agent_caps',
+      request: {
+        ...request,
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'lookup',
+              parameters: { type: 'object' },
+              strict: true,
+            },
+          },
+        ],
+        parallelToolCalls: false,
+        responseFormat: {
+          type: 'json_schema',
+          jsonSchema: { name: 'result', schema: { type: 'object' } },
+        },
+      },
+      signal: new AbortController().signal,
+    });
+    expect(plannedCapabilities).toEqual([
+      'chat',
+      'tools',
+      'strict_tools',
+      'parallel_tool_control',
+      'json_schema',
+    ]);
+  });
+
   it('returns one normalized provider attempt', async () => {
     const authenticator: ClientAuthenticator = {
       authenticate: () => Promise.resolve({ authenticated: true, apiKey }),
