@@ -10,28 +10,34 @@ The MVP implementation was published as signed
 [`v0.1.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0),
 and the operator and evaluation additions are published as
 [`v0.2.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.2.0).
-The `v0.3.0` candidate adds the bounded Agent tool-calling contract governed by
-ADR 0015. The public chat and model APIs, three providers,
+The Agent compatibility release is published as
+[`v0.3.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.3.0)
+and implements the bounded tool-calling contract governed by ADR 0015. The
+public chat and model APIs, three providers,
 streaming, authentication, deterministic routing, fallback, bounded retries,
 rate/concurrency coordination, circuit breaking, PostgreSQL migrations,
 OpenTelemetry, SDK previews, and Docker/Kubernetes delivery assets are present.
 
-The protected live-provider workflow has passed non-streaming and streaming
-requests for OpenAI, Anthropic, and Gemini. Real PostgreSQL and Redis tests,
-the empty-install staging deployment, production backup/disposable restore
+The protected live-provider workflow has passed non-streaming, streaming, and
+forced function-tool requests for OpenAI, Anthropic, and Gemini. Real
+PostgreSQL and Redis tests, the empty-install staging deployment, production backup/disposable restore
 exercise, and protected staging provider/lifecycle verification have also
-passed for the candidate commit. The protected staging observability comparison
+passed for the release line. The protected staging observability comparison
 passed with zero provider failures and HTTP 5xx responses, active requests
 returning to zero, and concurrent-stream memory below the accepted threshold.
-The signed multi-architecture image was deployed by digest, reverified on
-staging, and published with checksums, SBOM, signature, and provenance.
+The v0.1.0 signed multi-architecture image was deployed by digest, reverified on
+staging, and published with checksums, SBOM, signature, and provenance; every
+later signed release repeats those artifact controls.
 
 ADR 0012 establishes RAX Digital as the operator and RAX Compute Gateway as the
 neutral platform identity. Source, packages, API extensions, credentials,
 telemetry, deployment assets, and SDKs use the new identity. The public
 `https://api.rax-digital.com` endpoint, DNS, HTTPS, single-host operations,
 backup/restore timers, monitoring, and protected AWS deployment are active. The
-validated staging stack is stopped with its volume retained as a temporary
+production service was promoted to the v0.3.0 implementation and its health,
+Demo, operator console, and unauthenticated API boundary were independently
+verified over public HTTPS. The validated staging stack is stopped with its
+volume retained as a temporary
 rollback target; the public production stack remains healthy.
 
 ## Specification mapping
@@ -39,14 +45,14 @@ rollback target; the public production stack remains healthy.
 | Requirement | Implementation status | Remaining evidence or limitation |
 | --- | --- | --- |
 | Chat completions and SSE | Implemented; contract, client-disconnect, and graceful-shutdown staging tests pass | Re-run lifecycle evidence after stream/runtime changes |
-| Agent tools and structured output | Function tools, tool-result messages, streamed tool deltas, per-key permission, and capability-safe routing implemented for the three adapters | Protected live tool smoke and production promotion are required before the `v0.3.0` release |
+| Agent tools and structured output | Function tools, tool-result messages, streamed tool deltas, per-key permission, and capability-safe routing implemented for the three adapters | Protected live tool smoke and production promotion passed for `v0.3.0`; repeat them when provider models or protocol mappings change |
 | OpenAI, Anthropic, Gemini | Implemented; shared conformance and protected live smoke pass | Re-run when provider model/API configuration changes |
 | API keys and model permissions | HMAC-backed keys, status/expiry/environment checks, model/stream permissions, conservative input ceilings, and provider output caps implemented | Provider-native tokenizer accounting and detailed cost reporting remain deferred |
 | Routing and resilience | Stable weighted primary selection, ordered fallback, bounded retry, deadlines, concurrency and circuit state implemented | Deployment-region and operator-disabled route filtering described in `docs/router.md` has no policy field yet |
 | PostgreSQL and Redis | Migration/repository and atomic Redis coordination implementations exist; the protected nightly suite passed against real services | Production remains a deliberate single-host PostgreSQL/Redis deployment until a managed-data-service migration is justified |
-| Observability | Structured content-free logs, metrics, traces, build identity and shutdown flushing implemented; protected staging outcome, latency, active-request, and stream-memory evidence passes | No bundled production dashboard; custom routing child spans are not part of `0.1` |
+| Observability | Structured content-free logs, metrics, traces, build identity and shutdown flushing implemented; protected staging outcome, latency, active-request, and stream-memory evidence passes | No bundled production dashboard; custom routing child spans remain deferred |
 | Docker and Kubernetes | Compose, hardened signed image, Helm chart, two-replica/rolling CI validation, immutable-digest staging deployment, and published `v0.1.0` artifacts pass | Promote the release digest to each operator environment through its controlled deployment process |
-| SDKs and OpenAPI | TypeScript/Python clients, generated schemas, lint and compatibility gates implemented | Package registry publication is intentionally disabled for `0.1` |
+| SDKs and OpenAPI | TypeScript/Python clients, generated schemas, lint and compatibility gates implemented | Package registry publication remains intentionally disabled |
 
 ## Known documentation-to-code gaps
 
@@ -68,8 +74,9 @@ These items require a scoped issue or ADR before behavior changes:
 The completed first-release evidence, immutable digest, workflow links, and
 operator decision are recorded in `docs/releases/0.1.0-rc.md` and the public
 [`v0.1.0` release](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0).
-Future releases repeat the same signed-tag, artifact, digest-deployment, and
-protected-verification sequence rather than reusing this evidence.
+The v0.3.0 evidence is recorded in `docs/releases/0.3.0.md`. Future releases
+repeat the same signed-tag, artifact, digest-deployment, and
+protected-verification sequence rather than reusing earlier evidence.
 
 ## Intentionally deferred work
 
