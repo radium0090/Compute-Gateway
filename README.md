@@ -99,6 +99,10 @@ one low-cost model, non-streaming calls, small input/output budgets, one
 concurrent request, per-account cooldown, and a global daily budget. See
 [hosted demo design and operation](docs/demo.md).
 
+The `v0.3.0` experience page also introduces the `rax/agent` integration path.
+For safety, the claimed public key remains text-only; use an operator-issued
+key with **Allow Agent tool calls** enabled, or self-host, for function tools.
+
 The hosted service is for evaluation only. Applications should self-host or
 obtain a normal customer key rather than depend on trial availability.
 

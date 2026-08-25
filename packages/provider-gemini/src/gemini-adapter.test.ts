@@ -168,7 +168,12 @@ describe('GeminiAdapter provider-specific rules', () => {
             type: 'function',
             function: {
               name: 'weather',
-              parameters: { type: 'object' },
+              parameters: {
+                type: 'object',
+                properties: { city: { type: 'string' } },
+                required: ['city'],
+                additionalProperties: false,
+              },
             },
           },
         ],
@@ -192,7 +197,15 @@ describe('GeminiAdapter provider-specific rules', () => {
       tools: [
         {
           functionDeclarations: [
-            { name: 'weather', parameters: { type: 'object' } },
+            {
+              name: 'weather',
+              parametersJsonSchema: {
+                type: 'object',
+                properties: { city: { type: 'string' } },
+                required: ['city'],
+                additionalProperties: false,
+              },
+            },
           ],
         },
       ],

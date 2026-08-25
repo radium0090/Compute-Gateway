@@ -49,7 +49,10 @@ describe('hosted demo routes', () => {
     const response = await gateway.inject({ method: 'GET', url: '/demo' });
 
     expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('v0.3.0');
     expect(response.body).toContain('Claim a five-minute key');
+    expect(response.body).toContain('rax/agent');
+    expect(response.body).toContain('Public five-minute keys remain text-only');
     expect(response.headers['cache-control']).toBe('no-store');
     expect(response.headers['content-security-policy']).toContain(
       "default-src 'none'",
@@ -94,6 +97,7 @@ describe('hosted demo routes', () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain(`${origin}/v1/chat/completions`);
     expect(response.body).toContain('rcg_test_public-secret-shown-once');
+    expect(response.body).toContain('does not allow streaming or Agent tools');
     expect(response.headers.location).toBeUndefined();
     expect(value.complete).toHaveBeenCalledWith({
       code: 'github-code',
