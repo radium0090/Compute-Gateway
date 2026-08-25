@@ -12,7 +12,8 @@ Application -> RAX Compute Gateway -> OpenAI | Anthropic | Gemini | future provi
 
 ## Status
 
-RAX Compute Gateway `v0.3.0` adds bounded Agent compatibility: OpenAI-style
+RAX Compute Gateway [`v0.3.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.3.0)
+adds bounded Agent compatibility: OpenAI-style
 function tools, streamed tool-call deltas, tool-result messages, structured
 outputs, capability-safe routing, and per-key tool permission. The prior
 [v0.2.0 release](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.2.0)
