@@ -77,6 +77,112 @@ describe('POST /v1/chat/completions', () => {
     await app.close();
   });
 
+  it('accepts agent tool messages and returns OpenAI-compatible tool calls', async () => {
+    let canonicalRequest: unknown;
+    const app = await buildGateway({
+      config,
+      logger,
+      readinessProbe,
+      chatCompletionService: {
+        executeStream: () => {
+          throw new Error('streaming is not used by this test');
+        },
+        execute: (input) => {
+          canonicalRequest = input.request;
+          return Promise.resolve({
+            ok: true,
+            response: {
+              content: null,
+              toolCalls: [
+                {
+                  id: 'call_weather',
+                  type: 'function' as const,
+                  function: {
+                    name: 'weather',
+                    arguments: '{"city":"Tokyo"}',
+                  },
+                },
+              ],
+              finishReason: 'tool_calls' as const,
+              usage: { promptTokens: 8, completionTokens: 3, totalTokens: 11 },
+            },
+            route: {
+              providerRef: 'openai-primary',
+              provider: 'openai',
+              providerModel: 'gpt-test',
+            },
+            attempts: 1,
+          });
+        },
+      },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/chat/completions',
+      headers: { authorization: 'Bearer fake-rcg-key' },
+      payload: {
+        model: 'rax/agent',
+        messages: [
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: [
+              {
+                id: 'previous_call',
+                type: 'function',
+                function: { name: 'lookup', arguments: '{"id":1}' },
+              },
+            ],
+          },
+          { role: 'tool', tool_call_id: 'previous_call', content: '42' },
+          { role: 'user', content: 'What is the weather?' },
+        ],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'weather',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        ],
+        tool_choice: 'auto',
+        parallel_tool_calls: true,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(canonicalRequest).toMatchObject({
+      messages: [
+        { role: 'assistant', toolCalls: [{ id: 'previous_call' }] },
+        { role: 'tool', toolCallId: 'previous_call', content: '42' },
+        { role: 'user', content: 'What is the weather?' },
+      ],
+      tools: [{ function: { name: 'weather' } }],
+      toolChoice: 'auto',
+      parallelToolCalls: true,
+    });
+    expect(response.json()).toMatchObject({
+      choices: [
+        {
+          message: {
+            role: 'assistant',
+            content: null,
+            tool_calls: [
+              {
+                id: 'call_weather',
+                type: 'function',
+                function: { name: 'weather', arguments: '{"city":"Tokyo"}' },
+              },
+            ],
+          },
+          finish_reason: 'tool_calls',
+        },
+      ],
+    });
+    await app.close();
+  });
+
   it('returns the uniform authentication error', async () => {
     const app = await buildGateway({
       config,

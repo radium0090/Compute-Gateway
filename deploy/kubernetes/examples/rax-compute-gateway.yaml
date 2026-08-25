@@ -28,9 +28,16 @@ data:
         base_url: https://api.openai.com/v1
         models:
           gpt-5-mini:
-            capabilities: [chat, streaming]
+            capabilities:
+              [chat, streaming, tools, strict_tools, parallel_tool_control, json_object, json_schema]
     aliases:
       rax/fast:
+        candidates:
+          - provider: openai-primary
+            model: gpt-5-mini
+            weight: 100
+      rax/agent:
+        required_capabilities: [chat, tools]
         candidates:
           - provider: openai-primary
             model: gpt-5-mini

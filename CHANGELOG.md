@@ -5,6 +5,26 @@ Semantic Versioning and keeps release dates in UTC.
 
 ## Unreleased
 
+## 0.3.0 - 2026-08-25
+
+### Added
+
+- Bounded OpenAI-compatible function tools, tool choice, assistant tool calls,
+  tool-result messages, and streamed indexed tool-call deltas.
+- Provider-neutral tool translation for OpenAI, Anthropic, and Gemini.
+- `text`, `json_object`, and `json_schema` response-format negotiation through
+  explicit model capabilities.
+- The capability-safe `rax/agent` alias, per-key Agent tool permission in the
+  operator console, protected live-provider tool smoke, and Agent integration
+  documentation.
+
+### Security
+
+- Tool definitions, arguments, results, and structured output remain
+  non-persistent content and are excluded from logs and telemetry.
+- Tool permission remains deny-by-default, and streamed requests never retry or
+  fall back after the first tool/text delta is committed.
+
 ## 0.2.0 - 2026-08-15
 
 ### Added

@@ -14,6 +14,14 @@ const capabilities = {
 };
 
 const streamingCapabilities = { ...capabilities, streaming: true };
+const agentCapabilities = {
+  ...streamingCapabilities,
+  tools: true,
+  strictTools: true,
+  parallelToolControl: true,
+  jsonObject: true,
+  jsonSchema: true,
+};
 
 const request = {
   model: 'rax/fast',
@@ -28,6 +36,200 @@ const context = {
 };
 
 describe('OpenAiAdapter', () => {
+  it('passes tools and structured output through and normalizes tool calls', async () => {
+    let sentBody: Record<string, unknown> | undefined;
+    const adapter = new OpenAiAdapter({
+      id: 'openai-primary',
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'fake-provider-secret',
+      models: { 'gpt-test': agentCapabilities },
+      fetchImplementation: (_input, init) => {
+        if (typeof init?.body !== 'string') throw new Error('missing body');
+        sentBody = JSON.parse(init.body) as Record<string, unknown>;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    role: 'assistant',
+                    content: null,
+                    tool_calls: [
+                      {
+                        id: 'call_weather',
+                        type: 'function',
+                        function: {
+                          name: 'weather',
+                          arguments: '{"city":"Tokyo"}',
+                        },
+                      },
+                    ],
+                  },
+                  finish_reason: 'tool_calls',
+                },
+              ],
+              usage: {
+                prompt_tokens: 10,
+                completion_tokens: 5,
+                total_tokens: 15,
+              },
+            }),
+          ),
+        );
+      },
+    });
+
+    const result = await adapter.createChatCompletion(
+      {
+        ...request,
+        messages: [
+          { role: 'user', content: 'lookup' },
+          {
+            role: 'assistant',
+            content: null,
+            toolCalls: [
+              {
+                id: 'call_previous',
+                type: 'function',
+                function: { name: 'lookup', arguments: '{"id":1}' },
+              },
+            ],
+          },
+          { role: 'tool', toolCallId: 'call_previous', content: '42' },
+          { role: 'user', content: 'weather?' },
+        ],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'weather',
+              parameters: {
+                type: 'object',
+                properties: { city: { type: 'string' } },
+              },
+              strict: true,
+            },
+          },
+        ],
+        toolChoice: 'required',
+        responseFormat: {
+          type: 'json_schema',
+          jsonSchema: {
+            name: 'weather_result',
+            schema: { type: 'object' },
+            strict: true,
+          },
+        },
+      },
+      context,
+    );
+
+    expect(sentBody).toMatchObject({
+      messages: [
+        { role: 'user', content: 'lookup' },
+        {
+          role: 'assistant',
+          tool_calls: [{ id: 'call_previous', function: { name: 'lookup' } }],
+        },
+        { role: 'tool', tool_call_id: 'call_previous', content: '42' },
+        { role: 'user', content: 'weather?' },
+      ],
+      tools: [{ function: { name: 'weather', strict: true } }],
+      tool_choice: 'required',
+      response_format: {
+        type: 'json_schema',
+        json_schema: { name: 'weather_result', strict: true },
+      },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      response: {
+        content: null,
+        finishReason: 'tool_calls',
+        toolCalls: [
+          {
+            id: 'call_weather',
+            function: { name: 'weather', arguments: '{"city":"Tokyo"}' },
+          },
+        ],
+      },
+    });
+  });
+
+  it('normalizes streamed tool-call deltas without assembling arguments', async () => {
+    const adapter = new OpenAiAdapter({
+      id: 'openai-primary',
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'fake-provider-secret',
+      models: { 'gpt-test': agentCapabilities },
+      fetchImplementation: () =>
+        Promise.resolve(
+          new Response(
+            [
+              'data: {"choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"lookup","arguments":""}}]},"finish_reason":null}]}\n\n',
+              'data: {"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\\"id\\":1}"}}]},"finish_reason":"tool_calls"}]}\n\n',
+              'data: [DONE]\n\n',
+            ].join(''),
+            { headers: { 'content-type': 'text/event-stream' } },
+          ),
+        ),
+    });
+    const result = await adapter.streamChatCompletion(request, context);
+    if (!result.ok) throw new Error('expected stream');
+    const chunks = [];
+    for await (const chunk of result.stream) chunks.push(chunk);
+    expect(chunks).toMatchObject([
+      {
+        choice: {
+          delta: {
+            role: 'assistant',
+            toolCalls: [{ index: 0, id: 'call_1', type: 'function' }],
+          },
+        },
+      },
+      {
+        choice: {
+          delta: {
+            toolCalls: [{ index: 0, function: { arguments: '{"id":1}' } }],
+          },
+          finishReason: 'tool_calls',
+        },
+      },
+    ]);
+  });
+
+  it('rejects undeclared tool capability before contacting the provider', async () => {
+    let called = false;
+    const adapter = new OpenAiAdapter({
+      id: 'openai-primary',
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'fake-provider-secret',
+      models: { 'gpt-test': capabilities },
+      fetchImplementation: () => {
+        called = true;
+        return Promise.reject(new Error('must not be called'));
+      },
+    });
+    await expect(
+      adapter.createChatCompletion(
+        {
+          ...request,
+          tools: [
+            {
+              type: 'function',
+              function: { name: 'lookup', parameters: { type: 'object' } },
+            },
+          ],
+        },
+        context,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'provider_parameter_unsupported', retryable: false },
+    });
+    expect(called).toBe(false);
+  });
+
   it('translates canonical input and normalizes a successful response', async () => {
     let sentUrl = '';
     let sentAuthorization = '';

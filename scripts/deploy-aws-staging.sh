@@ -135,7 +135,7 @@ jq -r \
       "RCG_SHUTDOWN_GRACE_MS=30000",
       "RCG_TRUST_PROXY=false",
       "RCG_METRICS_ENABLED=true",
-      "RCG_SERVICE_VERSION=0.2.0-staging",
+      "RCG_SERVICE_VERSION=0.3.0-staging",
       "RCG_COMMIT_SHA=" + $commit,
       "RCG_REDIS_URL=redis://redis:6379",
       "OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318",

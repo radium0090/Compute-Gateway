@@ -176,6 +176,15 @@ export function resultErrorMapping(
         param: 'stream',
         retryable: false,
       };
+    case 'tools_not_allowed':
+      return {
+        statusCode: 403,
+        type: 'permission_error',
+        code: 'tools_not_allowed',
+        message: 'The API key is not permitted to use tools.',
+        param: 'tools',
+        retryable: false,
+      };
   }
 }
 

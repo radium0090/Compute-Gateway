@@ -8,6 +8,7 @@ import type {
   RoutePlanner,
   RouteResolutionResult,
   RouteResolver,
+  ProviderCapability,
 } from '@rax-digital/domain';
 
 type ConfiguredCapability =
@@ -74,6 +75,7 @@ export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
     readonly requestId: string;
     readonly apiKey: ApiKey;
     readonly requireStreaming?: boolean;
+    readonly requiredCapabilities?: readonly ProviderCapability[];
   }): RouteResolutionResult {
     const result = this.plan(input);
     if (!result.ok) return result;
@@ -88,6 +90,7 @@ export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
     readonly requestId: string;
     readonly apiKey: ApiKey;
     readonly requireStreaming?: boolean;
+    readonly requiredCapabilities?: readonly ProviderCapability[];
   }): RoutePlanResolutionResult {
     if (
       !input.apiKey.policy.allowedModelPatterns.some((pattern) =>
@@ -102,11 +105,13 @@ export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
         input.requestedModel,
         input.requestId,
         input.requireStreaming === true,
+        input.requiredCapabilities,
       );
     }
     return this.planQualifiedModel(
       input.requestedModel,
       input.requireStreaming === true,
+      input.requiredCapabilities,
     );
   }
 
@@ -114,15 +119,19 @@ export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
     aliasName: string,
     requestId: string,
     requireStreaming: boolean,
+    requestedCapabilities?: readonly ProviderCapability[],
   ): RoutePlanResolutionResult {
     const alias = this.policy.aliases[aliasName];
     if (alias === undefined) {
       return { ok: false, reason: 'model_not_found' };
     }
-    const required: readonly ConfiguredCapability[] = [
-      'chat',
-      ...(requireStreaming ? (['streaming'] as const) : []),
-      ...(alias.required_capabilities ?? []),
+    const required = [
+      ...new Set<ConfiguredCapability>([
+        'chat',
+        ...(requireStreaming ? (['streaming'] as const) : []),
+        ...(requestedCapabilities ?? []),
+        ...(alias.required_capabilities ?? []),
+      ]),
     ];
     const candidates = alias.candidates.filter((candidate) => {
       const model =
@@ -158,6 +167,7 @@ export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
   private planQualifiedModel(
     requestedModel: string,
     requireStreaming: boolean,
+    requestedCapabilities?: readonly ProviderCapability[],
   ): RoutePlanResolutionResult {
     const separator = requestedModel.indexOf('/');
     if (separator <= 0 || separator === requestedModel.length - 1) {
@@ -168,11 +178,15 @@ export class StaticPolicyRouter implements RouteResolver, RoutePlanner {
     const matches = Object.entries(this.policy.providers).filter(
       ([, provider]) => {
         const model = provider.models[modelName];
+        const required: readonly ConfiguredCapability[] = [
+          'chat',
+          ...(requireStreaming ? (['streaming'] as const) : []),
+          ...(requestedCapabilities ?? []),
+        ];
         return (
           provider.adapter === adapter &&
           model !== undefined &&
-          model.capabilities.includes('chat') &&
-          (!requireStreaming || model.capabilities.includes('streaming'))
+          supportsEveryCapability(model.capabilities, required)
         );
       },
     );

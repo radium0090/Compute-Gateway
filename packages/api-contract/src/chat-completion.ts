@@ -1,16 +1,116 @@
 import { Type, type Static } from '@sinclair/typebox';
 
-export const ChatMessageSchema = Type.Object(
+const FunctionCallSchema = Type.Object(
   {
-    role: Type.Union([
-      Type.Literal('system'),
-      Type.Literal('user'),
-      Type.Literal('assistant'),
-    ]),
-    content: Type.String({ maxLength: 1_000_000 }),
+    name: Type.String({ minLength: 1, maxLength: 256 }),
+    arguments: Type.String({ maxLength: 1_000_000 }),
   },
   { additionalProperties: false },
 );
+
+const ToolCallSchema = Type.Object(
+  {
+    id: Type.String({ minLength: 1, maxLength: 256 }),
+    type: Type.Literal('function'),
+    function: FunctionCallSchema,
+  },
+  { additionalProperties: false },
+);
+
+export const ChatMessageSchema = Type.Union([
+  Type.Object(
+    {
+      role: Type.Union([
+        Type.Literal('system'),
+        Type.Literal('developer'),
+        Type.Literal('user'),
+      ]),
+      content: Type.String({ maxLength: 1_000_000 }),
+    },
+    { additionalProperties: false },
+  ),
+  Type.Object(
+    {
+      role: Type.Literal('assistant'),
+      content: Type.Optional(
+        Type.Union([Type.String({ maxLength: 1_000_000 }), Type.Null()]),
+      ),
+      tool_calls: Type.Optional(
+        Type.Array(ToolCallSchema, { minItems: 1, maxItems: 128 }),
+      ),
+    },
+    { additionalProperties: false, minProperties: 2 },
+  ),
+  Type.Object(
+    {
+      role: Type.Literal('tool'),
+      content: Type.String({ maxLength: 1_000_000 }),
+      tool_call_id: Type.String({ minLength: 1, maxLength: 256 }),
+    },
+    { additionalProperties: false },
+  ),
+]);
+
+const FunctionToolSchema = Type.Object(
+  {
+    type: Type.Literal('function'),
+    function: Type.Object(
+      {
+        name: Type.String({
+          minLength: 1,
+          maxLength: 64,
+          pattern: '^[A-Za-z0-9_-]+$',
+        }),
+        description: Type.Optional(Type.String({ maxLength: 8_192 })),
+        parameters: Type.Optional(
+          Type.Object({}, { additionalProperties: true }),
+        ),
+        strict: Type.Optional(Type.Boolean()),
+      },
+      { additionalProperties: false },
+    ),
+  },
+  { additionalProperties: false },
+);
+
+const ToolChoiceSchema = Type.Union([
+  Type.Literal('none'),
+  Type.Literal('auto'),
+  Type.Literal('required'),
+  Type.Object(
+    {
+      type: Type.Literal('function'),
+      function: Type.Object(
+        { name: Type.String({ minLength: 1, maxLength: 64 }) },
+        { additionalProperties: false },
+      ),
+    },
+    { additionalProperties: false },
+  ),
+]);
+
+const ResponseFormatSchema = Type.Union([
+  Type.Object({ type: Type.Literal('text') }, { additionalProperties: false }),
+  Type.Object(
+    { type: Type.Literal('json_object') },
+    { additionalProperties: false },
+  ),
+  Type.Object(
+    {
+      type: Type.Literal('json_schema'),
+      json_schema: Type.Object(
+        {
+          name: Type.String({ minLength: 1, maxLength: 64 }),
+          description: Type.Optional(Type.String({ maxLength: 8_192 })),
+          schema: Type.Object({}, { additionalProperties: true }),
+          strict: Type.Optional(Type.Boolean()),
+        },
+        { additionalProperties: false },
+      ),
+    },
+    { additionalProperties: false },
+  ),
+]);
 
 export const ChatCompletionRequestSchema = Type.Object(
   {
@@ -31,6 +131,12 @@ export const ChatCompletionRequestSchema = Type.Object(
     stream: Type.Optional(Type.Boolean({ default: false })),
     n: Type.Optional(Type.Literal(1, { default: 1 })),
     user: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
+    tools: Type.Optional(
+      Type.Array(FunctionToolSchema, { minItems: 1, maxItems: 128 }),
+    ),
+    tool_choice: Type.Optional(ToolChoiceSchema),
+    parallel_tool_calls: Type.Optional(Type.Boolean()),
+    response_format: Type.Optional(ResponseFormatSchema),
   },
   { additionalProperties: false },
 );
@@ -50,7 +156,10 @@ export const ChatCompletionResponseSchema = Type.Object(
           message: Type.Object(
             {
               role: Type.Literal('assistant'),
-              content: Type.String(),
+              content: Type.Union([Type.String(), Type.Null()]),
+              tool_calls: Type.Optional(
+                Type.Array(ToolCallSchema, { minItems: 1, maxItems: 128 }),
+              ),
             },
             { additionalProperties: false },
           ),
@@ -114,6 +223,28 @@ export const ChatCompletionChunkSchema = Type.Object(
             {
               role: Type.Optional(Type.Literal('assistant')),
               content: Type.Optional(Type.String()),
+              tool_calls: Type.Optional(
+                Type.Array(
+                  Type.Object(
+                    {
+                      index: Type.Integer({ minimum: 0 }),
+                      id: Type.Optional(Type.String()),
+                      type: Type.Optional(Type.Literal('function')),
+                      function: Type.Optional(
+                        Type.Object(
+                          {
+                            name: Type.Optional(Type.String()),
+                            arguments: Type.Optional(Type.String()),
+                          },
+                          { additionalProperties: false },
+                        ),
+                      ),
+                    },
+                    { additionalProperties: false },
+                  ),
+                  { minItems: 1, maxItems: 128 },
+                ),
+              ),
             },
             { additionalProperties: false },
           ),

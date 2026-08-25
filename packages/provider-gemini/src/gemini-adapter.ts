@@ -1,7 +1,10 @@
 import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 
-import { ProviderStreamFailure } from '@rax-digital/domain';
+import {
+  ProviderStreamFailure,
+  providerSupportsChatRequest,
+} from '@rax-digital/domain';
 import type {
   CanonicalChatChunk,
   CanonicalChatRequest,
@@ -22,7 +25,20 @@ const UsageSchema = Type.Object({
 
 const ContentSchema = Type.Object({
   role: Type.Optional(Type.Literal('model')),
-  parts: Type.Optional(Type.Array(Type.Object({ text: Type.String() }))),
+  parts: Type.Optional(
+    Type.Array(
+      Type.Union([
+        Type.Object({ text: Type.String() }),
+        Type.Object({
+          functionCall: Type.Object({
+            id: Type.Optional(Type.String()),
+            name: Type.String(),
+            args: Type.Record(Type.String(), Type.Unknown()),
+          }),
+        }),
+      ]),
+    ),
+  ),
 });
 
 const CandidateSchema = Type.Object({
@@ -299,7 +315,23 @@ function contentText(candidate: typeof CandidateSchema.static): string | null {
       ? ''
       : null;
   }
-  return parts.map((part) => part.text).join('');
+  return parts
+    .filter((part) => 'text' in part)
+    .map((part) => part.text)
+    .join('');
+}
+
+function toolCalls(candidate: typeof CandidateSchema.static) {
+  return (candidate.content?.parts ?? [])
+    .filter((part) => 'functionCall' in part)
+    .map((part, index) => ({
+      id: part.functionCall.id ?? `call_rcg_${String(index)}`,
+      type: 'function' as const,
+      function: {
+        name: part.functionCall.name,
+        arguments: JSON.stringify(part.functionCall.args),
+      },
+    }));
 }
 
 function normalizedUsage(usage: typeof UsageSchema.static) {
@@ -317,17 +349,66 @@ function buildRequestBody(
   const system: string[] = [];
   const contents: {
     role: 'user' | 'model';
-    parts: readonly { readonly text: string }[];
+    parts: readonly Record<string, unknown>[];
   }[] = [];
+  const functionNames = new Map<string, string>();
   let conversationStarted = false;
   for (const message of request.messages) {
-    if (message.role === 'system') {
+    if (message.role === 'system' || message.role === 'developer') {
       if (conversationStarted) return { ok: false };
       system.push(message.content);
+    } else if (message.role === 'tool') {
+      conversationStarted = true;
+      const name = functionNames.get(message.toolCallId);
+      if (name === undefined) return { ok: false };
+      let response: unknown;
+      try {
+        response = JSON.parse(message.content) as unknown;
+      } catch {
+        response = { result: message.content };
+      }
+      if (!isRecord(response)) response = { result: response };
+      contents.push({
+        role: 'user',
+        parts: [
+          {
+            functionResponse: {
+              id: message.toolCallId,
+              name,
+              response,
+            },
+          },
+        ],
+      });
+    } else if (message.role === 'assistant') {
+      conversationStarted = true;
+      const parts: Record<string, unknown>[] = [];
+      if (message.content !== null && message.content.length > 0) {
+        parts.push({ text: message.content });
+      }
+      for (const toolCall of message.toolCalls ?? []) {
+        let args: unknown;
+        try {
+          args = JSON.parse(toolCall.function.arguments) as unknown;
+        } catch {
+          return { ok: false };
+        }
+        if (!isRecord(args)) return { ok: false };
+        functionNames.set(toolCall.id, toolCall.function.name);
+        parts.push({
+          functionCall: {
+            id: toolCall.id,
+            name: toolCall.function.name,
+            args,
+          },
+        });
+      }
+      if (parts.length === 0) return { ok: false };
+      contents.push({ role: 'model', parts });
     } else {
       conversationStarted = true;
       contents.push({
-        role: message.role === 'assistant' ? 'model' : 'user',
+        role: 'user',
         parts: [{ text: message.content }],
       });
     }
@@ -357,7 +438,19 @@ function buildRequestBody(
           stopSequences:
             typeof request.stop === 'string' ? [request.stop] : request.stop,
         }),
+    ...(request.responseFormat?.type === 'json_object'
+      ? { responseMimeType: 'application/json' }
+      : {}),
+    ...(request.responseFormat?.type === 'json_schema'
+      ? {
+          responseMimeType: 'application/json',
+          responseJsonSchema: request.responseFormat.jsonSchema.schema,
+        }
+      : {}),
   };
+  // Gemini permits parallel calls by default but has no equivalent for the
+  // OpenAI request's explicit disable switch.
+  if (request.parallelToolCalls === false) return { ok: false };
   return {
     ok: true,
     body: JSON.stringify({
@@ -366,6 +459,42 @@ function buildRequestBody(
         ? {}
         : { systemInstruction: { parts: [{ text: system.join('\n\n') }] } }),
       generationConfig,
+      ...(request.tools === undefined
+        ? {}
+        : {
+            tools: [
+              {
+                functionDeclarations: request.tools.map((tool) => ({
+                  name: tool.function.name,
+                  ...(tool.function.description === undefined
+                    ? {}
+                    : { description: tool.function.description }),
+                  parameters: tool.function.parameters ?? {
+                    type: 'object',
+                    properties: {},
+                  },
+                })),
+              },
+            ],
+          }),
+      ...(request.toolChoice === undefined
+        ? {}
+        : {
+            toolConfig: {
+              functionCallingConfig:
+                typeof request.toolChoice === 'string'
+                  ? {
+                      mode:
+                        request.toolChoice === 'required'
+                          ? 'ANY'
+                          : request.toolChoice.toUpperCase(),
+                    }
+                  : {
+                      mode: 'ANY',
+                      allowedFunctionNames: [request.toolChoice.function.name],
+                    },
+            },
+          }),
     }),
   };
 }
@@ -425,10 +554,24 @@ function handleStreamEvent(
   if (candidate !== undefined) {
     const text = contentText(candidate);
     if (text === null) throw streamFailure();
-    const normalizedFinish = finishReason(candidate.finishReason);
+    const calls = toolCalls(candidate);
+    const normalizedFinish =
+      calls.length > 0 && candidate.finishReason !== undefined
+        ? 'tool_calls'
+        : finishReason(candidate.finishReason);
     const delta = {
       ...(!state.roleSent ? { role: 'assistant' as const } : {}),
       ...(text.length === 0 ? {} : { content: text }),
+      ...(calls.length === 0
+        ? {}
+        : {
+            toolCalls: calls.map((call, index) => ({
+              index,
+              id: call.id,
+              type: call.type,
+              function: call.function,
+            })),
+          }),
     };
     state.roleSent = true;
     if (candidate.finishReason !== undefined) state.terminalSeen = true;
@@ -482,10 +625,17 @@ export class GeminiAdapter implements ProviderAdapter {
     request: CanonicalChatRequest,
     context: ProviderCallContext,
   ): Promise<ProviderCallResult> {
-    if (this.capabilities(context.providerModel) === null) {
+    const capabilities = this.capabilities(context.providerModel);
+    if (capabilities === null) {
       return {
         ok: false,
         error: requestError('provider_model_not_configured'),
+      };
+    }
+    if (!providerSupportsChatRequest(capabilities, request, false)) {
+      return {
+        ok: false,
+        error: requestError('provider_parameter_unsupported'),
       };
     }
     const translated = buildRequestBody(request, context.providerModel);
@@ -546,11 +696,16 @@ export class GeminiAdapter implements ProviderAdapter {
     if (candidate === undefined) return this.protocolError();
     const text = contentText(candidate);
     if (text === null) return this.protocolError();
+    const calls = toolCalls(candidate);
     return {
       ok: true,
       response: {
-        content: text,
-        finishReason: finishReason(candidate.finishReason),
+        content: text.length === 0 && calls.length > 0 ? null : text,
+        ...(calls.length === 0 ? {} : { toolCalls: calls }),
+        finishReason:
+          calls.length > 0
+            ? 'tool_calls'
+            : finishReason(candidate.finishReason),
         usage: {
           ...normalizedUsage(body.usageMetadata),
         },
@@ -562,7 +717,11 @@ export class GeminiAdapter implements ProviderAdapter {
     request: CanonicalChatRequest,
     context: ProviderCallContext,
   ): Promise<ProviderStreamCallResult> {
-    if (this.capabilities(context.providerModel)?.streaming !== true) {
+    const capabilities = this.capabilities(context.providerModel);
+    if (
+      capabilities === null ||
+      !providerSupportsChatRequest(capabilities, request, true)
+    ) {
       return {
         ok: false,
         error: requestError('provider_streaming_not_configured'),

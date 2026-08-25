@@ -112,6 +112,188 @@ defineProviderAdapterConformance({
 });
 
 describe('GeminiAdapter provider-specific rules', () => {
+  it('translates tools and JSON Schema and normalizes function calls', async () => {
+    let sentBody: Record<string, unknown> | undefined;
+    const adapter = new GeminiAdapter({
+      id: 'gemini-primary',
+      baseUrl: 'https://provider.example/v1beta',
+      apiKey: 'fake-gemini-secret',
+      models: {
+        'gemini-test': {
+          ...capabilities,
+          tools: true,
+          jsonObject: true,
+          jsonSchema: true,
+        },
+      },
+      fetchImplementation: (_input, init) => {
+        if (typeof init?.body !== 'string') throw new Error('missing body');
+        sentBody = JSON.parse(init.body) as Record<string, unknown>;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  content: {
+                    role: 'model',
+                    parts: [
+                      {
+                        functionCall: {
+                          id: 'call_1',
+                          name: 'weather',
+                          args: { city: 'Tokyo' },
+                        },
+                      },
+                    ],
+                  },
+                  finishReason: 'STOP',
+                },
+              ],
+              usageMetadata: {
+                promptTokenCount: 8,
+                candidatesTokenCount: 3,
+                totalTokenCount: 11,
+              },
+            }),
+          ),
+        );
+      },
+    });
+    const result = await adapter.createChatCompletion(
+      {
+        model: 'rax/gemini',
+        messages: [{ role: 'user', content: 'weather?' }],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'weather',
+              parameters: { type: 'object' },
+            },
+          },
+        ],
+        toolChoice: 'required',
+        responseFormat: {
+          type: 'json_schema',
+          jsonSchema: {
+            name: 'answer',
+            schema: { type: 'object', properties: {} },
+          },
+        },
+      },
+      {
+        requestId: 'req_tools',
+        providerModel: 'gemini-test',
+        signal: new AbortController().signal,
+      },
+    );
+
+    expect(sentBody).toMatchObject({
+      tools: [
+        {
+          functionDeclarations: [
+            { name: 'weather', parameters: { type: 'object' } },
+          ],
+        },
+      ],
+      toolConfig: { functionCallingConfig: { mode: 'ANY' } },
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseJsonSchema: { type: 'object', properties: {} },
+      },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      response: {
+        content: null,
+        finishReason: 'tool_calls',
+        toolCalls: [
+          {
+            id: 'call_1',
+            function: { name: 'weather', arguments: '{"city":"Tokyo"}' },
+          },
+        ],
+      },
+    });
+  });
+
+  it('translates prior tool results for a subsequent Gemini turn', async () => {
+    let sentBody: Record<string, unknown> | undefined;
+    const adapter = new GeminiAdapter({
+      id: 'gemini-primary',
+      baseUrl: 'https://provider.example/v1beta',
+      apiKey: 'fake-gemini-secret',
+      models: { 'gemini-test': { ...capabilities, tools: true } },
+      fetchImplementation: (_input, init) => {
+        if (typeof init?.body !== 'string') throw new Error('missing body');
+        sentBody = JSON.parse(init.body) as Record<string, unknown>;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  content: { role: 'model', parts: [{ text: 'done' }] },
+                  finishReason: 'STOP',
+                },
+              ],
+              usageMetadata: {
+                promptTokenCount: 8,
+                candidatesTokenCount: 1,
+                totalTokenCount: 9,
+              },
+            }),
+          ),
+        );
+      },
+    });
+    await adapter.createChatCompletion(
+      {
+        model: 'rax/gemini',
+        messages: [
+          { role: 'user', content: 'lookup' },
+          {
+            role: 'assistant',
+            content: null,
+            toolCalls: [
+              {
+                id: 'call_1',
+                type: 'function',
+                function: { name: 'lookup', arguments: '{"id":1}' },
+              },
+            ],
+          },
+          { role: 'tool', toolCallId: 'call_1', content: '{"value":42}' },
+        ],
+      },
+      {
+        requestId: 'req_tool_result',
+        providerModel: 'gemini-test',
+        signal: new AbortController().signal,
+      },
+    );
+    expect(sentBody).toMatchObject({
+      contents: [
+        { role: 'user', parts: [{ text: 'lookup' }] },
+        {
+          role: 'model',
+          parts: [{ functionCall: { id: 'call_1', name: 'lookup' } }],
+        },
+        {
+          role: 'user',
+          parts: [
+            {
+              functionResponse: {
+                id: 'call_1',
+                name: 'lookup',
+                response: { value: 42 },
+              },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
   it('classifies allowlisted Google API key reasons without exposing the body', async () => {
     const adapter = new GeminiAdapter({
       id: 'gemini-primary',

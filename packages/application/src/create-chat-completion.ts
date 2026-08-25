@@ -1,6 +1,8 @@
 import {
   ProviderStreamFailure,
   circuitOutcomeForProviderError,
+  providerSupportsChatRequest,
+  requiredProviderCapabilities,
 } from '@rax-digital/domain';
 import type {
   AdmissionRejectionReason,
@@ -36,7 +38,8 @@ export type ChatCompletionFailure =
         | 'model_not_allowed'
         | 'model_not_found'
         | 'no_healthy_route'
-        | 'streaming_not_allowed';
+        | 'streaming_not_allowed'
+        | 'tools_not_allowed';
     }
   | {
       readonly kind: 'admission';
@@ -91,6 +94,28 @@ export interface ChatCompletionResilienceOptions {
   readonly observer?: RoutingObserver;
 }
 
+function requestUsesTools(request: CanonicalChatRequest): boolean {
+  return (
+    request.tools !== undefined ||
+    request.messages.some(
+      (message) =>
+        message.role === 'tool' ||
+        (message.role === 'assistant' && message.toolCalls !== undefined),
+    )
+  );
+}
+
+function adapterSupportsRequest(
+  adapter: ProviderAdapter | undefined,
+  providerModel: string,
+  request: CanonicalChatRequest,
+  streaming: boolean,
+): adapter is ProviderAdapter {
+  const capabilities = adapter?.capabilities(providerModel);
+  if (capabilities === null || capabilities === undefined) return false;
+  return providerSupportsChatRequest(capabilities, request, streaming);
+}
+
 const timeoutError: ProviderError = {
   class: 'timeout',
   code: 'request_deadline_exceeded',
@@ -114,16 +139,10 @@ const noopLease: CoordinationLease = { release: () => Promise.resolve() };
 function conservativeRequestTokenUpperBound(
   request: CanonicalChatRequest,
 ): number {
-  // A UTF-8 byte is a deliberately conservative upper bound for tokenizer
-  // input. The small fixed overhead accounts for message framing and roles.
-  return request.messages.reduce(
-    (total, message) =>
-      total +
-      4 +
-      Buffer.byteLength(message.role, 'utf8') +
-      Buffer.byteLength(message.content, 'utf8'),
-    2,
-  );
+  // JSON bytes include messages, tool schemas, and tool arguments. One byte per
+  // token deliberately overestimates common tokenizers and prevents tool
+  // metadata from bypassing a key's request budget.
+  return Buffer.byteLength(JSON.stringify(request), 'utf8');
 }
 
 function applyApiKeyPolicy(
@@ -254,6 +273,15 @@ export class CreateChatCompletionService {
     if (!authentication.authenticated) {
       return { ok: false, failure: { kind: 'authentication' } };
     }
+    if (
+      requestUsesTools(input.request) &&
+      !authentication.apiKey.policy.allowTools
+    ) {
+      return {
+        ok: false,
+        failure: { kind: 'routing', reason: 'tools_not_allowed' },
+      };
+    }
     const policy = applyApiKeyPolicy(
       {
         requestId: input.requestId,
@@ -287,6 +315,15 @@ export class CreateChatCompletionService {
       return {
         ok: false,
         failure: { kind: 'routing', reason: 'streaming_not_allowed' },
+      };
+    }
+    if (
+      requestUsesTools(input.request) &&
+      !authentication.apiKey.policy.allowTools
+    ) {
+      return {
+        ok: false,
+        failure: { kind: 'routing', reason: 'tools_not_allowed' },
       };
     }
     const policy = applyApiKeyPolicy(
@@ -326,6 +363,10 @@ export class CreateChatCompletionService {
       requestId: input.requestId,
       apiKey,
       ...(requireStreaming ? { requireStreaming: true } : {}),
+      requiredCapabilities: requiredProviderCapabilities(
+        input.request,
+        requireStreaming,
+      ),
     };
     const resolution =
       'plan' in this.router
@@ -429,7 +470,14 @@ export class CreateChatCompletionService {
         attempts += 1;
         previousRoute = route;
         const adapter = this.providers.get(route.providerRef);
-        if (adapter?.capabilities(route.providerModel) == null) {
+        if (
+          !adapterSupportsRequest(
+            adapter,
+            route.providerModel,
+            input.request,
+            false,
+          )
+        ) {
           await this.finishAttempt(resources, 'neutral');
           break;
         }
@@ -534,7 +582,14 @@ export class CreateChatCompletionService {
         attempts += 1;
         previousRoute = route;
         const adapter = this.providers.get(route.providerRef);
-        if (adapter?.capabilities(route.providerModel)?.streaming !== true) {
+        if (
+          !adapterSupportsRequest(
+            adapter,
+            route.providerModel,
+            input.request,
+            true,
+          )
+        ) {
           await this.finishAttempt(resources, 'neutral');
           break;
         }
@@ -787,7 +842,12 @@ export class CreateChatCompletionService {
       route === undefined ? undefined : this.providers.get(route.providerRef);
     if (
       route === undefined ||
-      adapter?.capabilities(route.providerModel) == null
+      !adapterSupportsRequest(
+        adapter,
+        route.providerModel,
+        input.request,
+        false,
+      )
     ) {
       return {
         ok: false,
@@ -813,7 +873,7 @@ export class CreateChatCompletionService {
       route === undefined ? undefined : this.providers.get(route.providerRef);
     if (
       route === undefined ||
-      adapter?.capabilities(route.providerModel)?.streaming !== true
+      !adapterSupportsRequest(adapter, route.providerModel, input.request, true)
     ) {
       return {
         ok: false,

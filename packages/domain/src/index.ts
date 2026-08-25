@@ -37,14 +37,22 @@ export type {
   AdminControlRepository,
   AdminIdentityRepository,
 } from './admin-repository.js';
-export { ProviderStreamFailure } from './chat-completion.js';
+export {
+  ProviderStreamFailure,
+  providerSupportsChatRequest,
+  requiredProviderCapabilities,
+} from './chat-completion.js';
 export type {
   CanonicalChatMessage,
   CanonicalChatChunk,
   CanonicalChatRequest,
   CanonicalChatResponse,
   CanonicalFinishReason,
+  CanonicalFunctionTool,
   CanonicalMessageRole,
+  CanonicalResponseFormat,
+  CanonicalToolCall,
+  CanonicalToolChoice,
   CanonicalUsage,
   ClientAuthenticator,
   ProviderAdapter,
@@ -52,6 +60,7 @@ export type {
   ProviderCallResult,
   ProviderStreamCallResult,
   ProviderCapabilities,
+  ProviderCapability,
   ProviderError,
   ProviderErrorClass,
   ResolvedRoute,

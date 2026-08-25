@@ -72,6 +72,7 @@ export interface CreateAdminApiKeyInput {
   readonly environment: ApiKeyEnvironment;
   readonly allowedModelPatterns: readonly string[];
   readonly allowStreaming: boolean;
+  readonly allowTools?: boolean;
   readonly requestsPerMinute: number;
   readonly maxConcurrentRequests: number;
   readonly expiresAt: Date | null;
@@ -425,7 +426,7 @@ export class AdminConsoleService {
       policy: {
         allowedModelPatterns: input.value.allowedModelPatterns,
         allowStreaming: input.value.allowStreaming,
-        allowTools: false,
+        allowTools: input.value.allowTools ?? false,
         requestsPerMinute: input.value.requestsPerMinute,
         maxConcurrentRequests: input.value.maxConcurrentRequests,
       },

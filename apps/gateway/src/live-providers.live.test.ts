@@ -27,9 +27,9 @@ const live = process.env.RCG_LIVE_ENABLED === 'true' ? describe : describe.skip;
 const capabilities: ProviderCapabilities = {
   chat: true,
   streaming: true,
-  tools: false,
-  jsonObject: false,
-  jsonSchema: false,
+  tools: true,
+  jsonObject: true,
+  jsonSchema: true,
   systemMessages: true,
 };
 const config = loadConfig({
@@ -199,6 +199,44 @@ live('live provider compatibility through the OpenAI Node SDK', () => {
             );
           });
         expect(completion.choices[0]).toBeDefined();
+
+        const toolCompletion = await client.chat.completions.create({
+          model: `${providerCase.name}/${model}`,
+          messages: [
+            {
+              role: 'user',
+              content: 'Call return_status with status set to OK.',
+            },
+          ],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'return_status',
+                description: 'Return a test status.',
+                parameters: {
+                  type: 'object',
+                  properties: { status: { type: 'string' } },
+                  required: ['status'],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: {
+            type: 'function',
+            function: { name: 'return_status' },
+          },
+          max_tokens: 64,
+        });
+        const toolCall = toolCompletion.choices[0]?.message.tool_calls?.[0];
+        if (toolCall?.type !== 'function') {
+          throw new Error('provider did not return a function tool call');
+        }
+        expect(toolCall.function.name).toBe('return_status');
+        expect(() => {
+          void (JSON.parse(toolCall.function.arguments) as unknown);
+        }).not.toThrow();
 
         const stream = await client.chat.completions.create({
           ...request,

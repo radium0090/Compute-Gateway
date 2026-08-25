@@ -340,7 +340,8 @@ describe('administrator routes', () => {
   });
 
   it('returns a new API key exactly once from the create operation', async () => {
-    const gateway = await app();
+    const value = service();
+    const gateway = await app(value);
     const response = await gateway.inject({
       method: 'POST',
       url: '/admin/api/api-keys',
@@ -351,6 +352,7 @@ describe('administrator routes', () => {
         environment: 'production',
         allowed_model_patterns: ['rax/*'],
         allow_streaming: true,
+        allow_tools: true,
         requests_per_minute: 60,
         max_concurrent_requests: 10,
         expires_at: null,
@@ -362,6 +364,8 @@ describe('administrator routes', () => {
       'rcg_prod_publicid_secret-value-shown-once',
     );
     expect(response.body).toContain('cannot be shown again');
+    const createApiKey = vi.mocked(value.createApiKey);
+    expect(createApiKey.mock.calls[0]?.[0].value.allowTools).toBe(true);
     await gateway.close();
   });
 

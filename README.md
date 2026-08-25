@@ -12,8 +12,11 @@ Application -> RAX Compute Gateway -> OpenAI | Anthropic | Gemini | future provi
 
 ## Status
 
-[RAX Compute Gateway v0.2.0](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.2.0)
-adds the operator console, one-command self-hosted quickstart, and the public,
+RAX Compute Gateway `v0.3.0` adds bounded Agent compatibility: OpenAI-style
+function tools, streamed tool-call deltas, tool-result messages, structured
+outputs, capability-safe routing, and per-key tool permission. The prior
+[v0.2.0 release](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.2.0)
+added the operator console, one-command self-hosted quickstart, and the public,
 abuse-resistant hosted evaluation described below. Release artifacts include a
 signed multi-architecture image, Helm chart, OpenAPI contract, checksums, SBOM,
 and provenance. The documents in this repository remain normative unless an
@@ -23,6 +26,8 @@ accepted Architecture Decision Record (ADR) supersedes them.
 
 - `POST /v1/chat/completions`, including streaming
 - OpenAI, Anthropic, and Gemini adapters
+- Agent function calling across all three adapters, including streaming
+- `json_object` and JSON Schema structured-output capability routing
 - Stable public model aliases and explicit provider models
 - Deterministic routing, fallback, timeout, and retry policies
 - RAX Compute Gateway API keys and bring-your-own-provider-key (BYOK) operation
@@ -31,10 +36,53 @@ accepted Architecture Decision Record (ADR) supersedes them.
 - Docker Compose for local use and Kubernetes manifests/Helm for production
 - TypeScript and Python SDKs generated from the public contract
 
-Non-goals for the original MVP include tool calling and structured outputs, a
+Non-goals include gateway-side tool execution, the OpenAI Responses API, a
 hosted billing system, a marketplace, GPU scheduling, multimodal generation,
-and autonomous quality-based model selection. The operator console and hosted
-evaluation are narrowly scoped post-MVP additions governed by accepted ADRs.
+and autonomous quality-based model selection. Post-MVP additions are narrowly
+scoped by accepted ADRs.
+
+## Use with AI Agents (`v0.3`)
+
+Any Agent or harness that can use the OpenAI Chat Completions protocol can
+target RAX by changing its base URL, API key, and model. Use `rax/agent` so
+routing is restricted to tool-capable candidates:
+
+```text
+Base URL: https://api.rax-digital.com/v1
+API Key:  your RAX API key
+Model:    rax/agent
+```
+
+The key must have **Allow Agent tool calls** enabled. The Agent—not the
+gateway—executes tools and returns their results. Existing text-only and hosted
+demo keys remain denied by default.
+
+```bash
+curl https://api.rax-digital.com/v1/chat/completions \
+  -H "Authorization: Bearer $RCG_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "rax/agent",
+    "messages": [{"role":"user","content":"What is the weather in Tokyo?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get current weather",
+        "parameters": {
+          "type": "object",
+          "properties": {"city": {"type": "string"}},
+          "required": ["city"],
+          "additionalProperties": false
+        }
+      }
+    }],
+    "tool_choice": "auto"
+  }'
+```
+
+See [Agent and harness integration](docs/agents.md) for the supported boundary,
+Hermes configuration, multi-turn examples, and framework compatibility notes.
 
 ## Choose your first run
 
@@ -169,6 +217,7 @@ for a locally running gateway.
 - [Provider adapters](docs/providers.md)
 - [Authentication](docs/auth.md)
 - [SDKs](docs/sdk.md)
+- [Agent and harness integration](docs/agents.md)
 - [Configuration](docs/config.md)
 
 ### Operations

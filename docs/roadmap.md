@@ -29,6 +29,8 @@ Exit: all [MVP acceptance criteria](mvp.md#acceptance-criteria) pass.
 
 - authenticated operator console for tenant, API-key, health, and bounded
   usage-metadata administration;
+- OpenAI-compatible Agent tool calling, structured outputs, capability-safe
+  aliases, and framework integration fixtures;
 - additional provider adapters based on community demand;
 - configuration publication and operator CLI improvements;
 - stronger cost/token budgets and provider quota awareness;
