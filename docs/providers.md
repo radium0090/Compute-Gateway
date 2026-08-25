@@ -113,7 +113,9 @@ error handling.
 - Anthropic temperatures above `1` are rejected because the native API cannot
   represent them without changing their meaning.
 - Function tools are translated for OpenAI, Anthropic, and Gemini. Tool
-  execution remains the responsibility of the calling Agent/harness.
+  execution remains the responsibility of the calling Agent/harness. Gemini
+  receives the original function parameter schema through
+  `parametersJsonSchema` rather than its narrower OpenAPI `parameters` field.
 - OpenAI tool-call argument strings pass through unchanged. Anthropic native
   `tool_use`/`tool_result` blocks and Gemini
   `functionCall`/`functionResponse` parts are normalized to the OpenAI wire

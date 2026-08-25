@@ -469,7 +469,11 @@ function buildRequestBody(
                   ...(tool.function.description === undefined
                     ? {}
                     : { description: tool.function.description }),
-                  parameters: tool.function.parameters ?? {
+                  // The public contract accepts JSON Schema. Gemini's
+                  // `parameters` field is its narrower OpenAPI Schema type,
+                  // while `parametersJsonSchema` preserves fields commonly
+                  // emitted by Agent SDKs, including additionalProperties.
+                  parametersJsonSchema: tool.function.parameters ?? {
                     type: 'object',
                     properties: {},
                   },

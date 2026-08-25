@@ -227,7 +227,10 @@ live('live provider compatibility through the OpenAI Node SDK', () => {
             type: 'function',
             function: { name: 'return_status' },
           },
-          max_tokens: 64,
+          // Reasoning models count internal reasoning against this budget.
+          // Keep the live probe bounded while leaving enough room for the
+          // forced function call payload.
+          max_tokens: 512,
         });
         const toolCall = toolCompletion.choices[0]?.message.tool_calls?.[0];
         if (toolCall?.type !== 'function') {
