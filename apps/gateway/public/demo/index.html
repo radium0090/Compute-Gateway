@@ -9,8 +9,8 @@
   </head>
   <body>
     <main>
-      <p class="eyebrow">RAX Compute Gateway</p>
-      <h1>One response in about 60 seconds.</h1>
+      <p class="eyebrow">RAX Compute Gateway · v0.3.0</p>
+      <h1>Try the gateway in about 60 seconds.</h1>
       <p class="lede">
         Verify with GitHub and receive a new, tightly limited API key that works
         for five minutes. No provider key or local installation is required.
@@ -20,11 +20,30 @@
         <h2 id="limits-heading">Trial safeguards</h2>
         <ul>
           <li>One configured low-cost model</li>
-          <li>Non-streaming requests only</li>
+          <li>Text-only, non-streaming requests</li>
           <li>Small rate, concurrency, input, and output limits</li>
           <li>One claim per eligible GitHub account per day</li>
           <li>A global daily claim budget</li>
         </ul>
+      </section>
+      <section class="agent-note" aria-labelledby="agents-heading">
+        <p class="eyebrow">New in v0.3.0</p>
+        <h2 id="agents-heading">Bring one API to your Agent.</h2>
+        <p>
+          Normal customer and self-hosted keys can use
+          <code>rax/agent</code> with OpenAI-style function tools across OpenAI,
+          Anthropic, and Gemini. Your Agent keeps control of tool execution,
+          permissions, memory, and its sandbox.
+        </p>
+        <p>
+          Public five-minute keys remain text-only to limit abuse. Ask the
+          operator for a tool-enabled key or self-host the gateway to test a
+          complete Agent loop.
+        </p>
+        <a
+          href="https://github.com/radium0090/Compute-Gateway/blob/main/docs/agents.md"
+          >Read the Agent integration guide</a
+        >
       </section>
       <p class="privacy">
         GitHub provides your numeric account ID and account creation time. The

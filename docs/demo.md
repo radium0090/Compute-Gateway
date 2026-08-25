@@ -5,6 +5,11 @@ installing the gateway. It is an evaluation surface, not anonymous signup,
 billing, or a permanent credential service. The feature is disabled by default
 and does not change the `/v1` API contract.
 
+Starting with `v0.3.0`, the page also points developers to the Agent integration
+guide and the `rax/agent` alias. The claimed public key deliberately remains
+text-only: tool permission must be granted explicitly to a normal customer key
+or a self-hosted key. This preserves ADR 0015's deny-by-default public boundary.
+
 ## User flow
 
 1. The developer opens `/demo` and chooses **Claim a five-minute key**.

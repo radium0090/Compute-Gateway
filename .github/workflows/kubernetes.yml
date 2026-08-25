@@ -66,7 +66,7 @@ jobs:
       - name: Build and load release-candidate image
         run: |
           docker build \
-            --build-arg VERSION=0.2.0-rc \
+            --build-arg VERSION=0.3.0-rc \
             --build-arg REVISION="$GITHUB_SHA" \
             --tag rax-compute-gateway:rc .
           kind load docker-image rax-compute-gateway:rc --name rax-compute-gateway-validation

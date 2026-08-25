@@ -90,7 +90,7 @@ function escapeHtml(value: string): string {
 function page(title: string, body: string): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><title>${escapeHtml(title)}</title><link rel="stylesheet" href="/demo/app.css"></head>
-<body><main><p class="eyebrow">RAX Compute Gateway</p>${body}</main></body></html>`;
+<body><main><p class="eyebrow">RAX Compute Gateway · v0.3.0</p>${body}</main></body></html>`;
 }
 
 function resultPage(origin: string, result: DemoClaimSuccess): string {
@@ -105,7 +105,7 @@ function resultPage(origin: string, result: DemoClaimSuccess): string {
   -d '${payload}'`;
   return page(
     'Your five-minute RAX key',
-    `<h1>Your trial key is ready.</h1><p class="lede">It expires at <strong>${escapeHtml(result.expiresAt.toISOString())}</strong>. This page is the only time the credential is displayed.</p><p class="notice">Copy and run this command now. Do not share the credential.</p><textarea readonly aria-label="Ready-to-run curl command">${escapeHtml(curl)}</textarea><p><a href="/demo">Back to trial information</a></p>`,
+    `<h1>Your trial key is ready.</h1><p class="lede">It expires at <strong>${escapeHtml(result.expiresAt.toISOString())}</strong>. This page is the only time the credential is displayed.</p><p class="notice">Copy and run this command now. Do not share the credential.</p><textarea readonly aria-label="Ready-to-run curl command">${escapeHtml(curl)}</textarea><p class="privacy"><strong>Trial scope:</strong> this public key supports one text-only model and does not allow streaming or Agent tools. Tool-enabled keys must be issued explicitly by the operator or created in a self-hosted gateway.</p><p><a href="/demo">Back to trial information</a></p>`,
   );
 }
 
