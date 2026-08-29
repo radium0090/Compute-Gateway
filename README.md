@@ -23,6 +23,13 @@ signed multi-architecture image, Helm chart, OpenAPI contract, checksums, SBOM,
 and provenance. The documents in this repository remain normative unless an
 accepted Architecture Decision Record (ADR) supersedes them.
 
+> **Hosted-service status:** the public RAX deployment is currently paused
+> between scheduled evaluation windows to control operating costs. The hosted
+> API, operator console, and five-minute demo may therefore be unavailable.
+> To request a temporary evaluation window, [open a GitHub Issue](https://github.com/radium0090/Compute-Gateway/issues/new)
+> and wait for confirmation before trying the hosted URLs. Never include API
+> keys, provider credentials, or other secrets in an issue.
+
 ## MVP capabilities
 
 - `POST /v1/chat/completions`, including streaming
@@ -49,7 +56,8 @@ target RAX by changing its base URL, API key, and model. Use `rax/agent` so
 routing is restricted to tool-capable candidates:
 
 ```text
-Base URL: https://api.rax-digital.com/v1
+Self-hosted base URL: http://localhost:8080/v1
+Hosted base URL (when an evaluation window is active): https://api.rax-digital.com/v1
 API Key:  your RAX API key
 Model:    rax/agent
 ```
@@ -59,7 +67,7 @@ gateway—executes tools and returns their results. Existing text-only and hoste
 demo keys remain denied by default.
 
 ```bash
-curl https://api.rax-digital.com/v1/chat/completions \
+curl http://localhost:8080/v1/chat/completions \
   -H "Authorization: Bearer $RCG_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
@@ -87,12 +95,17 @@ Hermes configuration, multi-turn examples, and framework compatibility notes.
 
 ## Choose your first run
 
-### 60-second hosted trial
+### 60-second hosted trial (available by request)
 
-Open [api.rax-digital.com/demo](https://api.rax-digital.com/demo/), verify with
-GitHub, and copy the generated `curl`. The complete public path has been
-verified against the production gateway: claim a key, run the command, and
-receive a normalized model response.
+The hosted deployment is currently stopped between scheduled evaluation
+windows, so [api.rax-digital.com/demo](https://api.rax-digital.com/demo/) will
+not respond while the service is paused. To try it, [open a GitHub Issue](https://github.com/radium0090/Compute-Gateway/issues/new)
+requesting a temporary evaluation window. After the operator confirms that the
+service is online, open the demo, verify with GitHub, and copy the generated
+`curl`. Do not post credentials or claimed API keys in the issue.
+
+When active, the complete public path is: claim a key, run the generated
+command, and receive a normalized model response in about 60 seconds.
 
 The service issues a unique API key that expires after five minutes; there is
 no shared public key in this repository. The trial is intentionally limited to
