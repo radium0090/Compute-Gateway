@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: ghcr.io/radium0090/compute-gateway
-  tag: v0.3.0
+  tag: v0.3.1
   digest: ''
   pullPolicy: IfNotPresent
 
