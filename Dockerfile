@@ -14,7 +14,7 @@ FROM dependencies AS build
 RUN pnpm build
 RUN pnpm --filter @rax-digital/gateway deploy --prod /opt/rax-compute-gateway
 
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:774b7d020b24214835769e24c3544835526cd0288f0b094eae48e8b2c2429a79 AS runtime
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:cb606325b7ec4af55462cb0b424a53b452a5b4a894ffe841fcf1048d216fb9f8 AS runtime
 
 ARG VERSION=0.0.0
 ARG REVISION=unknown
