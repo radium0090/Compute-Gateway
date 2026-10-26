@@ -547,7 +547,7 @@ describe('OpenAiAdapter', () => {
 
     const consume = async (): Promise<void> => {
       for await (const chunk of result.stream) {
-        void chunk;
+        expect(chunk).toBeDefined();
       }
     };
     await expect(consume()).rejects.toBeInstanceOf(ProviderStreamFailure);

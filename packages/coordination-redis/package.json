@@ -16,6 +16,6 @@
   ],
   "dependencies": {
     "@rax-digital/domain": "workspace:*",
-    "redis": "6.2.0"
+    "redis": "6.2.1"
   }
 }
