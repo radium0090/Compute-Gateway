@@ -5,6 +5,27 @@ Semantic Versioning and keeps release dates in UTC.
 
 ## Unreleased
 
+## 0.3.1 - 2026-10-26
+
+### Changed
+
+- Refreshed the pinned Node.js 24 build image and GitHub Actions used by the
+  CI, container, Kubernetes, security, AWS deployment, and release workflows.
+- Updated Fastify, Vitest, the administrative rate limiter, PostgreSQL and Redis
+  clients, JavaScript and Python OpenAI compatibility clients, and supported
+  development tooling to their current compatible releases.
+- Pinned patched transitive URI parsing, brace expansion, and gRPC libraries
+  after auditing the production dependency graph against current advisories.
+
+### Fixed
+
+- Kept the test toolchain on a matched, security-patched Vitest 4 release
+  instead of accepting an incompatible coverage-only major upgrade.
+- Updated the OpenAI provider stream regression test for the stricter current
+  TypeScript ESLint rule set.
+- Corrected the implementation-status snapshot to reflect that the low-cost
+  public AWS service is intentionally paused between evaluation windows.
+
 ## 0.3.0 - 2026-08-25
 
 ### Added

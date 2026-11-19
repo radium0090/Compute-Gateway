@@ -1,6 +1,6 @@
 # Implementation status
 
-This page records the code-to-specification review updated on 2026-08-25.
+This page records the code-to-specification review updated on 2026-10-26.
 Accepted ADRs and the normative documents remain authoritative; this page is a
 status snapshot, not a new architecture decision.
 
@@ -13,7 +13,9 @@ and the operator and evaluation additions are published as
 The Agent compatibility release is published as
 [`v0.3.0`](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.3.0)
 and implements the bounded tool-calling contract governed by ADR 0015. The
-public chat and model APIs, three providers,
+`v0.3.1` maintenance line refreshes the supported Node.js 24 image, runtime
+dependencies, compatibility clients, and pinned CI/release actions without
+changing that contract. The public chat and model APIs, three providers,
 streaming, authentication, deterministic routing, fallback, bounded retries,
 rate/concurrency coordination, circuit breaking, PostgreSQL migrations,
 OpenTelemetry, SDK previews, and Docker/Kubernetes delivery assets are present.
@@ -36,9 +38,10 @@ telemetry, deployment assets, and SDKs use the new identity. The public
 backup/restore timers, monitoring, and protected AWS deployment are active. The
 production service was promoted to the v0.3.0 implementation and its health,
 Demo, operator console, and unauthenticated API boundary were independently
-verified over public HTTPS. The validated staging stack is stopped with its
-volume retained as a temporary
-rollback target; the public production stack remains healthy.
+verified over public HTTPS. To control operating costs, the validated staging
+and public production stacks are currently stopped between scheduled
+evaluation windows. Their deployment state is retained so an approved
+evaluation can be restarted and reverified.
 
 ## Specification mapping
 
@@ -74,17 +77,19 @@ These items require a scoped issue or ADR before behavior changes:
 The completed first-release evidence, immutable digest, workflow links, and
 operator decision are recorded in `docs/releases/0.1.0-rc.md` and the public
 [`v0.1.0` release](https://github.com/radium0090/Compute-Gateway/releases/tag/v0.1.0).
-The v0.3.0 evidence is recorded in `docs/releases/0.3.0.md`. Future releases
-repeat the same signed-tag, artifact, digest-deployment, and
-protected-verification sequence rather than reusing earlier evidence.
+The v0.3.0 evidence is recorded in `docs/releases/0.3.0.md`. The v0.3.1
+maintenance evidence is recorded in `docs/releases/0.3.1.md`. Future releases
+repeat the same signed-tag, artifact, digest-deployment, and protected-
+verification sequence rather than reusing earlier evidence.
 
 ## Intentionally deferred work
 
 The `v0.2` operator console, browser authentication, tenant/API-key management,
 and durable content-free audit events are implemented under ADR 0013. The
 GitHub-authenticated, five-minute evaluation flow implemented under ADR 0014 is
-enabled at `https://api.rax-digital.com/demo/`; its production claim-to-response
-path was verified on 2026-08-15. General hosted signup/billing, permanent
+available at `https://api.rax-digital.com/demo/` only during an announced
+evaluation window; its production claim-to-response path was verified on
+2026-08-15. General hosted signup/billing, permanent
 end-user identity, MFA or federated operator identity, detailed token/cost
 accounting, extra provider families, package publication, and additional
 data-plane API surfaces remain deferred and require their own scope and

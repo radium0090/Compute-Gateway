@@ -49,7 +49,7 @@ describe('hosted demo routes', () => {
     const response = await gateway.inject({ method: 'GET', url: '/demo' });
 
     expect(response.statusCode).toBe(200);
-    expect(response.body).toContain('v0.3.0');
+    expect(response.body).toContain('v0.3.1');
     expect(response.body).toContain('Claim a five-minute key');
     expect(response.body).toContain('rax/agent');
     expect(response.body).toContain('Public five-minute keys remain text-only');

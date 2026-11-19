@@ -1,6 +1,6 @@
 import json
 
-import httpx
+import httpx2 as httpx
 from openai import OpenAI
 
 
