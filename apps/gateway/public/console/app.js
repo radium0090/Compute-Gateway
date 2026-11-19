@@ -53,7 +53,7 @@ function bindForm(id, handler) {
 
 function loginView() {
   authLayout(
-    `<section class="card"><p class="eyebrow">Welcome back</p><h2>Sign in</h2><p class="sub">Use your verified customer account.</p><form class="form" id="login-form"><label>Email<input name="email" type="email" autocomplete="email" required /></label><label>Password<input name="password" type="password" autocomplete="current-password" required /></label><button class="button" type="submit">Sign in securely</button><p class="form-status" role="status"></p></form><p class="switch"><a href="#" id="forgot">Forgot password?</a></p><p class="switch">New to RAX? <a href="/console/register">Request access</a></p></section>`,
+    `<section class="card"><p class="eyebrow">Welcome back</p><h2>Sign in</h2><p class="sub">Use your verified customer account.</p><form class="form" id="login-form"><label>Email<input name="email" type="email" autocomplete="email" required /></label><label>Password<input name="password" type="password" autocomplete="current-password" required /></label><button class="button" type="submit">Sign in securely</button><p class="form-status" role="status"></p></form><p class="switch"><a href="#" id="forgot">Forgot password?</a> · <a href="#" id="resend-verification">Resend verification</a></p><p class="switch">New to RAX? <a href="/console/register">Request access</a></p></section>`,
   );
   bindForm('#login-form', async (_form, data) => {
     const result = await request('/console/api/login', {
@@ -72,6 +72,12 @@ function loginView() {
     event.preventDefault();
     passwordRequestView();
   });
+  document
+    .querySelector('#resend-verification')
+    ?.addEventListener('click', (event) => {
+      event.preventDefault();
+      verificationRequestView();
+    });
 }
 
 function registerView() {
@@ -92,7 +98,23 @@ function registerView() {
     form.reset();
     status(
       form,
-      'Account created. Check your email for the verification link.',
+      'If the address is eligible, check your email for a verification link.',
+    );
+  });
+}
+
+function verificationRequestView() {
+  authLayout(
+    `<section class="card"><p class="eyebrow">Email verification</p><h2>Send a new verification link</h2><p class="sub">If the address has a pending account, we will replace its previous link.</p><form class="form" id="verification-request-form"><label>Email<input name="email" type="email" autocomplete="email" required /></label><button class="button" type="submit">Send verification link</button><p class="form-status" role="status"></p></form><p class="switch"><a href="/console/login">Return to sign in</a></p></section>`,
+  );
+  bindForm('#verification-request-form', async (form, data) => {
+    await request('/console/api/verification/resend', {
+      method: 'POST',
+      body: JSON.stringify({ email: data.get('email') }),
+    });
+    status(
+      form,
+      'If the account is eligible, the verification email is on its way.',
     );
   });
 }
@@ -198,29 +220,55 @@ async function dashboardView() {
 }
 
 function createKeyModal() {
+  const previousFocus = document.activeElement;
   document.body.insertAdjacentHTML(
     'beforeend',
-    `<div class="modal-backdrop" id="modal"><section class="modal"><h2>Create an API key</h2><p class="sub">The new key inherits your approved tenant limits.</p><form class="form" id="key-form"><label>Key name<input name="name" maxlength="100" placeholder="production-app" required /></label><button class="button" type="submit">Create key</button><button class="button secondary" type="button" id="cancel">Cancel</button><p class="form-status"></p></form></section></div>`,
+    `<div class="modal-backdrop" id="modal"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="create-key-title"><h2 id="create-key-title">Create an API key</h2><p class="sub">The new key inherits your approved tenant limits.</p><form class="form" id="key-form"><label>Key name<input name="name" maxlength="100" placeholder="production-app" required /></label><button class="button" type="submit">Create key</button><button class="button secondary" type="button" id="cancel">Cancel</button><p class="form-status" role="status"></p></form></section></div>`,
   );
   const modal = document.querySelector('#modal');
+  let protectCredential = false;
+  const closeModal = (force = false) => {
+    if (
+      protectCredential &&
+      !force &&
+      !confirm('Close without copying this API key? It cannot be recovered.')
+    )
+      return;
+    modal.remove();
+    if (typeof previousFocus?.focus === 'function') previousFocus.focus();
+  };
   document
     .querySelector('#cancel')
-    ?.addEventListener('click', () => modal.remove());
+    ?.addEventListener('click', () => closeModal());
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeModal();
+  });
+  modal.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeModal();
+  });
+  modal.querySelector('input')?.focus();
   bindForm('#key-form', async (_form, data) => {
     const result = await request('/console/api/api-keys', {
       method: 'POST',
       mutation: true,
       body: JSON.stringify({ name: data.get('name') }),
     });
+    protectCredential = true;
     modal.querySelector('.modal').innerHTML =
       `<h2>Copy this key now</h2><p class="sub">It cannot be recovered after this dialog is closed.</p><code class="secret">${escapeHtml(result.credential)}</code><div class="modal-actions"><button class="button" id="copy">Copy key</button><button class="button secondary" id="done">Done</button></div>`;
-    modal
-      .querySelector('#copy')
-      .addEventListener('click', async () =>
-        navigator.clipboard.writeText(result.credential),
-      );
+    const copy = modal.querySelector('#copy');
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(result.credential);
+        copy.textContent = 'Copied';
+        protectCredential = false;
+      } catch {
+        copy.textContent = 'Copy failed — select the key manually';
+      }
+    });
+    copy.focus();
     modal.querySelector('#done').addEventListener('click', async () => {
-      modal.remove();
+      closeModal(true);
       await dashboardView();
     });
   });

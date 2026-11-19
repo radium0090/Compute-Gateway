@@ -96,6 +96,19 @@ describe('customer and product routes', () => {
     });
     expect(privacy.statusCode).toBe(200);
     expect(privacy.body).toContain('Privacy notice');
+    const consolePage = await app.inject({
+      method: 'GET',
+      url: '/console/login',
+    });
+    expect(consolePage.statusCode).toBe(200);
+    expect(consolePage.body).toContain('Customer Console');
+    const consoleScript = await app.inject({
+      method: 'GET',
+      url: '/console/app.js',
+    });
+    expect(consoleScript.statusCode).toBe(200);
+    expect(consoleScript.body).toContain('Resend verification');
+    expect(consoleScript.body).toContain('aria-modal="true"');
     await app.close();
   });
 
