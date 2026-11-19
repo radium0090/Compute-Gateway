@@ -40,6 +40,7 @@ release_root="${RCG_DEPLOY_PATH}/releases/${RCG_COMMIT_SHA}"
 shared_root="${RCG_DEPLOY_PATH}/shared"
 runtime_environment="${shared_root}/production.env"
 deployment_record="${shared_root}/production-deployment.env"
+release_environment="${release_root}/.deployment.env"
 if [[ ! -f "${release_root}/docker-compose.yml" ]]; then
   echo 'The uploaded release is incomplete.' >&2
   exit 1
@@ -54,10 +55,23 @@ if [[ "$(stat -c '%a' "$runtime_environment")" != 600 ]]; then
 fi
 
 ln -sfn "$runtime_environment" "${release_root}/.env"
+if [[ -n "${RCG_IMAGE_REF:-}" ]]; then
+  if [[ ! "$RCG_IMAGE_REF" =~ ^ghcr\.io/radium0090/compute-gateway:v[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}$ ]]; then
+    echo 'RCG_IMAGE_REF must be an immutable RAX release reference.' >&2
+    exit 1
+  fi
+  selected_image="$RCG_IMAGE_REF"
+else
+  selected_image="rax-compute-gateway:${RCG_COMMIT_SHA}"
+fi
+umask 077
+printf 'RCG_IMAGE=%s\n' "$selected_image" >"$release_environment"
+
 compose() {
   docker compose \
     --project-directory "$release_root" \
     --env-file "$runtime_environment" \
+    --env-file "$release_environment" \
     --file "${release_root}/docker-compose.yml" \
     --file "${release_root}/deploy/xserver/compose.yaml" \
     "$@"
@@ -71,10 +85,12 @@ fi
 rollback_on_error() {
   status=$?
   trap - ERR
-  if [[ -n "$previous_release" && -f "${previous_release}/docker-compose.yml" ]]; then
+  previous_release_environment="${previous_release}/.deployment.env"
+  if [[ -n "$previous_release" && -f "${previous_release}/docker-compose.yml" && -f "$previous_release_environment" ]]; then
     docker compose \
       --project-directory "$previous_release" \
       --env-file "$runtime_environment" \
+      --env-file "$previous_release_environment" \
       --file "${previous_release}/docker-compose.yml" \
       --file "${previous_release}/deploy/xserver/compose.yaml" \
       up --detach --wait --wait-timeout 240 || true
@@ -86,14 +102,8 @@ trap rollback_on_error ERR
 
 compose config --quiet
 if [[ -n "${RCG_IMAGE_REF:-}" ]]; then
-  if [[ ! "$RCG_IMAGE_REF" =~ ^ghcr\.io/radium0090/compute-gateway:v[0-9]+\.[0-9]+\.[0-9]+(@sha256:[0-9a-f]{64})?$ ]]; then
-    echo 'RCG_IMAGE_REF must be an immutable RAX release reference.' >&2
-    exit 1
-  fi
-  export RCG_IMAGE="$RCG_IMAGE_REF"
   compose pull gateway
 else
-  export RCG_IMAGE="rax-compute-gateway:${RCG_COMMIT_SHA}"
   compose build --pull gateway
 fi
 

@@ -119,7 +119,9 @@ first rehearsal; use a signed immutable release digest for a public release.
 
 The workflow validates main ancestry, uploads an archive, validates the runtime
 configuration, builds or pulls the image, runs migrations, starts the stack,
-and verifies both HTTPS hosts plus readiness.
+and verifies both HTTPS hosts plus readiness. Each release records its exact
+image reference in a non-secret `.deployment.env` file so an automatic rollback
+restores the previous application image instead of reusing the failed one.
 
 ## 7. Bootstrap the operator
 

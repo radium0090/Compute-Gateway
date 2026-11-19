@@ -47,7 +47,7 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 
-	@site path / /site/* /console* /api/inquiries
+	@site path / /site/* /console* /legal/* /api/inquiries
 	handle @site {
 		reverse_proxy gateway:8080 {
 			flush_interval -1

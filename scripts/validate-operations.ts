@@ -236,6 +236,23 @@ async function validateWorkflows(): Promise<void> {
       xserverSource.includes('git merge-base --is-ancestor'),
     'XServer deploy must pin the host key and deploy an approved main commit',
   );
+
+  const [xserverDeploy, xserverCaddy] = await Promise.all([
+    read('scripts/deploy-xserver.sh'),
+    read('deploy/xserver/Caddyfile'),
+  ]);
+  assert(
+    xserverDeploy.includes(
+      'release_environment="${release_root}/.deployment.env"',
+    ) &&
+      xserverDeploy.includes('--env-file "$previous_release_environment"') &&
+      xserverDeploy.includes('selected_image="$RCG_IMAGE_REF"'),
+    'XServer rollback must restore the previous release with its recorded immutable image',
+  );
+  assert(
+    xserverCaddy.includes('/legal/*'),
+    'XServer product host must expose the legal pages linked by the website and Console',
+  );
 }
 
 async function validateProductionRecovery(): Promise<void> {
