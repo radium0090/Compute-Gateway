@@ -328,6 +328,23 @@ async function validateProductionRecovery(): Promise<void> {
   );
 }
 
+async function validateMigrations(): Promise<void> {
+  const entries = (await readdir(new URL('db/migrations/', root)))
+    .filter((entry) => entry.endsWith('.sql'))
+    .sort();
+  const pattern = /^(\d{4})_[a-z0-9-]+\.sql$/u;
+  assert(entries.length > 0, 'at least one PostgreSQL migration is required');
+  assert(
+    entries.every((entry) => pattern.test(entry)),
+    'every PostgreSQL migration must use NNNN_description.sql naming',
+  );
+  const versions = entries.map((entry) => pattern.exec(entry)?.[1]);
+  assert(
+    new Set(versions).size === versions.length,
+    'PostgreSQL migration versions must be unique',
+  );
+}
+
 async function validateHelm(): Promise<void> {
   const chartRoot = 'deploy/helm/rax-compute-gateway/';
   const required = [
@@ -398,6 +415,7 @@ async function validateContainerReferences(): Promise<void> {
 
 await validateWorkflows();
 await validateProductionRecovery();
+await validateMigrations();
 await validateHelm();
 await validateContainerReferences();
 process.stdout.write('operations assets valid\n');

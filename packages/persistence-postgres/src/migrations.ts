@@ -25,10 +25,18 @@ export async function runMigrations(
   pool: Pool,
   migrationsDirectory: string,
 ): Promise<MigrationResult> {
-  const entries = (await readdir(migrationsDirectory, { withFileTypes: true }))
-    .filter((entry) => entry.isFile() && migrationFilePattern.test(entry.name))
-    .map((entry) => entry.name)
-    .sort();
+  const sqlEntries = (
+    await readdir(migrationsDirectory, { withFileTypes: true })
+  ).filter((entry) => entry.isFile() && entry.name.endsWith('.sql'));
+  const invalidEntry = sqlEntries.find(
+    (entry) => !migrationFilePattern.test(entry.name),
+  );
+  if (invalidEntry !== undefined) {
+    throw new Error(
+      `Invalid migration filename ${invalidEntry.name}; expected NNNN_description.sql`,
+    );
+  }
+  const entries = sqlEntries.map((entry) => entry.name).sort();
 
   const client = await pool.connect();
   const appliedVersions: string[] = [];
