@@ -33,6 +33,14 @@ or an external secret manager, never from PostgreSQL in the MVP.
 | Resilience | deadlines, bounded retries, concurrency, circuit state |
 | Telemetry | metrics, spans, structured redacted events |
 | Persistence | typed repositories and transactional migrations |
+| Customer control plane | verified identities, bounded entitlements, tenant-scoped key lifecycle |
+
+The optional hosted product site and customer Console use the same composition
+root but a separate identity/session boundary from `/admin`. Registration
+creates a disabled tenant; only an authenticated operator can activate bounded
+entitlements. Customer API-key creation is transactionally serialized per
+tenant so concurrent requests cannot exceed the approved key ceiling. These
+control-plane routes do not change the public `/v1` contract.
 
 ## Request lifecycle
 
@@ -94,8 +102,9 @@ before provider invocation rather than silently ignored.
 
 ## Consistency
 
-API key state is read from PostgreSQL during authentication, so revocation is
-effective on the next request after the database commit. Provider and alias
+API key state is read from PostgreSQL during authentication, so revocation or
+customer suspension is effective on the next request after the database
+commit. Provider and alias
 policy is loaded from the versioned YAML file before the listener opens;
 operators apply a policy change with a readiness-gated process restart.
 

@@ -1,0 +1,70 @@
+{
+	admin off
+	servers {
+		protocols h1 h2 h3
+	}
+}
+
+{$RCG_API_HOST} {
+	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+
+	@metrics path /metrics
+	respond @metrics 404
+
+	@api path /v1/* /health/* /admin* /demo*
+	handle @api {
+		reverse_proxy gateway:8080 {
+			flush_interval -1
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 65s
+				keepalive 30s
+			}
+		}
+	}
+
+	handle {
+		redir https://{$RCG_SITE_HOST}{uri} 308
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+{$RCG_SITE_HOST} {
+	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	@site path / /site/* /console* /legal/* /api/inquiries
+	handle @site {
+		reverse_proxy gateway:8080 {
+			flush_interval -1
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 65s
+				keepalive 30s
+			}
+		}
+	}
+
+	handle {
+		respond 404
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

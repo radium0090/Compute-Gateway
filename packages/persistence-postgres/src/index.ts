@@ -5,6 +5,11 @@ export {
   PostgresAdminControlRepository,
   PostgresAdminIdentityRepository,
 } from './admin-repository.js';
+export {
+  PostgresCustomerAuditRepository,
+  PostgresCustomerControlRepository,
+  PostgresCustomerIdentityRepository,
+} from './customer-repository.js';
 export { runMigrations, type MigrationResult } from './migrations.js';
 export {
   PostgresReadinessProbe,

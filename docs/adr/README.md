@@ -23,6 +23,8 @@ documents.
 | [0013](0013-admin-control-plane.md) | Embedded administrative control plane | Accepted |
 | [0014](0014-github-authenticated-demo-claims.md) | GitHub-authenticated ephemeral demo claims | Accepted |
 | [0015](0015-agent-tool-calling-compatibility.md) | Bounded agent tool-calling compatibility | Accepted |
+| [0016](0016-hosted-customer-accounts-and-console.md) | Hosted customer accounts and self-service console | Accepted |
+| [0017](0017-xserver-single-host-deployment.md) | XServer single-host production deployment | Accepted |
 
 ## Format and lifecycle
 

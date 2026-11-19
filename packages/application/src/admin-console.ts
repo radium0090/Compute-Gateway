@@ -10,6 +10,10 @@ import {
   type AdminTokenHash,
   type AdminUser,
   type AdminUserId,
+  type BusinessInquirySummary,
+  type CustomerAccountSummary,
+  type CustomerAdministrationRepository,
+  type CustomerTenantEntitlements,
   type ApiKey,
   type ApiKeyEnvironment,
   type ApiKeyPolicy,
@@ -64,6 +68,22 @@ export interface AdminConsoleServiceOptions {
   readonly lockDurationMs?: number;
   readonly clock?: () => Date;
   readonly idGenerator: () => string;
+  readonly customerAdministration?: CustomerAdministrationRepository;
+}
+
+export interface SetCustomerEntitlementsInput {
+  readonly tenantId: string;
+  readonly status: 'active' | 'suspended';
+  readonly planCode: string;
+  readonly allowedModelPatterns: readonly string[];
+  readonly allowStreaming: boolean;
+  readonly allowTools: boolean;
+  readonly requestsPerMinute: number;
+  readonly maxConcurrentRequests: number;
+  readonly maxRequestTokens: number;
+  readonly maxOutputTokens: number;
+  readonly maxActiveApiKeys: number;
+  readonly keyTtlDays: number;
 }
 
 export interface CreateAdminApiKeyInput {
@@ -83,7 +103,8 @@ const defaultLockDurationMs = 15 * 60 * 1_000;
 
 export class AdminInputError extends Error {
   public constructor(
-    public readonly code: 'tenant_invalid' | 'expiry_invalid',
+    public readonly code:
+      'tenant_invalid' | 'expiry_invalid' | 'email_unverified',
     message: string,
   ) {
     super(message);
@@ -462,6 +483,118 @@ export class AdminConsoleService {
       );
     }
     return revoked;
+  }
+
+  public listCustomerAccounts(): Promise<readonly CustomerAccountSummary[]> {
+    return this.customerAdministration().listCustomerAccounts();
+  }
+
+  public listBusinessInquiries(): Promise<readonly BusinessInquirySummary[]> {
+    return this.customerAdministration().listBusinessInquiries();
+  }
+
+  public async setCustomerEntitlements(input: {
+    readonly actor: AdminPrincipal;
+    readonly value: SetCustomerEntitlementsInput;
+    readonly requestId: string;
+  }): Promise<boolean> {
+    const now = this.clock();
+    const value = input.value;
+    if (
+      !/^[a-z][a-z0-9_-]{1,31}$/.test(value.planCode) ||
+      value.allowedModelPatterns.length < 1 ||
+      value.allowedModelPatterns.some(
+        (pattern) => pattern.trim() === '' || pattern.length > 200,
+      ) ||
+      [
+        value.requestsPerMinute,
+        value.maxConcurrentRequests,
+        value.maxRequestTokens,
+        value.maxOutputTokens,
+        value.maxActiveApiKeys,
+        value.keyTtlDays,
+      ].some((limit) => !Number.isInteger(limit) || limit <= 0)
+    ) {
+      throw new TypeError('Customer entitlements are invalid');
+    }
+    const selectedTenantId = tenantId(value.tenantId);
+    const account = (
+      await this.customerAdministration().listCustomerAccounts()
+    ).find((candidate) => candidate.tenantId === selectedTenantId);
+    if (account === undefined) return false;
+    if (value.status === 'active' && account.emailVerifiedAt === null) {
+      throw new AdminInputError(
+        'email_unverified',
+        'The customer must verify their email before service activation.',
+      );
+    }
+    const current = account.entitlements;
+    const entitlements: CustomerTenantEntitlements = {
+      tenantId: selectedTenantId,
+      status: value.status,
+      planCode: value.planCode,
+      policy: {
+        allowedModelPatterns: value.allowedModelPatterns,
+        allowStreaming: value.allowStreaming,
+        allowTools: value.allowTools,
+        requestsPerMinute: value.requestsPerMinute,
+        maxConcurrentRequests: value.maxConcurrentRequests,
+        maxRequestTokens: value.maxRequestTokens,
+        maxOutputTokens: value.maxOutputTokens,
+      },
+      maxActiveApiKeys: value.maxActiveApiKeys,
+      keyTtlDays: value.keyTtlDays,
+      createdAt: current.createdAt,
+      updatedAt: now,
+    };
+    const updated = await this.customerAdministration().setEntitlements({
+      tenantId: selectedTenantId,
+      tenantStatus: value.status === 'active' ? 'active' : 'disabled',
+      entitlements,
+    });
+    if (updated) {
+      await this.audit(
+        input.actor.id,
+        'customer.entitlements_updated',
+        'tenant',
+        selectedTenantId,
+        input.requestId,
+        { status: value.status, plan_code: value.planCode },
+      );
+    }
+    return updated;
+  }
+
+  public async updateBusinessInquiryStatus(input: {
+    readonly actor: AdminPrincipal;
+    readonly id: string;
+    readonly status: 'in_progress' | 'closed' | 'deleted';
+    readonly requestId: string;
+  }): Promise<boolean> {
+    const updated =
+      await this.customerAdministration().updateBusinessInquiryStatus(
+        input.id,
+        input.status,
+        this.clock(),
+      );
+    if (updated) {
+      await this.audit(
+        input.actor.id,
+        'business_inquiry.status_updated',
+        'business_inquiry',
+        input.id,
+        input.requestId,
+        { status: input.status },
+      );
+    }
+    return updated;
+  }
+
+  private customerAdministration(): CustomerAdministrationRepository {
+    if (this.options.customerAdministration === undefined) {
+      throw new Error('Customer administration is not configured');
+    }
+    return this.options.customerAdministration;
   }
 
   private async audit(

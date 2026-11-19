@@ -17,6 +17,12 @@ content, provider raw responses, and full API keys are not stored in the MVP.
 | `operator_audit_events` | content-free operator audit trail | actor, action, target, request ID, metadata |
 | `demo_oauth_states` | one-time OAuth replay protection | keyed state hash, expiry, consumption time |
 | `demo_claims` | public-trial cooldown and daily budget ledger | keyed identity pseudonym, API key reference, claim/expiry times |
+| `customer_users` | hosted customer identities, separate from operators | tenant, verified email, password hash, status and lock state |
+| `customer_sessions` | bounded hosted customer browser sessions | keyed session/CSRF hashes and expiry |
+| `customer_one_time_tokens` | verification and recovery replay protection | purpose, keyed token hash, expiry and consumption time |
+| `customer_tenant_entitlements` | operator-approved self-service ceilings | model/tool/stream limits, rate/concurrency/token/key ceilings |
+| `business_inquiries` | consented product and private-deployment contacts | contact fields, request ID, workflow status and timestamps |
+| `customer_audit_events` | content-free customer security audit trail | actor, tenant, action, target and request ID |
 
 Database identifiers use UUIDs; the current operator command generates random
 UUIDv4 API-key IDs and accepts an operator-supplied tenant UUID. Timestamps use
@@ -46,6 +52,11 @@ authentication updates `last_used_at` no more than once per minute per key.
 Hosted-demo budget checks and API-key insertion use one transaction. The small,
 operator-capped claim volume permits an exclusive claim-ledger lock so replicas
 cannot race past per-identity or global limits.
+
+Customer self-service API-key creation locks the tenant and entitlement rows,
+rechecks active status and the current policy, counts non-expired active keys,
+and inserts the key in the same transaction. Suspending customer entitlements
+disables every active key for that tenant in the entitlement transaction.
 
 ## Connections
 

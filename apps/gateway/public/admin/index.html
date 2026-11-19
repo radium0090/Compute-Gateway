@@ -53,6 +53,8 @@
           <button class="nav-item active" data-section="overview">概览</button>
           <button class="nav-item" data-section="tenants">租户</button>
           <button class="nav-item" data-section="keys">API Keys</button>
+          <button class="nav-item" data-section="customers">客户账号</button>
+          <button class="nav-item" data-section="inquiries">商务咨询</button>
         </nav>
         <div class="sidebar-foot">
           <span id="admin-name"></span>
@@ -191,6 +193,56 @@
                 </tr>
               </thead>
               <tbody id="key-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="customers-section" class="section-view hidden">
+          <div class="section-heading">
+            <div>
+              <h2>客户账号</h2>
+              <p class="muted">
+                邮箱验证不等于服务授权。激活后客户才能创建受限 API Key。
+              </p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>组织</th>
+                  <th>联系人</th>
+                  <th>验证</th>
+                  <th>服务状态</th>
+                  <th>计划</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="customer-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="inquiries-section" class="section-view hidden">
+          <div class="section-heading">
+            <div>
+              <h2>商务咨询</h2>
+              <p class="muted">官网提交的联系内容。处理完成后可关闭。</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>联系人</th>
+                  <th>公司</th>
+                  <th>咨询内容</th>
+                  <th>状态</th>
+                  <th>提交时间</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="inquiry-table"></tbody>
             </table>
           </div>
         </section>

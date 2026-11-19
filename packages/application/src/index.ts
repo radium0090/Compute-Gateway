@@ -17,6 +17,7 @@ export {
   type AdminSecurityPort,
   type ApiKeyProvisionerPort,
   type CreateAdminApiKeyInput,
+  type SetCustomerEntitlementsInput,
 } from './admin-console.js';
 export {
   DemoClaimError,
@@ -31,3 +32,12 @@ export {
   type DemoSecurityPort,
   type DemoStateRecord,
 } from './demo-claim.js';
+export {
+  CustomerConsoleService,
+  CustomerInputError,
+  type CustomerConsoleServiceOptions,
+  type CustomerLoginResult,
+  type CustomerMailerPort,
+  type CustomerPrincipal,
+  type CustomerSecurityPort,
+} from './customer-console.js';

@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | local process | contributor iteration | gateway + local PostgreSQL |
 | Docker Compose | evaluation/single host | gateway, PostgreSQL, Redis, Collector |
+| XServer VPS | low-cost hosted service | Compose stack, Caddy, product site and consoles |
 | Kubernetes | production | replicas, managed PostgreSQL/Redis, ingress, telemetry |
 
 Serverless runtimes with hard streaming limits or unstable outbound connection
@@ -121,6 +122,43 @@ identity pepper, and a dedicated tenant UUID. The deploy script runs migration
 spend limits and alerts enabled; application claim budgets are defense in depth,
 not a financial guarantee. Setup and emergency disable steps are in
 [hosted demo](demo.md).
+
+## XServer single-host production
+
+The low-cost hosted target governed by ADR 0017 uses the root Compose file plus
+`deploy/xserver/compose.yaml`. One Ubuntu 24.04 VPS runs Caddy, the gateway,
+PostgreSQL, Redis, and the Collector. The recommended minimum is 4 GiB memory.
+Only ports 80 and 443 are public; database, Redis, metrics, and gateway ports
+remain inside the Compose network.
+
+The default host split is:
+
+- `api.rax-digital.com` for `/v1`, health, the operator console, and the
+  optional demo;
+- `gateway.rax-digital.com` for the product site, inquiries, registration, and
+  customer Console.
+
+Before the first deployment, copy `deploy/xserver/runtime.env.example` to
+`/opt/rax-compute-gateway/shared/production.env`, replace every placeholder,
+and set mode `0600`. Provider and runtime secrets live only in that file. The
+complete host, SSH, DNS, Docker, and first-account procedure is in the
+[XServer production bootstrap runbook](runbooks/xserver-bootstrap.md). The
+protected `xserver-production` GitHub environment requires:
+
+- secrets `XSERVER_HOST`, `XSERVER_SSH_USER`, and
+  `XSERVER_SSH_PRIVATE_KEY`;
+- variables `XSERVER_DEPLOY_PATH`, `XSERVER_SSH_HOST_KEY`, `RCG_API_HOST`, and
+  `RCG_SITE_HOST`;
+- deployment restricted to `main` with a required reviewer.
+
+The workflow uploads an archive of an approved main commit, executes
+`scripts/deploy-xserver.sh`, runs migrations and configuration validation,
+starts the stack, and checks both HTTPS hosts. Keep public registration disabled
+until the sending domain is verified and an operator has tested account
+verification, recovery, approval, and key issuance.
+
+The single host is an intentional cost tradeoff. Enable encrypted off-host
+PostgreSQL backups before storing material paid-customer or billing data.
 
 ## Health semantics
 

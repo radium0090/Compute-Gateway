@@ -220,6 +220,60 @@ async function validateWorkflows(): Promise<void> {
     ),
     'AWS production workflow must not use long-lived cloud or SSH credentials',
   );
+
+  const xserverSource = await read(
+    '.github/workflows/xserver-production-deploy.yml',
+  );
+  const xserver = parse(xserverSource) as Workflow | null;
+  assert(
+    xserver?.jobs?.deploy?.environment === 'xserver-production',
+    'XServer deploy must use the protected xserver-production environment',
+  );
+  assert(
+    xserverSource.includes('scripts/deploy-xserver.sh') &&
+      xserverSource.includes('secrets.XSERVER_SSH_PRIVATE_KEY') &&
+      xserverSource.includes('vars.XSERVER_SSH_HOST_KEY') &&
+      xserverSource.includes('git merge-base --is-ancestor') &&
+      xserverSource.includes('-o StrictHostKeyChecking=yes') &&
+      xserverSource.includes('-o IdentitiesOnly=yes'),
+    'XServer deploy must pin the host key and deploy an approved main commit',
+  );
+
+  const [xserverDeploy, xserverCaddy] = await Promise.all([
+    read('scripts/deploy-xserver.sh'),
+    read('deploy/xserver/Caddyfile'),
+  ]);
+  assert(
+    xserverDeploy.includes(
+      'release_environment="${release_root}/.deployment.env"',
+    ) &&
+      xserverDeploy.includes('--env-file "$previous_release_environment"') &&
+      xserverDeploy.includes('selected_image="$RCG_IMAGE_REF"') &&
+      xserverDeploy.includes(
+        '^/opt/[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$',
+      ),
+    'XServer rollback must restore the previous release with its recorded immutable image',
+  );
+  const xserverVerify = await read('scripts/verify-xserver-production.sh');
+  assert(
+    xserverSource.includes('scripts/verify-xserver-production.sh') &&
+      xserverVerify.includes('/health/ready') &&
+      xserverVerify.includes('/console/login') &&
+      xserverVerify.includes('/legal/privacy') &&
+      xserverVerify.includes('/metrics" 404') &&
+      xserverVerify.includes('content-security-policy'),
+    'XServer deployment must verify the public product, Console, legal, health, security-header, and private-metrics boundaries',
+  );
+  assert(
+    xserverCaddy.includes('/legal/*'),
+    'XServer product host must expose the legal pages linked by the website and Console',
+  );
+  assert(
+    (await read('deploy/xserver/runtime.env.example')).includes(
+      'RCG_TRUST_PROXY=true',
+    ),
+    'XServer must trust its private Caddy hop so client-aware limits do not collapse to one proxy address',
+  );
 }
 
 async function validateProductionRecovery(): Promise<void> {
@@ -274,6 +328,23 @@ async function validateProductionRecovery(): Promise<void> {
   );
 }
 
+async function validateMigrations(): Promise<void> {
+  const entries = (await readdir(new URL('db/migrations/', root)))
+    .filter((entry) => entry.endsWith('.sql'))
+    .sort();
+  const pattern = /^(\d{4})_[a-z0-9-]+\.sql$/u;
+  assert(entries.length > 0, 'at least one PostgreSQL migration is required');
+  assert(
+    entries.every((entry) => pattern.test(entry)),
+    'every PostgreSQL migration must use NNNN_description.sql naming',
+  );
+  const versions = entries.map((entry) => pattern.exec(entry)?.[1]);
+  assert(
+    new Set(versions).size === versions.length,
+    'PostgreSQL migration versions must be unique',
+  );
+}
+
 async function validateHelm(): Promise<void> {
   const chartRoot = 'deploy/helm/rax-compute-gateway/';
   const required = [
@@ -314,6 +385,7 @@ async function validateContainerReferences(): Promise<void> {
     read('Dockerfile'),
     read('docker-compose.yml'),
     read('deploy/compose/production.yaml'),
+    read('deploy/xserver/compose.yaml'),
     read('deploy/helm/rax-compute-gateway/values.yaml'),
     read('deploy/kubernetes/examples/rax-compute-gateway.yaml'),
   ]);
@@ -335,10 +407,15 @@ async function validateContainerReferences(): Promise<void> {
     /image:\s*caddy:2\.11\.4-alpine@sha256:[a-f0-9]{64}/.test(sources[2]),
     'production edge must use the pinned Caddy image digest',
   );
+  assert(
+    /image:\s*caddy:2\.11\.4-alpine@sha256:[a-f0-9]{64}/.test(sources[3]),
+    'XServer edge must use the pinned Caddy image digest',
+  );
 }
 
 await validateWorkflows();
 await validateProductionRecovery();
+await validateMigrations();
 await validateHelm();
 await validateContainerReferences();
 process.stdout.write('operations assets valid\n');

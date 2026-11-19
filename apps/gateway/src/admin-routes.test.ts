@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type {
-  AdminLoginSuccess,
-  AdminPrincipal,
+import {
+  AdminInputError,
+  type AdminLoginSuccess,
+  type AdminPrincipal,
 } from '@rax-digital/application';
 import {
   adminUserId,
@@ -130,6 +131,10 @@ function service(): AdminRouteService {
       }),
     ),
     revokeApiKey: vi.fn(() => Promise.resolve(true)),
+    listCustomerAccounts: vi.fn(() => Promise.resolve([])),
+    listBusinessInquiries: vi.fn(() => Promise.resolve([])),
+    setCustomerEntitlements: vi.fn(() => Promise.resolve(true)),
+    updateBusinessInquiryStatus: vi.fn(() => Promise.resolve(true)),
   };
 }
 
@@ -285,6 +290,106 @@ describe('administrator routes', () => {
     expect(keys.body).toContain('public-id-1234');
     expect(keys.body).not.toContain('key_hash');
     expect(keys.body).not.toContain('credential');
+    await gateway.close();
+  });
+
+  it('keeps customer approval and inquiry operations behind admin CSRF', async () => {
+    const value = service();
+    const gateway = await app(value);
+    const customers = await gateway.inject({
+      method: 'GET',
+      url: '/admin/api/customers',
+      headers: { cookie: authenticatedHeaders.cookie },
+    });
+    const inquiries = await gateway.inject({
+      method: 'GET',
+      url: '/admin/api/inquiries',
+      headers: { cookie: authenticatedHeaders.cookie },
+    });
+    const rejected = await gateway.inject({
+      method: 'PUT',
+      url: '/admin/api/customers/00000000-0000-4000-8000-000000000010/entitlements',
+      headers: { cookie: authenticatedHeaders.cookie, origin },
+      payload: {
+        status: 'active',
+        plan_code: 'private_beta',
+        allowed_model_patterns: ['rax/*'],
+        allow_streaming: true,
+        allow_tools: false,
+        requests_per_minute: 30,
+        max_concurrent_requests: 3,
+        max_request_tokens: 4096,
+        max_output_tokens: 512,
+        max_active_api_keys: 2,
+        key_ttl_days: 30,
+      },
+    });
+    const approved = await gateway.inject({
+      method: 'PUT',
+      url: '/admin/api/customers/00000000-0000-4000-8000-000000000010/entitlements',
+      headers: authenticatedHeaders,
+      payload: {
+        status: 'active',
+        plan_code: 'private_beta',
+        allowed_model_patterns: ['rax/*'],
+        allow_streaming: true,
+        allow_tools: false,
+        requests_per_minute: 30,
+        max_concurrent_requests: 3,
+        max_request_tokens: 4096,
+        max_output_tokens: 512,
+        max_active_api_keys: 2,
+        key_ttl_days: 30,
+      },
+    });
+    const inquiry = await gateway.inject({
+      method: 'PATCH',
+      url: '/admin/api/inquiries/00000000-0000-4000-8000-000000000030',
+      headers: authenticatedHeaders,
+      payload: { status: 'in_progress' },
+    });
+
+    expect(customers.statusCode).toBe(200);
+    expect(inquiries.statusCode).toBe(200);
+    expect(rejected.statusCode).toBe(401);
+    expect(approved.statusCode).toBe(200);
+    expect(inquiry.statusCode).toBe(200);
+    expect(value.setCustomerEntitlements).toHaveBeenCalledOnce();
+    expect(value.updateBusinessInquiryStatus).toHaveBeenCalledOnce();
+    await gateway.close();
+  });
+
+  it('refuses service activation before the customer verifies email', async () => {
+    const value = service();
+    value.setCustomerEntitlements = vi.fn(() =>
+      Promise.reject(
+        new AdminInputError(
+          'email_unverified',
+          'The customer must verify their email before service activation.',
+        ),
+      ),
+    );
+    const gateway = await app(value);
+    const response = await gateway.inject({
+      method: 'PUT',
+      url: '/admin/api/customers/00000000-0000-4000-8000-000000000010/entitlements',
+      headers: authenticatedHeaders,
+      payload: {
+        status: 'active',
+        plan_code: 'private_beta',
+        allowed_model_patterns: ['rax/*'],
+        allow_streaming: true,
+        allow_tools: false,
+        requests_per_minute: 30,
+        max_concurrent_requests: 3,
+        max_request_tokens: 4096,
+        max_output_tokens: 512,
+        max_active_api_keys: 2,
+        key_ttl_days: 30,
+      },
+    });
+    expect(response.statusCode).toBe(409);
+    expect(response.body).toContain('email_unverified');
     await gateway.close();
   });
 

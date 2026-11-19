@@ -1,10 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   adminTokenHash,
   apiKeyHash,
   apiKeyId,
   apiKeyPublicId,
+  customerUserId,
+  tenantId,
   type AdminAuditEvent,
   type AdminAuditRepository,
   type AdminControlRepository,
@@ -19,6 +21,7 @@ import {
   type ApiKeyId,
   type ApiKeyPublicId,
   type ApiKeyRepository,
+  type CustomerAdministrationRepository,
   type Tenant,
   type TenantId,
 } from '@rax-digital/domain';
@@ -243,7 +246,7 @@ class TestSecurity {
   }
 }
 
-function fixture() {
+function fixture(customerAdministration?: CustomerAdministrationRepository) {
   let time = new Date('2026-08-13T00:00:00.000Z');
   let sequence = 1;
   const identities = new MemoryIdentities();
@@ -276,7 +279,13 @@ function fixture() {
         },
       }),
     },
-    { idGenerator, clock: () => time },
+    {
+      idGenerator,
+      clock: () => time,
+      ...(customerAdministration === undefined
+        ? {}
+        : { customerAdministration }),
+    },
   );
   return {
     service,
@@ -308,6 +317,72 @@ async function bootstrapAndLogin(value: ReturnType<typeof fixture>) {
 }
 
 describe('AdminConsoleService', () => {
+  it('cannot activate service before the customer verifies email', async () => {
+    const selectedTenantId = tenantId('00000000-0000-4000-8000-000000000091');
+    const setEntitlements = vi.fn(() => Promise.resolve(true));
+    const customerAdministration: CustomerAdministrationRepository = {
+      listCustomerAccounts: vi.fn(() =>
+        Promise.resolve([
+          {
+            userId: customerUserId('00000000-0000-4000-8000-000000000092'),
+            tenantId: selectedTenantId,
+            tenantName: 'Pending Customer',
+            tenantStatus: 'disabled' as const,
+            email: 'pending@example.com',
+            displayName: 'Pending Owner',
+            userStatus: 'pending_verification' as const,
+            emailVerifiedAt: null,
+            entitlements: {
+              tenantId: selectedTenantId,
+              status: 'pending' as const,
+              planCode: 'private_beta',
+              policy: {
+                allowedModelPatterns: [],
+                allowStreaming: false,
+                allowTools: false,
+                requestsPerMinute: 1,
+                maxConcurrentRequests: 1,
+                maxRequestTokens: 2048,
+                maxOutputTokens: 256,
+              },
+              maxActiveApiKeys: 1,
+              keyTtlDays: 30,
+              createdAt: new Date('2026-08-13T00:00:00.000Z'),
+              updatedAt: new Date('2026-08-13T00:00:00.000Z'),
+            },
+            createdAt: new Date('2026-08-13T00:00:00.000Z'),
+          },
+        ]),
+      ),
+      setEntitlements,
+      listBusinessInquiries: vi.fn(() => Promise.resolve([])),
+      updateBusinessInquiryStatus: vi.fn(() => Promise.resolve(false)),
+    };
+    const value = fixture(customerAdministration);
+    const login = await bootstrapAndLogin(value);
+    await expect(
+      value.service.setCustomerEntitlements({
+        actor: login.principal,
+        value: {
+          tenantId: selectedTenantId,
+          status: 'active',
+          planCode: 'private_beta',
+          allowedModelPatterns: ['rax/*'],
+          allowStreaming: true,
+          allowTools: false,
+          requestsPerMinute: 20,
+          maxConcurrentRequests: 2,
+          maxRequestTokens: 4096,
+          maxOutputTokens: 1024,
+          maxActiveApiKeys: 2,
+          keyTtlDays: 90,
+        },
+        requestId: 'req_unverified_approval',
+      }),
+    ).rejects.toMatchObject({ code: 'email_unverified' });
+    expect(setEntitlements).not.toHaveBeenCalled();
+  });
+
   it('bootstraps a normalized administrator and creates an opaque session', async () => {
     const value = fixture();
     await expect(

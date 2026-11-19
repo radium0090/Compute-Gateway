@@ -1,0 +1,129 @@
+name: XServer production deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full main-branch commit SHA to deploy
+        required: true
+        type: string
+      image_ref:
+        description: Optional immutable GHCR release reference
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xserver-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: xserver-production
+    steps:
+      - name: Validate deployment inputs
+        env:
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+          IMAGE_REF: ${{ inputs.image_ref }}
+          XSERVER_HOST: ${{ secrets.XSERVER_HOST }}
+          XSERVER_SSH_USER: ${{ secrets.XSERVER_SSH_USER }}
+          XSERVER_DEPLOY_PATH: ${{ vars.XSERVER_DEPLOY_PATH }}
+          RCG_API_HOST: ${{ vars.RCG_API_HOST }}
+          RCG_SITE_HOST: ${{ vars.RCG_SITE_HOST }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$XSERVER_HOST" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]]
+          [[ "$XSERVER_SSH_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]
+          [[ "$XSERVER_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$ ]]
+          [[ "$RCG_API_HOST" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]]
+          [[ "$RCG_SITE_HOST" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]]
+          if [[ -n "$IMAGE_REF" ]]; then
+            [[ "$IMAGE_REF" =~ ^ghcr\.io/radium0090/compute-gateway:v[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}$ ]]
+          fi
+
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v6.0.2
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Require commit on main
+        env:
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -Eeuo pipefail
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$COMMIT_SHA" origin/main
+          test "$(git rev-parse HEAD)" = "$COMMIT_SHA"
+
+      - name: Prepare SSH transport
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.XSERVER_SSH_PRIVATE_KEY }}
+          SSH_HOST_KEY: ${{ vars.XSERVER_SSH_HOST_KEY }}
+        run: |
+          set -Eeuo pipefail
+          install -d -m 0700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/xserver_deploy"
+          printf '%s\n' "$SSH_HOST_KEY" > "$HOME/.ssh/known_hosts"
+          ssh-keygen -y -f "$HOME/.ssh/xserver_deploy" >/dev/null
+
+      - name: Package and upload release
+        env:
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+          XSERVER_HOST: ${{ secrets.XSERVER_HOST }}
+          XSERVER_SSH_USER: ${{ secrets.XSERVER_SSH_USER }}
+          XSERVER_DEPLOY_PATH: ${{ vars.XSERVER_DEPLOY_PATH }}
+        run: |
+          set -Eeuo pipefail
+          archive="$RUNNER_TEMP/rax-compute-gateway-${COMMIT_SHA}.tar.gz"
+          git archive --format=tar.gz --output="$archive" "$COMMIT_SHA"
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -i "$HOME/.ssh/xserver_deploy" \
+            "${XSERVER_SSH_USER}@${XSERVER_HOST}" \
+            "install -d -m 0750 '${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}'"
+          scp -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -i "$HOME/.ssh/xserver_deploy" "$archive" \
+            "${XSERVER_SSH_USER}@${XSERVER_HOST}:${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}/release.tar.gz"
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -i "$HOME/.ssh/xserver_deploy" \
+            "${XSERVER_SSH_USER}@${XSERVER_HOST}" \
+            "tar -xzf '${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}/release.tar.gz' -C '${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}' && rm '${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}/release.tar.gz'"
+
+      - name: Deploy and verify
+        env:
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+          IMAGE_REF: ${{ inputs.image_ref }}
+          XSERVER_HOST: ${{ secrets.XSERVER_HOST }}
+          XSERVER_SSH_USER: ${{ secrets.XSERVER_SSH_USER }}
+          XSERVER_DEPLOY_PATH: ${{ vars.XSERVER_DEPLOY_PATH }}
+          RCG_API_HOST: ${{ vars.RCG_API_HOST }}
+          RCG_SITE_HOST: ${{ vars.RCG_SITE_HOST }}
+        run: |
+          set -Eeuo pipefail
+          printf -v remote_command \
+            "RCG_COMMIT_SHA=%q RCG_DEPLOY_PATH=%q RCG_API_HOST=%q RCG_SITE_HOST=%q RCG_IMAGE_REF=%q bash %q" \
+            "$COMMIT_SHA" "$XSERVER_DEPLOY_PATH" "$RCG_API_HOST" "$RCG_SITE_HOST" "$IMAGE_REF" \
+            "${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}/scripts/deploy-xserver.sh"
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -i "$HOME/.ssh/xserver_deploy" \
+            "${XSERVER_SSH_USER}@${XSERVER_HOST}" "$remote_command"
+
+      - name: Verify public product surface
+        env:
+          RCG_API_HOST: ${{ vars.RCG_API_HOST }}
+          RCG_SITE_HOST: ${{ vars.RCG_SITE_HOST }}
+        run: bash scripts/verify-xserver-production.sh
