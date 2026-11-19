@@ -30,6 +30,7 @@ describe('loadConfig', () => {
     expect(config.serviceVersion).toBe('v0.1.0');
     expect(config.commitSha).toBe('abcdef1234567');
     expect(config.adminEnabled).toBe(false);
+    expect(config.consoleEnabled).toBe(false);
     expect(config.demoEnabled).toBe(false);
     expect(config.demoKeyTtlMs).toBe(300_000);
   });
@@ -94,6 +95,8 @@ describe('loadConfig', () => {
       RCG_KEY_HASH_PEPPER: '<set>',
       RCG_MASTER_KEY: '<set>',
       RCG_ADMIN_SESSION_PEPPER: '<unset>',
+      RCG_CONSOLE_SESSION_PEPPER: '<unset>',
+      RCG_CONSOLE_RESEND_API_KEY: '<unset>',
       RCG_DEMO_GITHUB_CLIENT_SECRET: '<unset>',
       RCG_DEMO_HASH_PEPPER: '<unset>',
     });
@@ -127,6 +130,45 @@ describe('loadConfig', () => {
           'fake-admin-session-pepper-with-at-least-32-characters',
       }),
     ).toThrow(/must use HTTPS/);
+  });
+
+  it('requires isolated origin, session, and mail configuration for the customer console', () => {
+    expect(() =>
+      loadConfig({ ...validEnvironment, RCG_CONSOLE_ENABLED: 'true' }),
+    ).toThrow(/RCG_CONSOLE_ORIGIN|RCG_CONSOLE_SESSION_PEPPER/);
+
+    const config = loadConfig({
+      ...validEnvironment,
+      RCG_CONSOLE_ENABLED: 'true',
+      RCG_CONSOLE_ORIGIN: 'http://localhost:8080',
+      RCG_CONSOLE_SESSION_PEPPER:
+        'fake-console-session-pepper-with-at-least-32-characters',
+      RCG_CONSOLE_MAIL_FROM: 'RAX <console@example.com>',
+      RCG_CONSOLE_RESEND_API_KEY: 'fake-resend-key',
+      RCG_CONSOLE_REGISTRATION_ENABLED: 'true',
+    });
+    expect(config.consoleEnabled).toBe(true);
+    expect(config.consoleRegistrationEnabled).toBe(true);
+    expect(describeSecretPresence(config)).toMatchObject({
+      RCG_CONSOLE_SESSION_PEPPER: '<set>',
+      RCG_CONSOLE_RESEND_API_KEY: '<set>',
+    });
+  });
+
+  it('requires HTTPS for a production customer console origin', () => {
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        RCG_ENVIRONMENT: 'production',
+        RCG_REDIS_URL: 'redis://redis:6379',
+        RCG_CONSOLE_ENABLED: 'true',
+        RCG_CONSOLE_ORIGIN: 'http://gateway.example.com',
+        RCG_CONSOLE_SESSION_PEPPER:
+          'fake-console-session-pepper-with-at-least-32-characters',
+        RCG_CONSOLE_MAIL_FROM: 'RAX <console@example.com>',
+        RCG_CONSOLE_RESEND_API_KEY: 'fake-resend-key',
+      }),
+    ).toThrow(/RCG_CONSOLE_ORIGIN must use HTTPS/);
   });
 
   it('requires complete isolated configuration when the hosted demo is enabled', () => {

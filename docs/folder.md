@@ -10,7 +10,7 @@ rax-compute-gateway/
 │   ├── CODEOWNERS
 │   └── dependabot.yml
 ├── apps/
-│   └── gateway/                 # Fastify composition root, data plane, and optional admin assets
+│   └── gateway/                 # Fastify composition root, data plane, and optional browser assets
 ├── packages/
 │   ├── api-contract/            # TypeBox schemas and generated OpenAPI source
 │   ├── domain/                  # provider ports, canonical types, routing rules
@@ -32,7 +32,8 @@ rax-compute-gateway/
 ├── deploy/
 │   ├── compose/
 │   ├── helm/rax-compute-gateway/
-│   └── kubernetes/             # examples and disposable CI fixtures
+│   ├── kubernetes/             # examples and disposable CI fixtures
+│   └── xserver/                # low-cost single-host production overlay
 ├── benchmarks/                 # repeatable scenarios and checked thresholds
 ├── examples/
 │   ├── curl/

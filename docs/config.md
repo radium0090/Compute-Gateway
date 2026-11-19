@@ -18,6 +18,12 @@ route policy. Environment variables override file values only where documented.
 | `RCG_ADMIN_ENABLED` | no | enables the `/admin` control plane; default `false` |
 | `RCG_ADMIN_ORIGIN` | conditional | exact browser origin; required when admin is enabled |
 | `RCG_ADMIN_SESSION_PEPPER` | conditional | dedicated session/CSRF HMAC pepper; required when admin is enabled |
+| `RCG_CONSOLE_ENABLED` | no | enables the hosted customer Console and product site; default `false` |
+| `RCG_CONSOLE_ORIGIN` | conditional | exact HTTPS browser origin; required when the customer Console is enabled |
+| `RCG_CONSOLE_SESSION_PEPPER` | conditional | dedicated customer session/CSRF HMAC pepper |
+| `RCG_CONSOLE_REGISTRATION_ENABLED` | no | enables new customer registration only after the Console is configured |
+| `RCG_CONSOLE_MAIL_FROM` | conditional | verified transactional-email sender |
+| `RCG_CONSOLE_RESEND_API_KEY` | conditional | Resend credential used only for verification and reset messages |
 | `RCG_DEMO_ENABLED` | no | enables the optional `/demo` GitHub claim flow; default `false` |
 | `RCG_DEMO_ORIGIN` | conditional | exact HTTPS browser origin; required when demo is enabled |
 | `RCG_DEMO_GITHUB_CLIENT_ID` | conditional | dedicated GitHub OAuth App client ID |
@@ -46,6 +52,7 @@ credential name; the value is never included in route YAML.
 | `RCG_TRUST_PROXY` | `false` | development only; must remain false in production for `0.1` |
 | `RCG_METRICS_ENABLED` | `true` | boolean |
 | `RCG_ADMIN_SESSION_TTL_MS` | `28800000` | 15 minutes..24 hours |
+| `RCG_CONSOLE_SESSION_TTL_MS` | `28800000` | 15 minutes..24 hours |
 | `RCG_DEMO_MODEL` | `rax/fast` | one public model allowed by trial keys |
 | `RCG_DEMO_KEY_TTL_MS` | `300000` | 1..5 minutes |
 | `RCG_DEMO_ACCOUNT_MINIMUM_AGE_DAYS` | `7` | 0..3650 days |
@@ -154,6 +161,12 @@ are ignored, but unknown YAML keys fail validation to catch spelling errors.
 The hosted demo remains disabled unless every required setting validates. Its
 origin must be HTTPS in production and contain only scheme and authority. See
 [hosted demo](demo.md) for OAuth App and dedicated-tenant setup.
+
+The hosted customer Console also fails startup unless its exact origin,
+independent session pepper, verified sender, and email-delivery credential are
+present. Registration may be disabled independently while existing approved
+customers continue to sign in. See [customer Console](customer-console.md) for
+the approval and production-acceptance lifecycle.
 
 ## Secret handling
 

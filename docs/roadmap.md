@@ -38,6 +38,11 @@ Exit: all [MVP acceptance criteria](mvp.md#acceptance-criteria) pass.
 - stable SDK packaging and broader examples;
 - security assessment and operational runbooks.
 
+The current `0.4` work adds the RAX product site, business-inquiry intake,
+separate customer accounts, manually approved private-beta entitlements,
+self-service tenant API keys, and the low-cost XServer deployment profile. It
+does not yet add automated subscriptions or billing.
+
 ## Phase 3: Stable gateway (`1.0`)
 
 - stability commitment for `/v1` and provider contract;
@@ -55,7 +60,8 @@ Subject to evidence and separate ADRs:
 - latency, price, region, and capacity-aware policies;
 - semantic cache with explicit privacy boundaries;
 - policy-as-code and enterprise identity/control integrations;
-- hosted RAX Compute Gateway Cloud for managed teams, analytics, and billing;
+- automated subscriptions, detailed hosted analytics, and billing for managed
+  RAX Compute Gateway teams;
 - compute scheduling and portable compute credits.
 
 ## Prioritization criteria

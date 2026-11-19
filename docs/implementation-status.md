@@ -1,6 +1,6 @@
 # Implementation status
 
-This page records the code-to-specification review updated on 2026-10-26.
+This page records the code-to-specification review updated on 2026-11-19.
 Accepted ADRs and the normative documents remain authoritative; this page is a
 status snapshot, not a new architecture decision.
 
@@ -89,8 +89,16 @@ and durable content-free audit events are implemented under ADR 0013. The
 GitHub-authenticated, five-minute evaluation flow implemented under ADR 0014 is
 available at `https://api.rax-digital.com/demo/` only during an announced
 evaluation window; its production claim-to-response path was verified on
-2026-08-15. General hosted signup/billing, permanent
-end-user identity, MFA or federated operator identity, detailed token/cost
-accounting, extra provider families, package publication, and additional
-data-plane API surfaces remain deferred and require their own scope and
-decision review.
+2026-08-15.
+
+The unreleased `0.4` work governed by ADRs 0016 and 0017 now implements a
+separate customer identity/session boundary, verified-email registration,
+operator-approved entitlements, self-service tenant API keys, business inquiry
+intake, a product site and customer Console, and an XServer single-host
+deployment profile. Automated subscription billing, MFA, customer teams/BYOK,
+off-host production backup evidence, and XServer deployment evidence remain
+open. The new PostgreSQL repository integration test also needs to run against
+the deployment database before public registration is enabled. Detailed
+token/cost accounting, extra provider families, package publication, and
+additional data-plane API surfaces remain deferred and require their own scope
+and decision review.

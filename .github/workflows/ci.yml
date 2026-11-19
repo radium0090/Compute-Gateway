@@ -51,6 +51,7 @@ jobs:
           pnpm performance:check
           pnpm docs:check
           pnpm examples:check
+          pnpm ui:check
           pnpm operations:check
       - name: Validate development configuration
         run: node apps/gateway/dist/index.js --check-config
@@ -69,6 +70,15 @@ jobs:
           RCG_DATABASE_URL: postgresql://rcg:fake@postgres.invalid:5432/compute_gateway
           RCG_REDIS_URL: rediss://redis.invalid:6379
           RCG_KEY_HASH_PEPPER: fake-pepper-with-at-least-32-characters
+          RCG_ADMIN_ENABLED: 'true'
+          RCG_ADMIN_ORIGIN: https://api.example.com
+          RCG_ADMIN_SESSION_PEPPER: fake-admin-pepper-with-at-least-32-characters
+          RCG_CONSOLE_ENABLED: 'true'
+          RCG_CONSOLE_ORIGIN: https://gateway.example.com
+          RCG_CONSOLE_SESSION_PEPPER: fake-console-pepper-with-at-least-32-characters
+          RCG_CONSOLE_REGISTRATION_ENABLED: 'false'
+          RCG_CONSOLE_MAIL_FROM: RAX Compute Gateway <console@example.com>
+          RCG_CONSOLE_RESEND_API_KEY: fake-resend-api-key
           RCG_CONFIG_FILE: deploy/compose/rax-compute-gateway.yaml
           OPENAI_API_KEY: fake-openai
           ANTHROPIC_API_KEY: fake-anthropic

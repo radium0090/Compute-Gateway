@@ -31,6 +31,12 @@ accepted Architecture Decision Record (ADR) supersedes them.
 > and wait for confirmation before trying the hosted URLs. Never include API
 > keys, provider credentials, or other secrets in an issue.
 
+The next hosted release is in development: it adds a product site, business
+inquiry intake, separate verified customer accounts, operator-approved private-
+beta access, self-service tenant API keys, and a low-cost XServer deployment
+profile. It remains a manually approved beta; automated subscription billing
+is not yet available.
+
 ## MVP capabilities
 
 - `POST /v1/chat/completions`, including streaming
@@ -213,6 +219,20 @@ Open `http://localhost:8080/admin/`. The temporary password must be replaced at
 first login. The console manages tenants and one-time-display API keys and
 shows bounded service/activity metadata. It never exposes provider credentials,
 password/session hashes, API-key hashes, prompts, or completions.
+
+## Hosted customer Console (next release)
+
+The customer Console is separate from `/admin`. Registration creates a pending
+account and disabled tenant; it does not grant provider access. After email
+verification, an operator approves bounded model, rate, concurrency, token,
+tool, expiry, and key-count entitlements. An approved customer can then create,
+list, and revoke only their tenant's API keys.
+
+See [customer Console](docs/customer-console.md) and the
+[XServer bootstrap runbook](docs/runbooks/xserver-bootstrap.md). Public signup
+must remain disabled until transactional email, operator approval, password
+recovery, key revocation, provider calls, and restart persistence have passed
+on the deployed host.
 
 ## Documentation
 

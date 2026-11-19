@@ -6,6 +6,7 @@ import Fastify, {
   type FastifyBaseLogger,
   type FastifyInstance,
 } from 'fastify';
+import rateLimit from '@fastify/rate-limit';
 
 import type { RuntimeConfig } from '@rax-digital/config';
 import type {
@@ -15,6 +16,10 @@ import type {
 import type { MetricsRequestHandler } from '@rax-digital/observability';
 
 import { registerChatCompletionRoute } from './chat-completion.js';
+import {
+  registerCustomerRoutes,
+  type CustomerRouteService,
+} from './customer-routes.js';
 import { registerAdminRoutes, type AdminRouteService } from './admin-routes.js';
 import { registerDemoRoutes, type DemoRouteService } from './demo-routes.js';
 import { registerErrorHandling } from './error-handling.js';
@@ -42,6 +47,12 @@ export interface GatewayDependencies {
   readonly demo?: {
     readonly service: DemoRouteService;
     readonly origin: string;
+  };
+  readonly customer?: {
+    readonly service: CustomerRouteService;
+    readonly origin: string;
+    readonly sessionTtlMs: number;
+    readonly registrationEnabled: boolean;
   };
 }
 
@@ -79,6 +90,15 @@ export async function buildGateway(
     reply.header('x-request-id', request.id);
   });
 
+  await app.register(rateLimit, {
+    global: false,
+    errorResponseBuilder: () => ({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: 'The request limit was exceeded.',
+    }),
+  });
+
   registerRequestTelemetry(app);
   registerErrorHandling(app);
   registerHealthRoutes(app, dependencies.readinessProbe);
@@ -107,6 +127,9 @@ export async function buildGateway(
   }
   if (dependencies.demo !== undefined) {
     await registerDemoRoutes(app, dependencies.demo);
+  }
+  if (dependencies.customer !== undefined) {
+    await registerCustomerRoutes(app, dependencies.customer);
   }
   return app;
 }

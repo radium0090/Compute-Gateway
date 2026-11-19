@@ -46,6 +46,7 @@ export default defineConfig({
       // unit-test code.
       exclude: [
         'packages/persistence-postgres/src/admin-repository.ts',
+        'packages/persistence-postgres/src/customer-repository.ts',
         'packages/persistence-postgres/src/demo-claim-repository.ts',
       ],
       reporter: ['text', 'lcov'],

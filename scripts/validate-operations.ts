@@ -220,6 +220,22 @@ async function validateWorkflows(): Promise<void> {
     ),
     'AWS production workflow must not use long-lived cloud or SSH credentials',
   );
+
+  const xserverSource = await read(
+    '.github/workflows/xserver-production-deploy.yml',
+  );
+  const xserver = parse(xserverSource) as Workflow | null;
+  assert(
+    xserver?.jobs?.deploy?.environment === 'xserver-production',
+    'XServer deploy must use the protected xserver-production environment',
+  );
+  assert(
+    xserverSource.includes('scripts/deploy-xserver.sh') &&
+      xserverSource.includes('secrets.XSERVER_SSH_PRIVATE_KEY') &&
+      xserverSource.includes('vars.XSERVER_SSH_HOST_KEY') &&
+      xserverSource.includes('git merge-base --is-ancestor'),
+    'XServer deploy must pin the host key and deploy an approved main commit',
+  );
 }
 
 async function validateProductionRecovery(): Promise<void> {
@@ -314,6 +330,7 @@ async function validateContainerReferences(): Promise<void> {
     read('Dockerfile'),
     read('docker-compose.yml'),
     read('deploy/compose/production.yaml'),
+    read('deploy/xserver/compose.yaml'),
     read('deploy/helm/rax-compute-gateway/values.yaml'),
     read('deploy/kubernetes/examples/rax-compute-gateway.yaml'),
   ]);
@@ -334,6 +351,10 @@ async function validateContainerReferences(): Promise<void> {
   assert(
     /image:\s*caddy:2\.11\.4-alpine@sha256:[a-f0-9]{64}/.test(sources[2]),
     'production edge must use the pinned Caddy image digest',
+  );
+  assert(
+    /image:\s*caddy:2\.11\.4-alpine@sha256:[a-f0-9]{64}/.test(sources[3]),
+    'XServer edge must use the pinned Caddy image digest',
   );
 }
 

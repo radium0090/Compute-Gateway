@@ -1,18 +1,25 @@
 import { readFile } from 'node:fs/promises';
 
-import rateLimit from '@fastify/rate-limit';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import {
   AdminApiKeyCreateRequestSchema,
   AdminApiKeyPathSchema,
   AdminApiKeyQuerySchema,
+  AdminBusinessInquiryPathSchema,
+  AdminBusinessInquiryStatusRequestSchema,
+  AdminCustomerEntitlementsPathSchema,
+  AdminCustomerEntitlementsRequestSchema,
   AdminLoginRequestSchema,
   AdminPasswordChangeRequestSchema,
   AdminTenantCreateRequestSchema,
   type AdminApiKeyCreateRequest,
   type AdminApiKeyPath,
   type AdminApiKeyQuery,
+  type AdminBusinessInquiryPath,
+  type AdminBusinessInquiryStatusRequest,
+  type AdminCustomerEntitlementsPath,
+  type AdminCustomerEntitlementsRequest,
   type AdminLoginRequest,
   type AdminPasswordChangeRequest,
   type AdminTenantCreateRequest,
@@ -57,10 +64,14 @@ export type AdminRouteService = Pick<
   | 'createTenant'
   | 'dashboardSummary'
   | 'listApiKeys'
+  | 'listBusinessInquiries'
+  | 'listCustomerAccounts'
   | 'listTenants'
   | 'login'
   | 'logout'
   | 'revokeApiKey'
+  | 'setCustomerEntitlements'
+  | 'updateBusinessInquiryStatus'
 >;
 
 export interface AdminRouteDependencies {
@@ -206,18 +217,6 @@ export async function registerAdminRoutes(
     readFile(new URL('../public/admin/app.js', import.meta.url), 'utf8'),
   ]);
   const loginLimiter = dependencies.loginLimiter ?? new AdminLoginLimiter();
-
-  // Keep control-plane throttling independent from customer inference traffic.
-  // The plugin provides per-client limits; AdminLoginLimiter additionally caps
-  // total password hashing work across all clients in this process.
-  await app.register(rateLimit, {
-    global: false,
-    errorResponseBuilder: () => ({
-      statusCode: 429,
-      error: 'Too Many Requests',
-      message: 'The administrative request limit was exceeded.',
-    }),
-  });
 
   app.addHook('onSend', async (request, reply) => {
     if (!request.raw.url?.startsWith('/admin')) return;
@@ -458,6 +457,156 @@ export async function registerAdminRoutes(
         status: tenant.status,
         created_at: tenant.createdAt.toISOString(),
       });
+    },
+  );
+
+  app.get(
+    '/admin/api/customers',
+    { config: { rateLimit: adminApiRateLimit } },
+    async (request, reply) => {
+      const actor = await requirePrincipal(
+        request,
+        reply,
+        dependencies.service,
+        { mutation: false },
+      );
+      if (actor === null) return reply;
+      const customers = await dependencies.service.listCustomerAccounts();
+      return {
+        data: customers.map((customer) => ({
+          user_id: customer.userId,
+          tenant_id: customer.tenantId,
+          tenant_name: customer.tenantName,
+          tenant_status: customer.tenantStatus,
+          email: customer.email,
+          display_name: customer.displayName,
+          user_status: customer.userStatus,
+          email_verified_at: customer.emailVerifiedAt?.toISOString() ?? null,
+          created_at: customer.createdAt.toISOString(),
+          entitlements: {
+            status: customer.entitlements.status,
+            plan_code: customer.entitlements.planCode,
+            allowed_model_patterns:
+              customer.entitlements.policy.allowedModelPatterns,
+            allow_streaming: customer.entitlements.policy.allowStreaming,
+            allow_tools: customer.entitlements.policy.allowTools,
+            requests_per_minute: customer.entitlements.policy.requestsPerMinute,
+            max_concurrent_requests:
+              customer.entitlements.policy.maxConcurrentRequests,
+            max_request_tokens:
+              customer.entitlements.policy.maxRequestTokens ?? null,
+            max_output_tokens:
+              customer.entitlements.policy.maxOutputTokens ?? null,
+            max_active_api_keys: customer.entitlements.maxActiveApiKeys,
+            key_ttl_days: customer.entitlements.keyTtlDays,
+          },
+        })),
+      };
+    },
+  );
+
+  app.put<{
+    Params: AdminCustomerEntitlementsPath;
+    Body: AdminCustomerEntitlementsRequest;
+  }>(
+    '/admin/api/customers/:tenant_id/entitlements',
+    {
+      schema: {
+        params: AdminCustomerEntitlementsPathSchema,
+        body: AdminCustomerEntitlementsRequestSchema,
+      },
+      config: { rateLimit: adminApiRateLimit },
+    },
+    async (request, reply) => {
+      if (!checkOrigin(request, reply, dependencies.origin)) return reply;
+      const actor = await requirePrincipal(
+        request,
+        reply,
+        dependencies.service,
+        { mutation: true },
+      );
+      if (actor === null) return reply;
+      const updated = await dependencies.service.setCustomerEntitlements({
+        actor,
+        value: {
+          tenantId: request.params.tenant_id,
+          status: request.body.status,
+          planCode: request.body.plan_code,
+          allowedModelPatterns: request.body.allowed_model_patterns,
+          allowStreaming: request.body.allow_streaming,
+          allowTools: request.body.allow_tools,
+          requestsPerMinute: request.body.requests_per_minute,
+          maxConcurrentRequests: request.body.max_concurrent_requests,
+          maxRequestTokens: request.body.max_request_tokens,
+          maxOutputTokens: request.body.max_output_tokens,
+          maxActiveApiKeys: request.body.max_active_api_keys,
+          keyTtlDays: request.body.key_ttl_days,
+        },
+        requestId: request.id,
+      });
+      return updated
+        ? { updated: true }
+        : adminError(reply, 404, 'customer_not_found', 'Customer not found.');
+    },
+  );
+
+  app.get(
+    '/admin/api/inquiries',
+    { config: { rateLimit: adminApiRateLimit } },
+    async (request, reply) => {
+      const actor = await requirePrincipal(
+        request,
+        reply,
+        dependencies.service,
+        { mutation: false },
+      );
+      if (actor === null) return reply;
+      const inquiries = await dependencies.service.listBusinessInquiries();
+      return {
+        data: inquiries.map((inquiry) => ({
+          id: inquiry.id,
+          name: inquiry.name,
+          email: inquiry.email,
+          company: inquiry.company,
+          message: inquiry.message,
+          status: inquiry.status,
+          consented_at: inquiry.consentedAt.toISOString(),
+          created_at: inquiry.createdAt.toISOString(),
+        })),
+      };
+    },
+  );
+
+  app.patch<{
+    Params: AdminBusinessInquiryPath;
+    Body: AdminBusinessInquiryStatusRequest;
+  }>(
+    '/admin/api/inquiries/:id',
+    {
+      schema: {
+        params: AdminBusinessInquiryPathSchema,
+        body: AdminBusinessInquiryStatusRequestSchema,
+      },
+      config: { rateLimit: adminApiRateLimit },
+    },
+    async (request, reply) => {
+      if (!checkOrigin(request, reply, dependencies.origin)) return reply;
+      const actor = await requirePrincipal(
+        request,
+        reply,
+        dependencies.service,
+        { mutation: true },
+      );
+      if (actor === null) return reply;
+      const updated = await dependencies.service.updateBusinessInquiryStatus({
+        actor,
+        id: request.params.id,
+        status: request.body.status,
+        requestId: request.id,
+      });
+      return updated
+        ? { updated: true }
+        : adminError(reply, 404, 'inquiry_not_found', 'Inquiry not found.');
     },
   );
 

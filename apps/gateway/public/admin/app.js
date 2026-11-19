@@ -5,6 +5,8 @@ const state = {
   user: null,
   tenants: [],
   keys: [],
+  customers: [],
+  inquiries: [],
 };
 
 const byId = (id) => document.getElementById(id);
@@ -137,6 +139,133 @@ function renderKeys() {
   }
 }
 
+function entitlementPayload(customer, status) {
+  const current = customer.entitlements;
+  return {
+    status,
+    plan_code: current.plan_code || 'private_beta',
+    allowed_model_patterns:
+      current.allowed_model_patterns.length > 0
+        ? current.allowed_model_patterns
+        : ['rax/*'],
+    allow_streaming: status === 'active',
+    allow_tools: current.allow_tools || false,
+    requests_per_minute:
+      current.status === 'pending' ? 20 : current.requests_per_minute,
+    max_concurrent_requests:
+      current.status === 'pending' ? 2 : current.max_concurrent_requests,
+    max_request_tokens:
+      current.status === 'pending' ? 4096 : current.max_request_tokens,
+    max_output_tokens:
+      current.status === 'pending' ? 1024 : current.max_output_tokens,
+    max_active_api_keys:
+      current.status === 'pending' ? 2 : current.max_active_api_keys,
+    key_ttl_days: current.status === 'pending' ? 90 : current.key_ttl_days,
+  };
+}
+
+async function updateCustomer(customer, status) {
+  const action = status === 'active' ? '激活' : '暂停';
+  if (!window.confirm(`确认${action} “${customer.tenant_name}” 的客户访问吗？`))
+    return;
+  await api(
+    `/customers/${encodeURIComponent(customer.tenant_id)}/entitlements`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(entitlementPayload(customer, status)),
+    },
+  );
+  await refresh();
+}
+
+function renderCustomers() {
+  const body = byId('customer-table');
+  body.replaceChildren();
+  for (const customer of state.customers) {
+    const row = document.createElement('tr');
+    row.append(
+      makeCell(customer.tenant_name),
+      makeCell(`${customer.display_name}\n${customer.email}`),
+      makeCell(customer.email_verified_at ? '已验证' : '待验证'),
+    );
+    const statusCell = document.createElement('td');
+    statusCell.append(badge(customer.entitlements.status));
+    row.append(statusCell, makeCell(customer.entitlements.plan_code));
+    const action = document.createElement('td');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className =
+      customer.entitlements.status === 'active'
+        ? 'danger-button'
+        : 'button primary';
+    button.textContent =
+      customer.entitlements.status === 'active' ? '暂停' : '激活 Beta';
+    button.disabled = !customer.email_verified_at;
+    button.addEventListener('click', () =>
+      updateCustomer(
+        customer,
+        customer.entitlements.status === 'active' ? 'suspended' : 'active',
+      ),
+    );
+    action.append(button);
+    row.append(action);
+    body.append(row);
+  }
+}
+
+async function updateInquiry(inquiry, status) {
+  await api(`/inquiries/${encodeURIComponent(inquiry.id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+  await refresh();
+}
+
+function renderInquiries() {
+  const body = byId('inquiry-table');
+  body.replaceChildren();
+  for (const inquiry of state.inquiries) {
+    const row = document.createElement('tr');
+    row.append(
+      makeCell(`${inquiry.name}\n${inquiry.email}`),
+      makeCell(inquiry.company || '—'),
+      makeCell(inquiry.message),
+    );
+    const statusCell = document.createElement('td');
+    statusCell.append(badge(inquiry.status));
+    row.append(statusCell, makeCell(formatDate(inquiry.created_at)));
+    const action = document.createElement('td');
+    if (inquiry.status === 'new') {
+      const progress = document.createElement('button');
+      progress.type = 'button';
+      progress.className = 'text-button';
+      progress.textContent = '开始处理';
+      progress.addEventListener('click', () =>
+        updateInquiry(inquiry, 'in_progress'),
+      );
+      action.append(progress);
+    } else {
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'text-button';
+      close.textContent = '关闭';
+      close.addEventListener('click', () => updateInquiry(inquiry, 'closed'));
+      action.append(close);
+    }
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'danger-button';
+    remove.textContent = '删除';
+    remove.addEventListener('click', () => {
+      if (window.confirm('确认删除这条商务咨询记录吗？'))
+        void updateInquiry(inquiry, 'deleted');
+    });
+    action.append(remove);
+    row.append(action);
+    body.append(row);
+  }
+}
+
 function renderDashboard(data) {
   const summary = data.summary;
   byId('metric-tenants').textContent = summary.tenant_count;
@@ -168,16 +297,22 @@ async function refresh() {
   if (state.user?.must_change_password) return;
   showError('');
   try {
-    const [dashboard, tenants, keys] = await Promise.all([
+    const [dashboard, tenants, keys, customers, inquiries] = await Promise.all([
       api('/dashboard'),
       api('/tenants'),
       api('/api-keys'),
+      api('/customers'),
+      api('/inquiries'),
     ]);
     state.tenants = tenants.data;
     state.keys = keys.data;
+    state.customers = customers.data;
+    state.inquiries = inquiries.data;
     renderDashboard(dashboard);
     renderTenants();
     renderKeys();
+    renderCustomers();
+    renderInquiries();
   } catch (error) {
     if (error.status === 401) return setSignedOut();
     showError(error.message);
@@ -255,6 +390,8 @@ document.querySelectorAll('.nav-item').forEach((item) => {
       overview: '服务概览',
       tenants: '租户管理',
       keys: 'API Key 管理',
+      customers: '客户账号',
+      inquiries: '商务咨询',
     };
     byId('section-title').textContent = titles[section];
     document

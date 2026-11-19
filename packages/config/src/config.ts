@@ -37,6 +37,18 @@ export const RuntimeConfigSchema = Type.Object(
     adminOrigin: Type.Optional(Type.String({ minLength: 1 })),
     adminSessionPepper: Type.Optional(Type.String({ minLength: 32 })),
     adminSessionTtlMs: Type.Integer({ minimum: 900_000, maximum: 86_400_000 }),
+    consoleEnabled: Type.Boolean(),
+    consoleOrigin: Type.Optional(Type.String({ minLength: 1 })),
+    consoleSessionPepper: Type.Optional(Type.String({ minLength: 32 })),
+    consoleSessionTtlMs: Type.Integer({
+      minimum: 900_000,
+      maximum: 86_400_000,
+    }),
+    consoleRegistrationEnabled: Type.Boolean(),
+    consoleMailFrom: Type.Optional(
+      Type.String({ minLength: 3, maxLength: 320 }),
+    ),
+    consoleResendApiKey: Type.Optional(Type.String({ minLength: 1 })),
     demoEnabled: Type.Boolean(),
     demoOrigin: Type.Optional(Type.String({ minLength: 1 })),
     demoGithubClientId: Type.Optional(Type.String({ minLength: 1 })),
@@ -96,6 +108,13 @@ const fieldToEnvironmentVariable: Readonly<Record<string, string>> = {
   adminOrigin: 'RCG_ADMIN_ORIGIN',
   adminSessionPepper: 'RCG_ADMIN_SESSION_PEPPER',
   adminSessionTtlMs: 'RCG_ADMIN_SESSION_TTL_MS',
+  consoleEnabled: 'RCG_CONSOLE_ENABLED',
+  consoleOrigin: 'RCG_CONSOLE_ORIGIN',
+  consoleSessionPepper: 'RCG_CONSOLE_SESSION_PEPPER',
+  consoleSessionTtlMs: 'RCG_CONSOLE_SESSION_TTL_MS',
+  consoleRegistrationEnabled: 'RCG_CONSOLE_REGISTRATION_ENABLED',
+  consoleMailFrom: 'RCG_CONSOLE_MAIL_FROM',
+  consoleResendApiKey: 'RCG_CONSOLE_RESEND_API_KEY',
   demoEnabled: 'RCG_DEMO_ENABLED',
   demoOrigin: 'RCG_DEMO_ORIGIN',
   demoGithubClientId: 'RCG_DEMO_GITHUB_CLIENT_ID',
@@ -195,6 +214,27 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
       source.RCG_ADMIN_SESSION_TTL_MS,
       8 * 60 * 60 * 1_000,
     ),
+    consoleEnabled: parseBoolean(source.RCG_CONSOLE_ENABLED, false),
+    ...(source.RCG_CONSOLE_ORIGIN === undefined
+      ? {}
+      : { consoleOrigin: source.RCG_CONSOLE_ORIGIN }),
+    ...(source.RCG_CONSOLE_SESSION_PEPPER === undefined
+      ? {}
+      : { consoleSessionPepper: source.RCG_CONSOLE_SESSION_PEPPER }),
+    consoleSessionTtlMs: parseInteger(
+      source.RCG_CONSOLE_SESSION_TTL_MS,
+      8 * 60 * 60 * 1_000,
+    ),
+    consoleRegistrationEnabled: parseBoolean(
+      source.RCG_CONSOLE_REGISTRATION_ENABLED,
+      false,
+    ),
+    ...(source.RCG_CONSOLE_MAIL_FROM === undefined
+      ? {}
+      : { consoleMailFrom: source.RCG_CONSOLE_MAIL_FROM }),
+    ...(source.RCG_CONSOLE_RESEND_API_KEY === undefined
+      ? {}
+      : { consoleResendApiKey: source.RCG_CONSOLE_RESEND_API_KEY }),
     demoEnabled: parseBoolean(source.RCG_DEMO_ENABLED, false),
     ...(source.RCG_DEMO_ORIGIN === undefined
       ? {}
@@ -309,6 +349,53 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     }
   }
 
+  if (candidate.consoleEnabled) {
+    if (candidate.consoleOrigin === undefined) {
+      issues.push(
+        'RCG_CONSOLE_ORIGIN is required when the customer console is enabled',
+      );
+    } else if (
+      !isUrlWithProtocol(candidate.consoleOrigin, ['http:', 'https:'])
+    ) {
+      issues.push('RCG_CONSOLE_ORIGIN must be an HTTP(S) origin');
+    } else {
+      const origin = new URL(candidate.consoleOrigin);
+      if (
+        origin.origin !== candidate.consoleOrigin ||
+        origin.pathname !== '/'
+      ) {
+        issues.push(
+          'RCG_CONSOLE_ORIGIN must contain only scheme and authority',
+        );
+      }
+      if (
+        candidate.environment === 'production' &&
+        origin.protocol !== 'https:'
+      ) {
+        issues.push('RCG_CONSOLE_ORIGIN must use HTTPS in production');
+      }
+    }
+    if (candidate.consoleSessionPepper === undefined) {
+      issues.push(
+        'RCG_CONSOLE_SESSION_PEPPER is required when the customer console is enabled',
+      );
+    }
+    if (candidate.consoleMailFrom === undefined) {
+      issues.push(
+        'RCG_CONSOLE_MAIL_FROM is required when the customer console is enabled',
+      );
+    }
+    if (candidate.consoleResendApiKey === undefined) {
+      issues.push(
+        'RCG_CONSOLE_RESEND_API_KEY is required when the customer console is enabled',
+      );
+    }
+  } else if (candidate.consoleRegistrationEnabled) {
+    issues.push(
+      'RCG_CONSOLE_ENABLED must be true when public registration is enabled',
+    );
+  }
+
   if (candidate.demoEnabled) {
     if (candidate.demoOrigin === undefined) {
       issues.push(
@@ -365,6 +452,8 @@ export function describeSecretPresence(
     | 'RCG_KEY_HASH_PEPPER'
     | 'RCG_MASTER_KEY'
     | 'RCG_ADMIN_SESSION_PEPPER'
+    | 'RCG_CONSOLE_SESSION_PEPPER'
+    | 'RCG_CONSOLE_RESEND_API_KEY'
     | 'RCG_DEMO_GITHUB_CLIENT_SECRET'
     | 'RCG_DEMO_HASH_PEPPER',
     '<set>' | '<unset>'
@@ -375,6 +464,10 @@ export function describeSecretPresence(
     RCG_MASTER_KEY: config.masterKey === undefined ? '<unset>' : '<set>',
     RCG_ADMIN_SESSION_PEPPER:
       config.adminSessionPepper === undefined ? '<unset>' : '<set>',
+    RCG_CONSOLE_SESSION_PEPPER:
+      config.consoleSessionPepper === undefined ? '<unset>' : '<set>',
+    RCG_CONSOLE_RESEND_API_KEY:
+      config.consoleResendApiKey === undefined ? '<unset>' : '<set>',
     RCG_DEMO_GITHUB_CLIENT_SECRET:
       config.demoGithubClientSecret === undefined ? '<unset>' : '<set>',
     RCG_DEMO_HASH_PEPPER:

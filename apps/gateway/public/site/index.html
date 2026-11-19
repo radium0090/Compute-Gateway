@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="RAX Compute Gateway gives applications one OpenAI-compatible API for OpenAI, Anthropic, and Gemini with deterministic routing, fallback, limits, and telemetry."
+    />
+    <title>RAX Compute Gateway — One API. Every AI model.</title>
+    <link rel="stylesheet" href="/site/app.css" />
+    <script type="module" src="/site/app.js"></script>
+  </head>
+  <body>
+    <header class="nav-shell">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="#top" aria-label="RAX Compute Gateway home">
+          <span class="brand-mark" aria-hidden="true">R</span>
+          <span>RAX Compute Gateway</span>
+        </a>
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="nav-links"
+        >
+          Menu
+        </button>
+        <div class="nav-links" id="nav-links">
+          <a href="#product">Product</a>
+          <a href="#deploy">Deploy</a>
+          <a href="#plans">Plans</a>
+          <a href="#contact">Contact</a>
+          <a
+            href="https://github.com/radium0090/Compute-Gateway"
+            rel="noreferrer"
+            >GitHub</a
+          >
+          <a class="button button-small button-quiet" href="/console/login"
+            >Sign in</a
+          >
+          <a class="button button-small" href="/console/register"
+            >Request access</a
+          >
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero section">
+        <div class="hero-copy">
+          <p class="eyebrow">
+            <span class="pulse"></span> Open-source AI infrastructure
+          </p>
+          <h1>One stable API.<br /><span>Every AI model.</span></h1>
+          <p class="hero-lede">
+            Route applications and Agents across OpenAI, Anthropic, and Gemini
+            without rewriting client code. Control fallback, access, limits, and
+            telemetry at one trustworthy boundary.
+          </p>
+          <div class="hero-actions">
+            <a class="button" href="/console/register"
+              >Request managed access</a
+            >
+            <a
+              class="button button-quiet"
+              href="https://github.com/radium0090/Compute-Gateway"
+              rel="noreferrer"
+              >Self-host from GitHub</a
+            >
+          </div>
+          <p class="hero-note">
+            Private beta · Tokyo-hosted option · Apache-2.0 core
+          </p>
+        </div>
+        <div class="terminal-card" aria-label="Example API request">
+          <div class="terminal-head">
+            <span></span><span></span><span></span>
+            <p>chat-completion.sh</p>
+          </div>
+          <pre><code><span class="muted">curl</span> https://api.rax-digital.com/v1/chat/completions \
+  -H <span class="green">"Authorization: Bearer $RCG_API_KEY"</span> \
+  -H <span class="green">"Content-Type: application/json"</span> \
+  -d <span class="cyan">'{
+    "model": "rax/agent",
+    "messages": [{
+      "role": "user",
+      "content": "Plan the next step"
+    }]
+  }'</span></code></pre>
+          <div class="route-line">
+            <span>rax/agent</span><i></i><span>Gemini</span><i></i
+            ><span>OpenAI fallback</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section proof" aria-label="Product principles">
+        <p>OpenAI-compatible</p>
+        <p>Provider-neutral</p>
+        <p>Content-free telemetry</p>
+        <p>Deterministic fallback</p>
+        <p>Agent tool calling</p>
+      </section>
+
+      <section class="section narrative" id="product">
+        <div class="section-heading">
+          <p class="eyebrow">The control layer your AI stack is missing</p>
+          <h2>
+            Provider choice should be infrastructure, not application code.
+          </h2>
+          <p>
+            RAX keeps your application contract stable while model vendors,
+            availability, and cost constraints keep changing.
+          </p>
+        </div>
+        <div
+          class="architecture"
+          role="img"
+          aria-label="Applications connect through RAX to multiple providers"
+        >
+          <div class="arch-column sources">
+            <span>Web app</span><span>AI Agent</span><span>Workflow</span>
+          </div>
+          <div class="connector"></div>
+          <div class="arch-core">
+            <b>RAX</b><small>Authenticate · Route · Retry · Observe</small>
+          </div>
+          <div class="connector"></div>
+          <div class="arch-column providers">
+            <span>OpenAI</span><span>Anthropic</span><span>Gemini</span>
+          </div>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span>01</span>
+            <h3>Stable model aliases</h3>
+            <p>
+              Point clients at <code>rax/fast</code> or <code>rax/agent</code>.
+              Change providers centrally, not in every application.
+            </p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Bounded fallback</h3>
+            <p>
+              Retry and switch only for documented transient failures, within
+              one deadline and before response commitment.
+            </p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Tenant-safe access</h3>
+            <p>
+              Issue hashed, scoped API keys with model, streaming, tool, rate,
+              concurrency, token, and expiry ceilings.
+            </p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3>Observable by default</h3>
+            <p>
+              Use OpenTelemetry traces, metrics, and structured logs without
+              retaining prompts, completions, or tool content.
+            </p>
+          </article>
+          <article>
+            <span>05</span>
+            <h3>Agent compatible</h3>
+            <p>
+              Use OpenAI-style function tools, streamed tool-call deltas,
+              tool-result messages, and structured output routing.
+            </p>
+          </article>
+          <article>
+            <span>06</span>
+            <h3>Portable deployment</h3>
+            <p>
+              Run the same signed OCI image with Docker Compose, Kubernetes, or
+              a private customer deployment.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section deploy" id="deploy">
+        <div class="section-heading compact">
+          <p class="eyebrow">Choose your operating model</p>
+          <h2>
+            Open core when you want control. Managed service when you want
+            focus.
+          </h2>
+        </div>
+        <div class="deploy-grid">
+          <article class="deploy-card">
+            <p class="tag">Self-hosted</p>
+            <h3>Run it in your environment</h3>
+            <p>
+              Clone the Apache-2.0 repository, bring provider credentials, and
+              start with Docker Compose in minutes.
+            </p>
+            <ul>
+              <li>Full operational control</li>
+              <li>Docker and Kubernetes assets</li>
+              <li>TypeScript and Python SDKs</li>
+            </ul>
+            <a
+              class="text-link"
+              href="https://github.com/radium0090/Compute-Gateway"
+              rel="noreferrer"
+              >Open the repository</a
+            >
+          </article>
+          <article class="deploy-card featured">
+            <p class="tag">Managed Cloud</p>
+            <h3>Use RAX as a service</h3>
+            <p>
+              Receive an organization, bounded API keys, managed upgrades, and
+              one endpoint for supported providers.
+            </p>
+            <ul>
+              <li>Customer Console</li>
+              <li>Managed routing and telemetry</li>
+              <li>Usage boundaries per key</li>
+            </ul>
+            <a class="button" href="/console/register">Join the private beta</a>
+          </article>
+          <article class="deploy-card">
+            <p class="tag">Private deployment</p>
+            <h3>Designed around your controls</h3>
+            <p>
+              For teams that need network isolation, custom provider policy,
+              migration support, or dedicated operations.
+            </p>
+            <ul>
+              <li>Architecture and security review</li>
+              <li>Deployment assistance</li>
+              <li>Commercial support options</li>
+            </ul>
+            <a class="text-link" href="#contact">Discuss your requirements</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="section plans" id="plans">
+        <div class="section-heading compact">
+          <p class="eyebrow">Private beta plans</p>
+          <h2>Start within a controlled budget.</h2>
+          <p>
+            Managed access is currently approved manually while billing and
+            automated subscriptions are prepared.
+          </p>
+        </div>
+        <div class="plan-table">
+          <div class="plan-row plan-head">
+            <span>Plan</span><span>Best for</span><span>Access</span
+            ><span></span>
+          </div>
+          <div class="plan-row">
+            <strong>Developer</strong><span>Evaluation and side projects</span
+            ><span>Bounded shared service</span
+            ><a href="/console/register">Request access</a>
+          </div>
+          <div class="plan-row">
+            <strong>Team</strong><span>Production applications</span
+            ><span>Managed limits and support</span
+            ><a href="#contact">Contact RAX</a>
+          </div>
+          <div class="plan-row">
+            <strong>Private</strong
+            ><span>Enterprise and regulated workloads</span
+            ><span>Dedicated deployment</span
+            ><a href="#contact">Design a deployment</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section contact" id="contact">
+        <div class="contact-copy">
+          <p class="eyebrow">Talk to RAX Digital</p>
+          <h2>Bring the integration you have today.</h2>
+          <p>
+            Tell us which provider, SDK, Agent, or workflow you use. We will
+            reply with a focused integration path—without asking you to post
+            credentials.
+          </p>
+          <div class="contact-points">
+            <p>
+              <b>PoC support</b><br />Gemini-primary and multi-provider fallback
+              validation
+            </p>
+            <p>
+              <b>Private deployment</b><br />Architecture, setup, and
+              operational handoff
+            </p>
+            <p><b>日本語対応</b><br />国内PoC・導入相談も日本語で対応します</p>
+          </div>
+        </div>
+        <form class="contact-form" id="contact-form">
+          <div class="form-row">
+            <label
+              >Name<input
+                name="name"
+                autocomplete="name"
+                required
+                maxlength="100" /></label
+            ><label
+              >Work email<input
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+                maxlength="254"
+            /></label>
+          </div>
+          <label
+            >Company <span>Optional</span
+            ><input name="company" autocomplete="organization" maxlength="160"
+          /></label>
+          <label
+            >What are you building?<textarea
+              name="message"
+              required
+              minlength="10"
+              maxlength="4000"
+              rows="5"
+              placeholder="Current provider, expected traffic, fallback or deployment requirements"
+            ></textarea>
+          </label>
+          <label class="privacy-check"
+            ><input name="accepted_privacy" type="checkbox" required /><span
+              >I agree that RAX Digital may use these details to reply to this
+              inquiry.</span
+            ></label
+          >
+          <label class="trap" aria-hidden="true"
+            >Website<input name="website" tabindex="-1" autocomplete="off"
+          /></label>
+          <button class="button" type="submit">Send inquiry</button>
+          <p class="form-status" id="contact-status" role="status"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand" href="#top"
+        ><span class="brand-mark">R</span><span>RAX Compute Gateway</span></a
+      >
+      <p>One API. Every AI model.</p>
+      <div>
+        <a href="https://github.com/radium0090/Compute-Gateway" rel="noreferrer"
+          >GitHub</a
+        ><a href="/console/login">Console</a><a href="/legal/privacy">Privacy</a
+        ><a href="/legal/service">Service notice</a
+        ><a href="mailto:pokemnn@yahoo.co.jp">Email</a>
+      </div>
+      <small
+        >© 2026 RAX Digital. Open-source core licensed under Apache-2.0.</small
+      >
+    </footer>
+  </body>
+</html>

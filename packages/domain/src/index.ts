@@ -38,6 +38,33 @@ export type {
   AdminIdentityRepository,
 } from './admin-repository.js';
 export {
+  customerSessionId,
+  customerTokenHash,
+  customerUserId,
+  type BusinessInquiry,
+  type BusinessInquirySummary,
+  type CustomerAccountSummary,
+  type CustomerApiKeySummary,
+  type CustomerAuditEvent,
+  type CustomerEntitlementStatus,
+  type CustomerOneTimeToken,
+  type CustomerSession,
+  type CustomerSessionId,
+  type CustomerSessionWithUser,
+  type CustomerTenantEntitlements,
+  type CustomerTokenHash,
+  type CustomerTokenPurpose,
+  type CustomerUser,
+  type CustomerUserId,
+  type CustomerUserStatus,
+} from './customer.js';
+export type {
+  CustomerAdministrationRepository,
+  CustomerAuditRepository,
+  CustomerControlRepository,
+  CustomerIdentityRepository,
+} from './customer-repository.js';
+export {
   ProviderStreamFailure,
   providerSupportsChatRequest,
   requiredProviderCapabilities,

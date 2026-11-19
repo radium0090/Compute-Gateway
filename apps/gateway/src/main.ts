@@ -6,6 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import {
   AdminConsoleService,
   CreateChatCompletionService,
+  CustomerConsoleService,
   DemoClaimService,
   ListModelsService,
 } from '@rax-digital/application';
@@ -13,6 +14,7 @@ import {
   ApiKeyAuthenticator,
   GitHubOAuthClient,
   NodeAdminSecurity,
+  NodeCustomerSecurity,
   NodeDemoSecurity,
   provisionApiKey,
 } from '@rax-digital/auth';
@@ -38,6 +40,9 @@ import {
   PostgresAdminControlRepository,
   PostgresAdminIdentityRepository,
   PostgresDemoClaimRepository,
+  PostgresCustomerAuditRepository,
+  PostgresCustomerControlRepository,
+  PostgresCustomerIdentityRepository,
   PostgresReadinessProbe,
   createPostgresPool,
   runMigrations,
@@ -53,6 +58,7 @@ import {
 } from '@rax-digital/router';
 
 import { buildGateway } from './app.js';
+import { ResendCustomerMailer } from './customer-mailer.js';
 import type { ReadinessProbe } from './health.js';
 
 interface CoordinationRuntime {
@@ -280,6 +286,9 @@ export async function runGateway(
       coordination = await coordinationRuntime(config, policy);
       const router = new StaticPolicyRouter(policy);
       const apiKeyRepository = new PostgresApiKeyRepository(pool);
+      const customerControlRepository = new PostgresCustomerControlRepository(
+        pool,
+      );
       const probe = readinessProbe(
         new PostgresReadinessProbe(pool),
         coordination,
@@ -322,6 +331,7 @@ export async function runGateway(
             {
               sessionTtlMs: config.adminSessionTtlMs,
               idGenerator: randomUUID,
+              customerAdministration: customerControlRepository,
             },
           ),
           origin: config.adminOrigin,
@@ -384,6 +394,58 @@ export async function runGateway(
           origin: config.demoOrigin,
         };
       })();
+      const customer = (() => {
+        if (!config.consoleEnabled) return undefined;
+        if (
+          config.consoleOrigin === undefined ||
+          config.consoleSessionPepper === undefined ||
+          config.consoleMailFrom === undefined ||
+          config.consoleResendApiKey === undefined
+        ) {
+          throw new TypeError(
+            'Validated customer console configuration is incomplete',
+          );
+        }
+        const security = new NodeCustomerSecurity({
+          sessionPepper: config.consoleSessionPepper,
+        });
+        return {
+          service: new CustomerConsoleService(
+            new PostgresCustomerIdentityRepository(pool),
+            customerControlRepository,
+            new PostgresCustomerAuditRepository(pool),
+            security,
+            new ResendCustomerMailer({
+              apiKey: config.consoleResendApiKey,
+              from: config.consoleMailFrom,
+              origin: config.consoleOrigin,
+            }),
+            {
+              provision: (input) =>
+                provisionApiKey(
+                  {
+                    id: apiKeyId(input.id),
+                    tenantId: input.tenantId,
+                    name: input.name,
+                    environment: input.environment,
+                    policy: input.policy,
+                    pepper: config.keyHashPepper,
+                    expiresAt: input.expiresAt,
+                  },
+                  input.now,
+                ),
+            },
+            {
+              environment: config.environment,
+              sessionTtlMs: config.consoleSessionTtlMs,
+              idGenerator: randomUUID,
+            },
+          ),
+          origin: config.consoleOrigin,
+          sessionTtlMs: config.consoleSessionTtlMs,
+          registrationEnabled: config.consoleRegistrationEnabled,
+        };
+      })();
       const app = await buildGateway({
         config,
         logger,
@@ -393,6 +455,7 @@ export async function runGateway(
         readinessProbe: probe,
         ...(admin === undefined ? {} : { admin }),
         ...(demo === undefined ? {} : { demo }),
+        ...(customer === undefined ? {} : { customer }),
         chatCompletionService: new CreateChatCompletionService(
           authenticator,
           router,
