@@ -526,24 +526,35 @@ export async function registerAdminRoutes(
         { mutation: true },
       );
       if (actor === null) return reply;
-      const updated = await dependencies.service.setCustomerEntitlements({
-        actor,
-        value: {
-          tenantId: request.params.tenant_id,
-          status: request.body.status,
-          planCode: request.body.plan_code,
-          allowedModelPatterns: request.body.allowed_model_patterns,
-          allowStreaming: request.body.allow_streaming,
-          allowTools: request.body.allow_tools,
-          requestsPerMinute: request.body.requests_per_minute,
-          maxConcurrentRequests: request.body.max_concurrent_requests,
-          maxRequestTokens: request.body.max_request_tokens,
-          maxOutputTokens: request.body.max_output_tokens,
-          maxActiveApiKeys: request.body.max_active_api_keys,
-          keyTtlDays: request.body.key_ttl_days,
-        },
-        requestId: request.id,
-      });
+      let updated: boolean;
+      try {
+        updated = await dependencies.service.setCustomerEntitlements({
+          actor,
+          value: {
+            tenantId: request.params.tenant_id,
+            status: request.body.status,
+            planCode: request.body.plan_code,
+            allowedModelPatterns: request.body.allowed_model_patterns,
+            allowStreaming: request.body.allow_streaming,
+            allowTools: request.body.allow_tools,
+            requestsPerMinute: request.body.requests_per_minute,
+            maxConcurrentRequests: request.body.max_concurrent_requests,
+            maxRequestTokens: request.body.max_request_tokens,
+            maxOutputTokens: request.body.max_output_tokens,
+            maxActiveApiKeys: request.body.max_active_api_keys,
+            keyTtlDays: request.body.key_ttl_days,
+          },
+          requestId: request.id,
+        });
+      } catch (error: unknown) {
+        if (
+          error instanceof AdminInputError &&
+          error.code === 'email_unverified'
+        ) {
+          return adminError(reply, 409, error.code, error.message);
+        }
+        throw error;
+      }
       return updated
         ? { updated: true }
         : adminError(reply, 404, 'customer_not_found', 'Customer not found.');

@@ -244,7 +244,7 @@ function renderInquiries() {
         updateInquiry(inquiry, 'in_progress'),
       );
       action.append(progress);
-    } else {
+    } else if (inquiry.status === 'in_progress') {
       const close = document.createElement('button');
       close.type = 'button';
       close.className = 'text-button';

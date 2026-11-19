@@ -103,7 +103,8 @@ const defaultLockDurationMs = 15 * 60 * 1_000;
 
 export class AdminInputError extends Error {
   public constructor(
-    public readonly code: 'tenant_invalid' | 'expiry_invalid',
+    public readonly code:
+      'tenant_invalid' | 'expiry_invalid' | 'email_unverified',
     message: string,
   ) {
     super(message);
@@ -517,10 +518,17 @@ export class AdminConsoleService {
       throw new TypeError('Customer entitlements are invalid');
     }
     const selectedTenantId = tenantId(value.tenantId);
-    const current = (
+    const account = (
       await this.customerAdministration().listCustomerAccounts()
-    ).find((account) => account.tenantId === selectedTenantId)?.entitlements;
-    if (current === undefined) return false;
+    ).find((candidate) => candidate.tenantId === selectedTenantId);
+    if (account === undefined) return false;
+    if (value.status === 'active' && account.emailVerifiedAt === null) {
+      throw new AdminInputError(
+        'email_unverified',
+        'The customer must verify their email before service activation.',
+      );
+    }
+    const current = account.entitlements;
     const entitlements: CustomerTenantEntitlements = {
       tenantId: selectedTenantId,
       status: value.status,
