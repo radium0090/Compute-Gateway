@@ -121,3 +121,9 @@ jobs:
             -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             -i "$HOME/.ssh/xserver_deploy" \
             "${XSERVER_SSH_USER}@${XSERVER_HOST}" "$remote_command"
+
+      - name: Verify public product surface
+        env:
+          RCG_API_HOST: ${{ vars.RCG_API_HOST }}
+          RCG_SITE_HOST: ${{ vars.RCG_SITE_HOST }}
+        run: bash scripts/verify-xserver-production.sh

@@ -123,7 +123,10 @@ The workflow validates main ancestry, uploads an archive, validates the runtime
 configuration, builds or pulls the image, runs migrations, starts the stack,
 and verifies both HTTPS hosts plus readiness. Each release records its exact
 image reference in a non-secret `.deployment.env` file so an automatic rollback
-restores the previous application image instead of reusing the failed one.
+restores the previous application image instead of reusing the failed one. A
+second verification runs from the GitHub-hosted runner and proves that public
+DNS, TLS, the product site, Console, legal pages, security headers, and health
+routes work from outside the VPS while `/metrics` remains unavailable.
 
 ## 7. Bootstrap the operator
 

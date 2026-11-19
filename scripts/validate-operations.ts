@@ -254,6 +254,16 @@ async function validateWorkflows(): Promise<void> {
       ),
     'XServer rollback must restore the previous release with its recorded immutable image',
   );
+  const xserverVerify = await read('scripts/verify-xserver-production.sh');
+  assert(
+    xserverSource.includes('scripts/verify-xserver-production.sh') &&
+      xserverVerify.includes('/health/ready') &&
+      xserverVerify.includes('/console/login') &&
+      xserverVerify.includes('/legal/privacy') &&
+      xserverVerify.includes('/metrics" 404') &&
+      xserverVerify.includes('content-security-policy'),
+    'XServer deployment must verify the public product, Console, legal, health, security-header, and private-metrics boundaries',
+  );
   assert(
     xserverCaddy.includes('/legal/*'),
     'XServer product host must expose the legal pages linked by the website and Console',
