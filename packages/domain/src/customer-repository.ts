@@ -25,7 +25,7 @@ export interface CustomerIdentityRepository {
     readonly user: CustomerUser;
     readonly entitlements: CustomerTenantEntitlements;
     readonly verification: CustomerOneTimeToken;
-  }): Promise<void>;
+  }): Promise<'created' | 'account_exists'>;
   recordLoginSuccess(id: CustomerUserId, loggedInAt: Date): Promise<void>;
   recordLoginFailure(
     id: CustomerUserId,

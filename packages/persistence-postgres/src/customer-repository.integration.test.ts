@@ -105,19 +105,52 @@ describeIntegration('PostgreSQL customer repositories', () => {
   });
 
   it('persists the complete customer identity, entitlement, key, and inquiry lifecycle', async () => {
-    await identities.createRegistration({
-      tenant,
-      user,
-      entitlements,
-      verification: {
-        id: randomUUID(),
-        userId,
-        purpose: 'verify_email',
-        tokenHash: verificationHash,
-        createdAt: now,
-        expiresAt: new Date('2026-11-20T00:00:00.000Z'),
-      },
-    });
+    await expect(
+      identities.createRegistration({
+        tenant,
+        user,
+        entitlements,
+        verification: {
+          id: randomUUID(),
+          userId,
+          purpose: 'verify_email',
+          tokenHash: verificationHash,
+          createdAt: now,
+          expiresAt: new Date('2026-11-20T00:00:00.000Z'),
+        },
+      }),
+    ).resolves.toBe('created');
+    const duplicateTenantId = tenantId(randomUUID());
+    const duplicateUserId = customerUserId(randomUUID());
+    await expect(
+      identities.createRegistration({
+        tenant: {
+          ...tenant,
+          id: duplicateTenantId,
+          name: `${tenant.name}-duplicate`,
+        },
+        user: {
+          ...user,
+          id: duplicateUserId,
+          tenantId: duplicateTenantId,
+        },
+        entitlements: {
+          ...entitlements,
+          tenantId: duplicateTenantId,
+        },
+        verification: {
+          id: randomUUID(),
+          userId: duplicateUserId,
+          purpose: 'verify_email',
+          tokenHash: customerTokenHash('9'.repeat(64)),
+          createdAt: now,
+          expiresAt: new Date('2026-11-20T00:00:00.000Z'),
+        },
+      }),
+    ).resolves.toBe('account_exists');
+    await expect(
+      pool.query('SELECT id FROM tenants WHERE id = $1', [duplicateTenantId]),
+    ).resolves.toMatchObject({ rowCount: 0 });
     await expect(identities.findUserByEmail(user.email)).resolves.toEqual(user);
     await expect(
       identities.verifyEmail(

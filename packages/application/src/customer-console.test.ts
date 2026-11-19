@@ -33,6 +33,7 @@ class MemoryIdentity implements CustomerIdentityRepository {
   public readonly sessions = new Map<string, CustomerSession>();
   public readonly tokens = new Map<string, CustomerOneTimeToken>();
   public readonly entitlements = new Map<string, CustomerTenantEntitlements>();
+  public registrationResult: 'created' | 'account_exists' = 'created';
 
   public findUserByEmail(email: string): Promise<CustomerUser | null> {
     return Promise.resolve(
@@ -44,11 +45,14 @@ class MemoryIdentity implements CustomerIdentityRepository {
   }
   public createRegistration(
     input: Parameters<CustomerIdentityRepository['createRegistration']>[0],
-  ): Promise<void> {
+  ): Promise<'created' | 'account_exists'> {
+    if (this.registrationResult === 'account_exists') {
+      return Promise.resolve('account_exists');
+    }
     this.users.set(input.user.id, input.user);
     this.entitlements.set(input.entitlements.tenantId, input.entitlements);
     this.tokens.set(input.verification.tokenHash, input.verification);
-    return Promise.resolve();
+    return Promise.resolve('created');
   }
   public recordLoginSuccess(id: CustomerUserId, at: Date): Promise<void> {
     const user = this.users.get(id);
@@ -320,6 +324,21 @@ async function registerAndVerify(value: ReturnType<typeof fixture>) {
 }
 
 describe('CustomerConsoleService', () => {
+  it('maps a concurrent duplicate registration to the safe account-exists result', async () => {
+    const value = fixture();
+    value.identities.registrationResult = 'account_exists';
+    await expect(
+      value.service.register({
+        email: 'owner@example.com',
+        displayName: 'Owner',
+        organizationName: 'Example',
+        password: 'correct horse battery',
+        requestId: 'req-register-race',
+      }),
+    ).rejects.toMatchObject({ code: 'account_exists' });
+    expect(value.mailer.verificationToken).toBe('');
+  });
+
   it('registers a pending tenant, verifies email, and creates a session', async () => {
     const value = fixture();
     await value.service.register({

@@ -151,6 +151,15 @@ function isPositiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0;
 }
 
+function isDuplicateCustomerEmail(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const record = error as Readonly<Record<string, unknown>>;
+  return (
+    record.code === '23505' &&
+    record.constraint === 'customer_users_email_unique_idx'
+  );
+}
+
 function parsePolicy(value: unknown): ApiKeyPolicy {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new TypeError('Persisted API key policy is invalid');
@@ -258,68 +267,74 @@ export class PostgresCustomerIdentityRepository implements CustomerIdentityRepos
     readonly user: CustomerUser;
     readonly entitlements: CustomerTenantEntitlements;
     readonly verification: CustomerOneTimeToken;
-  }): Promise<void> {
-    await transaction(this.pool, async (client) => {
-      await client.query(
-        `INSERT INTO tenants (id, name, status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [
-          input.tenant.id,
-          input.tenant.name,
-          input.tenant.status,
-          input.tenant.createdAt,
-          input.tenant.updatedAt,
-        ],
-      );
-      await client.query(
-        `INSERT INTO customer_users
-           (id, tenant_id, email, display_name, password_hash, status,
-            email_verified_at, failed_login_count, locked_until, last_login_at,
-            created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          input.user.id,
-          input.user.tenantId,
-          input.user.email,
-          input.user.displayName,
-          input.user.passwordHash,
-          input.user.status,
-          input.user.emailVerifiedAt,
-          input.user.failedLoginCount,
-          input.user.lockedUntil,
-          input.user.lastLoginAt,
-          input.user.createdAt,
-          input.user.updatedAt,
-        ],
-      );
-      const policy = input.entitlements.policy;
-      await client.query(
-        `INSERT INTO customer_tenant_entitlements
-           (tenant_id, status, plan_code, allowed_model_patterns,
-            allow_streaming, allow_tools, requests_per_minute,
-            max_concurrent_requests, max_request_tokens, max_output_tokens,
-            max_active_api_keys, key_ttl_days, created_at, updated_at)
-         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12,
-                 $13, $14)`,
-        [
-          input.entitlements.tenantId,
-          input.entitlements.status,
-          input.entitlements.planCode,
-          JSON.stringify(policy.allowedModelPatterns),
-          policy.allowStreaming,
-          policy.allowTools,
-          policy.requestsPerMinute,
-          policy.maxConcurrentRequests,
-          policy.maxRequestTokens ?? 2_048,
-          policy.maxOutputTokens ?? 256,
-          input.entitlements.maxActiveApiKeys,
-          input.entitlements.keyTtlDays,
-          input.entitlements.createdAt,
-          input.entitlements.updatedAt,
-        ],
-      );
-      await this.insertToken(client, input.verification);
-    });
+  }): Promise<'created' | 'account_exists'> {
+    try {
+      await transaction(this.pool, async (client) => {
+        await client.query(
+          `INSERT INTO tenants (id, name, status, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            input.tenant.id,
+            input.tenant.name,
+            input.tenant.status,
+            input.tenant.createdAt,
+            input.tenant.updatedAt,
+          ],
+        );
+        await client.query(
+          `INSERT INTO customer_users
+             (id, tenant_id, email, display_name, password_hash, status,
+              email_verified_at, failed_login_count, locked_until, last_login_at,
+              created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            input.user.id,
+            input.user.tenantId,
+            input.user.email,
+            input.user.displayName,
+            input.user.passwordHash,
+            input.user.status,
+            input.user.emailVerifiedAt,
+            input.user.failedLoginCount,
+            input.user.lockedUntil,
+            input.user.lastLoginAt,
+            input.user.createdAt,
+            input.user.updatedAt,
+          ],
+        );
+        const policy = input.entitlements.policy;
+        await client.query(
+          `INSERT INTO customer_tenant_entitlements
+             (tenant_id, status, plan_code, allowed_model_patterns,
+              allow_streaming, allow_tools, requests_per_minute,
+              max_concurrent_requests, max_request_tokens, max_output_tokens,
+              max_active_api_keys, key_ttl_days, created_at, updated_at)
+           VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12,
+                   $13, $14)`,
+          [
+            input.entitlements.tenantId,
+            input.entitlements.status,
+            input.entitlements.planCode,
+            JSON.stringify(policy.allowedModelPatterns),
+            policy.allowStreaming,
+            policy.allowTools,
+            policy.requestsPerMinute,
+            policy.maxConcurrentRequests,
+            policy.maxRequestTokens ?? 2_048,
+            policy.maxOutputTokens ?? 256,
+            input.entitlements.maxActiveApiKeys,
+            input.entitlements.keyTtlDays,
+            input.entitlements.createdAt,
+            input.entitlements.updatedAt,
+          ],
+        );
+        await this.insertToken(client, input.verification);
+      });
+      return 'created';
+    } catch (error) {
+      if (isDuplicateCustomerEmail(error)) return 'account_exists';
+      throw error;
+    }
   }
 
   public async recordLoginSuccess(

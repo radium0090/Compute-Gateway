@@ -220,7 +220,7 @@ export class CustomerConsoleService {
       createdAt: now,
       updatedAt: now,
     };
-    await this.identities.createRegistration({
+    const registration = await this.identities.createRegistration({
       tenant,
       user,
       entitlements,
@@ -233,6 +233,12 @@ export class CustomerConsoleService {
         expiresAt: new Date(now.getTime() + this.verificationTtlMs),
       },
     });
+    if (registration === 'account_exists') {
+      throw new CustomerInputError(
+        'account_exists',
+        'An account already exists for this email address.',
+      );
+    }
     await this.audit(
       userId,
       registrationTenantId,

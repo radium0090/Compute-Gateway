@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type {
-  CustomerLoginResult,
-  CustomerPrincipal,
+import {
+  CustomerInputError,
+  type CustomerLoginResult,
+  type CustomerPrincipal,
 } from '@rax-digital/application';
 import { loadConfig } from '@rax-digital/config';
 import {
@@ -150,6 +151,34 @@ describe('customer and product routes', () => {
     });
     expect(response.statusCode).toBe(503);
     expect(value.register).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('masks duplicate registration outcomes at the public boundary', async () => {
+    const value = service();
+    value.register = vi.fn(() =>
+      Promise.reject(
+        new CustomerInputError(
+          'account_exists',
+          'An account already exists for this email address.',
+        ),
+      ),
+    );
+    const app = await gateway(value);
+    const response = await app.inject({
+      method: 'POST',
+      url: '/console/api/register',
+      headers: { origin },
+      payload: {
+        email: actor.email,
+        display_name: actor.displayName,
+        organization_name: 'Example',
+        password: 'a secure password',
+        accepted_terms: true,
+      },
+    });
+    expect(response.statusCode).toBe(202);
+    expect(response.json()).toEqual({ verification_required: true });
     await app.close();
   });
 
