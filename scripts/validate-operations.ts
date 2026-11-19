@@ -233,7 +233,9 @@ async function validateWorkflows(): Promise<void> {
     xserverSource.includes('scripts/deploy-xserver.sh') &&
       xserverSource.includes('secrets.XSERVER_SSH_PRIVATE_KEY') &&
       xserverSource.includes('vars.XSERVER_SSH_HOST_KEY') &&
-      xserverSource.includes('git merge-base --is-ancestor'),
+      xserverSource.includes('git merge-base --is-ancestor') &&
+      xserverSource.includes('-o StrictHostKeyChecking=yes') &&
+      xserverSource.includes('-o IdentitiesOnly=yes'),
     'XServer deploy must pin the host key and deploy an approved main commit',
   );
 
@@ -246,12 +248,21 @@ async function validateWorkflows(): Promise<void> {
       'release_environment="${release_root}/.deployment.env"',
     ) &&
       xserverDeploy.includes('--env-file "$previous_release_environment"') &&
-      xserverDeploy.includes('selected_image="$RCG_IMAGE_REF"'),
+      xserverDeploy.includes('selected_image="$RCG_IMAGE_REF"') &&
+      xserverDeploy.includes(
+        '^/opt/[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$',
+      ),
     'XServer rollback must restore the previous release with its recorded immutable image',
   );
   assert(
     xserverCaddy.includes('/legal/*'),
     'XServer product host must expose the legal pages linked by the website and Console',
+  );
+  assert(
+    (await read('deploy/xserver/runtime.env.example')).includes(
+      'RCG_TRUST_PROXY=true',
+    ),
+    'XServer must trust its private Caddy hop so client-aware limits do not collapse to one proxy address',
   );
 }
 

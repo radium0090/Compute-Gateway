@@ -109,7 +109,9 @@ Environment variables:
 - `RCG_SITE_HOST`: for example `gateway.rax-digital.com`.
 
 Verify the SSH host-key fingerprint through the XServer console before saving
-it. Do not trust an unverified network scan by itself.
+it. Do not trust an unverified network scan by itself. The workflow enforces
+strict host-key checking, uses only the dedicated deployment identity, and
+rejects non-normalized paths below `/opt`.
 
 ## 6. First deployment
 

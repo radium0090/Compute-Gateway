@@ -18,7 +18,7 @@ if [[ ! "$RCG_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
   echo 'RCG_COMMIT_SHA must be a full lowercase Git SHA.' >&2
   exit 1
 fi
-if [[ ! "$RCG_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]; then
+if [[ ! "$RCG_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$ ]]; then
   echo 'RCG_DEPLOY_PATH must be a normalized path below /opt.' >&2
   exit 1
 fi

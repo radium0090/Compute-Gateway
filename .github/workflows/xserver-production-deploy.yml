@@ -29,13 +29,17 @@ jobs:
         env:
           COMMIT_SHA: ${{ inputs.commit_sha }}
           IMAGE_REF: ${{ inputs.image_ref }}
+          XSERVER_HOST: ${{ secrets.XSERVER_HOST }}
+          XSERVER_SSH_USER: ${{ secrets.XSERVER_SSH_USER }}
           XSERVER_DEPLOY_PATH: ${{ vars.XSERVER_DEPLOY_PATH }}
           RCG_API_HOST: ${{ vars.RCG_API_HOST }}
           RCG_SITE_HOST: ${{ vars.RCG_SITE_HOST }}
         run: |
           set -Eeuo pipefail
           [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$XSERVER_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._/-]*$ ]]
+          [[ "$XSERVER_HOST" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]]
+          [[ "$XSERVER_SSH_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]
+          [[ "$XSERVER_DEPLOY_PATH" =~ ^/opt/[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$ ]]
           [[ "$RCG_API_HOST" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]]
           [[ "$RCG_SITE_HOST" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]]
           if [[ -n "$IMAGE_REF" ]]; then
@@ -79,12 +83,21 @@ jobs:
           set -Eeuo pipefail
           archive="$RUNNER_TEMP/rax-compute-gateway-${COMMIT_SHA}.tar.gz"
           git archive --format=tar.gz --output="$archive" "$COMMIT_SHA"
-          ssh -i "$HOME/.ssh/xserver_deploy" \
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -i "$HOME/.ssh/xserver_deploy" \
             "${XSERVER_SSH_USER}@${XSERVER_HOST}" \
             "install -d -m 0750 '${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}'"
-          scp -i "$HOME/.ssh/xserver_deploy" "$archive" \
+          scp -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -i "$HOME/.ssh/xserver_deploy" "$archive" \
             "${XSERVER_SSH_USER}@${XSERVER_HOST}:${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}/release.tar.gz"
-          ssh -i "$HOME/.ssh/xserver_deploy" \
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -i "$HOME/.ssh/xserver_deploy" \
             "${XSERVER_SSH_USER}@${XSERVER_HOST}" \
             "tar -xzf '${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}/release.tar.gz' -C '${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}' && rm '${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}/release.tar.gz'"
 
@@ -103,5 +116,8 @@ jobs:
             "RCG_COMMIT_SHA=%q RCG_DEPLOY_PATH=%q RCG_API_HOST=%q RCG_SITE_HOST=%q RCG_IMAGE_REF=%q bash %q" \
             "$COMMIT_SHA" "$XSERVER_DEPLOY_PATH" "$RCG_API_HOST" "$RCG_SITE_HOST" "$IMAGE_REF" \
             "${XSERVER_DEPLOY_PATH}/releases/${COMMIT_SHA}/scripts/deploy-xserver.sh"
-          ssh -i "$HOME/.ssh/xserver_deploy" \
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -i "$HOME/.ssh/xserver_deploy" \
             "${XSERVER_SSH_USER}@${XSERVER_HOST}" "$remote_command"
