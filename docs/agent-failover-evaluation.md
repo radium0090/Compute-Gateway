@@ -13,6 +13,10 @@ implement the same behavior. The homepage lab is an illustration; it does not
 run against the visitor's providers. A generated, customer-specific failover
 report is a possible follow-up, not an existing feature.
 
+The [acceptance report runbook](runbooks/agent-failover-report.md) provides an
+offline report and a protected live check for one synthetic Gemini-to-OpenAI
+scenario, without using any customer records.
+
 ## Competitive snapshot
 
 Official documentation reviewed on 2026-11-26; not an independent performance,

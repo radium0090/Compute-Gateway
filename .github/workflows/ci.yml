@@ -53,6 +53,18 @@ jobs:
           pnpm examples:check
           pnpm ui:check
           pnpm operations:check
+      - name: Generate offline agent failover evidence
+        run: |
+          mkdir -p "$RUNNER_TEMP/agent-failover"
+          pnpm --silent agent:failover-report --format json > "$RUNNER_TEMP/agent-failover/report.json"
+          pnpm --silent agent:failover-report > "$RUNNER_TEMP/agent-failover/report.md"
+      - name: Upload offline agent failover evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: agent-failover-offline-report
+          path: ${{ runner.temp }}/agent-failover/
+          retention-days: 7
+          if-no-files-found: error
       - name: Validate development configuration
         run: node apps/gateway/dist/index.js --check-config
         env:
@@ -82,6 +94,16 @@ jobs:
           RCG_CONFIG_FILE: deploy/compose/rax-compute-gateway.yaml
           OPENAI_API_KEY: fake-openai
           ANTHROPIC_API_KEY: fake-anthropic
+          GEMINI_API_KEY: fake-gemini
+      - name: Validate isolated agent pilot policy
+        run: node apps/gateway/dist/index.js --check-config
+        env:
+          RCG_ENVIRONMENT: production
+          RCG_DATABASE_URL: postgresql://rcg:fake@postgres.invalid:5432/compute_gateway
+          RCG_REDIS_URL: rediss://redis.invalid:6379
+          RCG_KEY_HASH_PEPPER: fake-pepper-with-at-least-32-characters
+          RCG_CONFIG_FILE: deploy/compose/gemini-openai-pilot.yaml
+          OPENAI_API_KEY: fake-openai
           GEMINI_API_KEY: fake-gemini
 
   integration:

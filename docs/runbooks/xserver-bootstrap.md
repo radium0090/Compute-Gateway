@@ -119,6 +119,11 @@ Merge a fully green pull request to `main`, copy its full 40-character commit
 SHA, and dispatch `XServer production deploy`. Leave `image_ref` empty for the
 first rehearsal; use a signed immutable release digest for a public release.
 
+For an agent pilot, save the
+[offline failover report](agent-failover-report.md) from that commit's CI run
+before dispatching. It is a regression baseline, not evidence that the
+VPS, production credentials or upstream models are working.
+
 The workflow validates main ancestry, uploads an archive, validates the runtime
 configuration, builds or pulls the image, runs migrations, starts the stack,
 and verifies both HTTPS hosts plus readiness. Each release records its exact
@@ -157,9 +162,20 @@ Confirm:
 - customer registration, email verification, reset, key creation, API call,
   key revocation, and suspension using `docs/customer-console.md`;
 - normal and streaming calls for every enabled provider alias;
+- pilot-specific response and failover checks, with controlled failures
+  exercised in an isolated environment rather than on the public service;
 - container restart preserves PostgreSQL state and invalidates no valid keys.
 
 Only then change `RCG_CONSOLE_REGISTRATION_ENABLED=true` and redeploy.
+
+Do not treat the VPS region, IP address, or working credentials as permission
+to offer an upstream model to a customer. Check each provider's current
+eligibility requirements for the customer, their users, and the service
+being offered. For Claude, review Anthropic's
+[Supported Regions Policy](https://www.anthropic.com/legal/supported-regions)
+and [Commercial Terms](https://www.anthropic.com/legal/commercial-terms)
+before enabling it for a managed customer. A provider that is not approved
+for a pilot must not appear in that pilot's fallback routes.
 
 ## 9. Recovery baseline
 

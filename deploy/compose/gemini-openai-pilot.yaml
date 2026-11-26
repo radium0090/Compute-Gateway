@@ -1,0 +1,35 @@
+# Example only: verify the exact customer-approved models before deployment.
+version: 1
+providers:
+  gemini-primary:
+    adapter: gemini
+    credential_env: GEMINI_API_KEY
+    base_url: https://generativelanguage.googleapis.com/v1beta
+    models:
+      gemini-3.5-flash:
+        capabilities: [chat, streaming, tools, json_object, json_schema]
+  openai-backup:
+    adapter: openai
+    credential_env: OPENAI_API_KEY
+    base_url: https://api.openai.com/v1
+    models:
+      gpt-5-mini:
+        capabilities: [chat, streaming, tools, json_object, json_schema]
+aliases:
+  rax/agent:
+    required_capabilities: [chat, tools]
+    candidates:
+      - provider: gemini-primary
+        model: gemini-3.5-flash
+        weight: 100
+      - provider: openai-backup
+        model: gpt-5-mini
+        weight: 0
+routing:
+  max_attempts: 2
+  total_timeout_ms: 30000
+  connect_timeout_ms: 10000
+  same_route_retries: 0
+  minimum_attempt_budget_ms: 2000
+  global_max_concurrent_calls: 4
+  provider_max_concurrent_calls: 2

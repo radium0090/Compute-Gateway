@@ -83,9 +83,12 @@ if [[ -L "${RCG_DEPLOY_PATH}/current" ]]; then
 fi
 
 rollback_on_error() {
-  status=$?
-  trap - ERR
-  previous_release_environment="${previous_release}/.deployment.env"
+  local status=$?
+  trap - EXIT
+  if (( status == 0 )); then
+    return
+  fi
+  local previous_release_environment="${previous_release}/.deployment.env"
   if [[ -n "$previous_release" && -f "${previous_release}/docker-compose.yml" && -f "$previous_release_environment" ]]; then
     docker compose \
       --project-directory "$previous_release" \
@@ -98,7 +101,8 @@ rollback_on_error() {
   compose logs --tail 120 gateway caddy >&2 || true
   exit "$status"
 }
-trap rollback_on_error ERR
+# EXIT also covers explicit exits, such as exhausting HTTPS readiness retries.
+trap rollback_on_error EXIT
 
 compose config --quiet
 if [[ -n "${RCG_IMAGE_REF:-}" ]]; then
@@ -138,7 +142,7 @@ umask 077
   echo "DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } >"$deployment_record"
 
-trap - ERR
+trap - EXIT
 echo "deployed_commit=${RCG_COMMIT_SHA}"
 echo "api_host=${RCG_API_HOST}"
 echo "site_host=${RCG_SITE_HOST}"

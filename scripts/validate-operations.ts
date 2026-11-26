@@ -248,6 +248,7 @@ async function validateWorkflows(): Promise<void> {
       'release_environment="${release_root}/.deployment.env"',
     ) &&
       xserverDeploy.includes('--env-file "$previous_release_environment"') &&
+      xserverDeploy.includes('trap rollback_on_error EXIT') &&
       xserverDeploy.includes('selected_image="$RCG_IMAGE_REF"') &&
       xserverDeploy.includes(
         '^/opt/[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$',
