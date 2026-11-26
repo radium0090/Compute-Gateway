@@ -1,0 +1,8 @@
+# Opt-in for a separate pilot stack. Paths are resolved from the base file.
+services:
+  migrate:
+    volumes:
+      - ./deploy/compose/gemini-openai-pilot.yaml:/etc/rax-compute-gateway/config.yaml:ro
+  gateway:
+    volumes:
+      - ./deploy/compose/gemini-openai-pilot.yaml:/etc/rax-compute-gateway/config.yaml:ro

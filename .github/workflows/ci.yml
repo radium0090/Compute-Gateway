@@ -95,6 +95,16 @@ jobs:
           OPENAI_API_KEY: fake-openai
           ANTHROPIC_API_KEY: fake-anthropic
           GEMINI_API_KEY: fake-gemini
+      - name: Validate isolated agent pilot policy
+        run: node apps/gateway/dist/index.js --check-config
+        env:
+          RCG_ENVIRONMENT: production
+          RCG_DATABASE_URL: postgresql://rcg:fake@postgres.invalid:5432/compute_gateway
+          RCG_REDIS_URL: rediss://redis.invalid:6379
+          RCG_KEY_HASH_PEPPER: fake-pepper-with-at-least-32-characters
+          RCG_CONFIG_FILE: deploy/compose/gemini-openai-pilot.yaml
+          OPENAI_API_KEY: fake-openai
+          GEMINI_API_KEY: fake-gemini
 
   integration:
     runs-on: ubuntu-latest

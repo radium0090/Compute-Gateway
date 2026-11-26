@@ -40,6 +40,24 @@ of the public repository and public CI artifacts.
 
 ## Before accepting a real pilot
 
+For an isolated Compose rehearsal, the
+[example pilot policy](../../deploy/compose/gemini-openai-pilot.yaml) exposes
+`rax/agent` with only Gemini primary and OpenAI fallback. The
+[Compose override](../../deploy/compose/agent-pilot.override.yaml) mounts that
+policy for the gateway and migrations. In a separate test checkout with its own
+protected `.env`, set `RCG_CONFIG_FILE=/etc/rax-compute-gateway/config.yaml`,
+provide only the approved Gemini and OpenAI credentials, and validate the
+Compose configuration before starting the isolated pilot project:
+
+```sh
+docker compose -p rax-agent-pilot -f docker-compose.yml \
+  -f deploy/compose/agent-pilot.override.yaml config --quiet
+```
+
+If another stack is running, assign separate loopback ports in the test
+`.env` before starting. The override is opt-in and does not change the
+production profile. Example models are not guarantees of account access.
+
 1. Agree with the customer on one integration, a synthetic or scrubbed sample,
    exact primary and backup model IDs, and how the client handles missing or
    partial responses. If the integration does not use tools or JSON Schema,
