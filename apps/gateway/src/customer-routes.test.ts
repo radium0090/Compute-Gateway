@@ -86,7 +86,11 @@ describe('customer and product routes', () => {
     const app = await gateway();
     const response = await app.inject({ method: 'GET', url: '/' });
     expect(response.statusCode).toBe(200);
-    expect(response.body).toContain('One stable API.');
+    expect(response.body).toContain('One API for your agents.');
+    expect(response.body).toContain('No live model calls or API key required.');
+    for (const scenario of ['lab-healthy', 'lab-limited', 'lab-interrupted']) {
+      expect(response.body).toContain(`id="${scenario}"`);
+    }
     expect(response.headers['content-security-policy']).toContain(
       "default-src 'none'",
     );

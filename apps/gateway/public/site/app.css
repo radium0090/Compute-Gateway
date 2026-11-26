@@ -26,6 +26,9 @@
 html {
   scroll-behavior: smooth;
 }
+[id] {
+  scroll-margin-top: 95px;
+}
 body {
   margin: 0;
   background:
@@ -133,11 +136,11 @@ textarea {
   border-color: #3a4c61;
 }
 .hero {
-  min-height: 680px;
-  padding: 110px 0 90px;
+  min-height: 630px;
+  padding: 90px 0;
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 70px;
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+  gap: clamp(32px, 6vw, 80px);
   align-items: center;
 }
 .eyebrow {
@@ -164,8 +167,8 @@ p {
   margin-top: 0;
 }
 h1 {
-  font-size: clamp(3.3rem, 7vw, 6.2rem);
-  line-height: 0.94;
+  font-size: clamp(3.3rem, 6vw, 5.65rem);
+  line-height: 0.98;
   letter-spacing: -0.07em;
   margin-bottom: 30px;
 }
@@ -183,12 +186,13 @@ h1 span {
 }
 .hero-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 34px;
 }
 .hero-note {
   margin-top: 20px;
-  color: #72869d;
+  color: var(--muted);
   font-size: 0.85rem;
 }
 .terminal-card {
@@ -207,15 +211,9 @@ h1 span {
   border-bottom: 1px solid #203044;
   background: #0d1724;
 }
-.terminal-head span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #42546b;
-}
 .terminal-head p {
-  margin: 0 0 0 7px;
-  color: #71859c;
+  margin: 0;
+  color: var(--muted);
   font:
     12px ui-monospace,
     monospace;
@@ -231,28 +229,140 @@ h1 span {
     Menlo,
     monospace;
 }
-.terminal-card .muted {
-  color: #8da2b9;
+.terminal-card pre code {
+  color: inherit;
 }
 .terminal-card .green {
   color: var(--green);
 }
-.terminal-card .cyan {
-  color: #7edfd6;
+.lab .terminal-head {
+  justify-content: space-between;
 }
-.route-line {
+.lab-badge {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 0.69rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.lab-body {
+  padding: clamp(14px, 3.5vw, 30px);
+}
+.lab h2 {
+  margin-bottom: 9px;
+  font-size: clamp(1.45rem, 2.3vw, 2.05rem);
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+.lab-request {
+  margin-bottom: 22px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+.lab-request span {
+  padding-inline: 5px;
+}
+.lab-options {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 20px;
-  border-top: 1px solid #203044;
-  color: #91a6bb;
-  font-size: 12px;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
-.route-line i {
-  flex: 1;
+.lab-options legend {
+  margin-bottom: 7px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.lab-options input {
+  position: absolute;
+  width: 1px;
   height: 1px;
-  background: linear-gradient(90deg, var(--cyan), #2d4158);
+  padding: 0;
+  clip-path: inset(50%);
+}
+.lab-options label {
+  min-height: 35px;
+  align-items: center;
+  margin: 0;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.76rem;
+}
+.lab-options input:checked + label {
+  border-color: var(--cyan);
+  background: #15312f;
+  color: var(--text);
+}
+.lab-options input:focus-visible + label,
+.terminal-card pre:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+.lab-results {
+  flex-basis: 100%;
+  min-width: 0;
+  margin-top: 12px;
+}
+.lab-result {
+  display: none;
+}
+#lab-healthy:checked ~ .lab-results .lab-result-healthy,
+#lab-limited:checked ~ .lab-results .lab-result-limited,
+#lab-interrupted:checked ~ .lab-results .lab-result-interrupted {
+  display: block;
+}
+.lab-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lab-steps li {
+  display: grid;
+  grid-template-columns: 1.65rem 1fr auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 46px;
+  padding-block: 7px;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.lab-steps li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.lab-steps li > span,
+.lab-steps small,
+.lab-result p {
+  color: var(--muted);
+}
+.lab-steps small {
+  text-align: right;
+}
+.lab-steps .lab-ok {
+  color: var(--green);
+}
+.lab-steps .lab-warn {
+  color: #ffd395;
+}
+.lab-result p {
+  min-height: 2.7em;
+  margin: 13px 0 0;
+  font-size: 0.83rem;
+}
+.lab-note {
+  margin: 0;
+  padding: 12px clamp(14px, 3.5vw, 30px);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.74rem;
 }
 .proof {
   display: grid;
@@ -293,43 +403,21 @@ h1 span {
   color: var(--muted);
   font-size: 1.06rem;
 }
-.architecture {
+.evidence {
   display: grid;
-  grid-template-columns: 1fr 90px 1.3fr 90px 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(25px, 6vw, 85px);
   align-items: center;
-  margin: 70px 0 80px;
+  margin-bottom: 70px;
 }
-.arch-column {
-  display: grid;
-  gap: 12px;
+.evidence h3 {
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  margin-bottom: 14px;
 }
-.arch-column span,
-.arch-core {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
-  padding: 17px;
-  text-align: center;
-}
-.arch-core {
-  padding: 33px 22px;
-  border-color: #438a88;
-  background: linear-gradient(145deg, #102638, #10312f);
-  box-shadow: 0 0 60px rgba(81, 226, 210, 0.08);
-}
-.arch-core b {
-  display: block;
-  color: var(--cyan);
-  font-size: 2.5rem;
-  letter-spacing: -0.06em;
-}
-.arch-core small {
-  display: block;
-  color: #a6bacb;
-}
-.connector {
-  height: 1px;
-  background: linear-gradient(90deg, #263a50, var(--cyan), #263a50);
+.evidence p:not(.eyebrow) {
+  color: var(--muted);
 }
 .feature-grid {
   display: grid;
@@ -608,15 +696,6 @@ footer small {
     grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
-  .architecture {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .connector {
-    width: 1px;
-    height: 30px;
-    margin: auto;
-  }
   .feature-grid,
   .deploy-grid {
     grid-template-columns: 1fr 1fr;
@@ -645,11 +724,13 @@ footer small {
     padding: 65px 0;
   }
   h1 {
-    font-size: 3.35rem;
+    font-size: clamp(2.8rem, 10.3vw, 3.6rem);
   }
+  .evidence,
   .hero-actions,
   .form-row {
     display: grid;
+    grid-template-columns: 1fr;
   }
   .feature-grid,
   .deploy-grid,
@@ -672,5 +753,10 @@ footer small {
   footer div {
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }
