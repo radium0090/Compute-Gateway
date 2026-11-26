@@ -9,6 +9,7 @@
   "files": [
     "dist",
     "public",
+    "!dist/evaluation",
     "!dist/**/*.test.*",
     "!dist/**/*.tsbuildinfo"
   ],

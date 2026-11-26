@@ -21,6 +21,7 @@
     }
   },
   "scripts": {
+    "agent:failover-report": "node apps/gateway/dist/evaluation/agent-failover-cli.js",
     "build": "tsc -b --pretty false",
     "clean": "tsc -b --clean",
     "compose:smoke": "sh scripts/smoke-compose.sh",
