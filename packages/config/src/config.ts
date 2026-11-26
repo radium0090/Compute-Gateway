@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+
 import { Type, type Static } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 
@@ -32,6 +34,13 @@ export const RuntimeConfigSchema = Type.Object(
     connectTimeoutMs: Type.Integer({ minimum: 1 }),
     shutdownGraceMs: Type.Integer({ minimum: 1 }),
     trustProxy: Type.Boolean(),
+    trustProxyCidrs: Type.Optional(
+      Type.Array(Type.String(), {
+        minItems: 1,
+        maxItems: 16,
+        uniqueItems: true,
+      }),
+    ),
     metricsEnabled: Type.Boolean(),
     adminEnabled: Type.Boolean(),
     adminOrigin: Type.Optional(Type.String({ minLength: 1 })),
@@ -103,6 +112,7 @@ const fieldToEnvironmentVariable: Readonly<Record<string, string>> = {
   connectTimeoutMs: 'RCG_CONNECT_TIMEOUT_MS',
   shutdownGraceMs: 'RCG_SHUTDOWN_GRACE_MS',
   trustProxy: 'RCG_TRUST_PROXY',
+  trustProxyCidrs: 'RCG_TRUST_PROXY_CIDRS',
   metricsEnabled: 'RCG_METRICS_ENABLED',
   adminEnabled: 'RCG_ADMIN_ENABLED',
   adminOrigin: 'RCG_ADMIN_ORIGIN',
@@ -169,6 +179,22 @@ function isUrlWithProtocol(
   }
 }
 
+function isExplicitProxyCidr(value: string): boolean {
+  const parts = value.split('/');
+  const [address, prefix] = parts;
+  if (
+    parts.length !== 2 ||
+    address === undefined ||
+    address.includes('%') ||
+    prefix === undefined ||
+    !/^[1-9][0-9]{0,2}$/u.test(prefix)
+  )
+    return false;
+  const version = isIP(address);
+  const bits = Number(prefix);
+  return version === 4 ? bits <= 32 : version === 6 && bits <= 128;
+}
+
 function schemaIssueToSafeMessage(path: string): string {
   const field = path.replace(/^\//, '').split('/')[0] ?? '';
   return `${fieldToEnvironmentVariable[field] ?? 'configuration'} is invalid`;
@@ -202,6 +228,13 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
     connectTimeoutMs: parseInteger(source.RCG_CONNECT_TIMEOUT_MS, 30_000),
     shutdownGraceMs: parseInteger(source.RCG_SHUTDOWN_GRACE_MS, 30_000),
     trustProxy: parseBoolean(source.RCG_TRUST_PROXY, false),
+    ...(source.RCG_TRUST_PROXY_CIDRS === undefined
+      ? {}
+      : {
+          trustProxyCidrs: source.RCG_TRUST_PROXY_CIDRS.split(',').map(
+            (value) => value.trim(),
+          ),
+        }),
     metricsEnabled: parseBoolean(source.RCG_METRICS_ENABLED, true),
     adminEnabled: parseBoolean(source.RCG_ADMIN_ENABLED, false),
     ...(source.RCG_ADMIN_ORIGIN === undefined
@@ -311,7 +344,19 @@ export function loadConfig(source: EnvironmentSource): RuntimeConfig {
   }
 
   if (candidate.environment === 'production' && candidate.trustProxy) {
-    issues.push('RCG_TRUST_PROXY requires explicit proxy CIDRs in production');
+    issues.push(
+      'RCG_TRUST_PROXY=true is not allowed in production; use explicit proxy CIDRs',
+    );
+  }
+  if (candidate.trustProxyCidrs !== undefined) {
+    if (
+      candidate.trustProxy ||
+      !candidate.trustProxyCidrs.every(isExplicitProxyCidr)
+    ) {
+      issues.push(
+        'RCG_TRUST_PROXY_CIDRS must contain explicit nonzero IP prefixes and cannot be combined with RCG_TRUST_PROXY=true',
+      );
+    }
   }
 
   if (

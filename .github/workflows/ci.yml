@@ -105,6 +105,10 @@ jobs:
           RCG_CONFIG_FILE: deploy/compose/gemini-openai-pilot.yaml
           OPENAI_API_KEY: fake-openai
           GEMINI_API_KEY: fake-gemini
+      - name: Validate actual XServer runtime template
+        run: node --env-file=deploy/xserver/runtime.env.example apps/gateway/dist/index.js --check-config
+        env:
+          RCG_CONFIG_FILE: deploy/compose/rax-compute-gateway.yaml
 
   integration:
     runs-on: ubuntu-latest

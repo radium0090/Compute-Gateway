@@ -74,7 +74,8 @@ export async function buildGateway(
   const app = Fastify({
     loggerInstance: dependencies.logger,
     bodyLimit: dependencies.config.requestBodyLimitBytes,
-    trustProxy: dependencies.config.trustProxy,
+    trustProxy:
+      dependencies.config.trustProxyCidrs ?? dependencies.config.trustProxy,
     genReqId: requestId,
     logController: new LogController({ disableRequestLogging: true }),
     ajv: {
