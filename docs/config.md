@@ -49,7 +49,8 @@ credential name; the value is never included in route YAML.
 | `RCG_TOTAL_TIMEOUT_MS` | `60000` | 1000..300000 |
 | `RCG_CONNECT_TIMEOUT_MS` | `30000` | less than total timeout |
 | `RCG_SHUTDOWN_GRACE_MS` | `30000` | positive integer |
-| `RCG_TRUST_PROXY` | `false` | development only; must remain false in production for `0.1` |
+| `RCG_TRUST_PROXY` | `false` | trust every proxy; never enable in production |
+| `RCG_TRUST_PROXY_CIDRS` | unset | comma-separated IPv4/IPv6 CIDRs for known proxy peers; no `/0` or wildcard |
 | `RCG_METRICS_ENABLED` | `true` | boolean |
 | `RCG_ADMIN_SESSION_TTL_MS` | `28800000` | 15 minutes..24 hours |
 | `RCG_CONSOLE_SESSION_TTL_MS` | `28800000` | 15 minutes..24 hours |

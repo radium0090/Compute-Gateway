@@ -50,6 +50,7 @@ kernel update does not surprise an evaluation window.
 sudo adduser --disabled-password --gecos '' raxdeploy
 sudo usermod -aG docker raxdeploy
 sudo install -d -o raxdeploy -g raxdeploy -m 0750 \
+  /opt/rax-compute-gateway \
   /opt/rax-compute-gateway/releases \
   /opt/rax-compute-gateway/shared \
   /home/raxdeploy/.ssh
@@ -88,6 +89,11 @@ them into a GitHub variable, workflow input, issue, or log.
 
 Keep `RCG_CONSOLE_REGISTRATION_ENABLED=false` for the first deployment. Use a
 verified sending domain and exact HTTPS Console origin before enabling it.
+
+The production Compose network uses `10.249.254.0/28`, with Caddy fixed at
+`10.249.254.2`. Confirm the subnet does not overlap host routes. Set
+`RCG_TRUST_PROXY_CIDRS=10.249.254.2/32` so forwarded addresses are accepted
+only from Caddy. Do not use `RCG_TRUST_PROXY=true`.
 
 ## 5. Configure GitHub
 

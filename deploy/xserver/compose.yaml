@@ -22,6 +22,9 @@ services:
 
   caddy:
     image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    networks:
+      default:
+        ipv4_address: 10.249.254.2
     environment:
       RCG_API_HOST: ${RCG_API_HOST:?RCG_API_HOST is required}
       RCG_SITE_HOST: ${RCG_SITE_HOST:?RCG_SITE_HOST is required}
@@ -54,3 +57,9 @@ services:
 volumes:
   caddy-data:
   caddy-config:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 10.249.254.0/28

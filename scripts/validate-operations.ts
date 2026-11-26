@@ -271,9 +271,12 @@ async function validateWorkflows(): Promise<void> {
   );
   assert(
     (await read('deploy/xserver/runtime.env.example')).includes(
-      'RCG_TRUST_PROXY=true',
-    ),
-    'XServer must trust its private Caddy hop so client-aware limits do not collapse to one proxy address',
+      'RCG_TRUST_PROXY_CIDRS=10.249.254.2/32',
+    ) &&
+      (await read('deploy/xserver/compose.yaml')).includes(
+        'ipv4_address: 10.249.254.2',
+      ),
+    'XServer must trust only the fixed private Caddy hop',
   );
 }
 

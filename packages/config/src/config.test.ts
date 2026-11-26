@@ -71,6 +71,51 @@ describe('loadConfig', () => {
     ).toThrow(/must be less|explicit proxy CIDRs/);
   });
 
+  it('loads explicit proxy CIDRs without allowing trust-all', () => {
+    const production = {
+      ...validEnvironment,
+      RCG_ENVIRONMENT: 'production',
+      RCG_REDIS_URL: 'redis://redis:6379',
+    };
+    expect(
+      loadConfig({
+        ...production,
+        RCG_TRUST_PROXY_CIDRS: '10.249.254.2/32, fd00::8/128',
+      }),
+    ).toMatchObject({
+      trustProxy: false,
+      trustProxyCidrs: ['10.249.254.2/32', 'fd00::8/128'],
+    });
+    expect(() =>
+      loadConfig({ ...production, RCG_TRUST_PROXY: 'true' }),
+    ).toThrow(/not allowed in production/);
+  });
+
+  it.each([
+    '',
+    '0.0.0.0/0',
+    '::/0',
+    '10.249.254.2/33',
+    'fd00::8/129',
+    'localhost/32',
+    'fe80::1%en0/128',
+    '10.249.254.2/32,',
+  ])('rejects malformed or wildcard proxy CIDRs: %j', (cidrs) => {
+    expect(() =>
+      loadConfig({ ...validEnvironment, RCG_TRUST_PROXY_CIDRS: cidrs }),
+    ).toThrow(/RCG_TRUST_PROXY_CIDRS/);
+  });
+
+  it('rejects ambiguous explicit and trust-all proxy modes', () => {
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        RCG_TRUST_PROXY: 'true',
+        RCG_TRUST_PROXY_CIDRS: '10.249.254.2/32',
+      }),
+    ).toThrow(/cannot be combined/);
+  });
+
   it('requires Redis for production distributed controls', () => {
     expect(() =>
       loadConfig({ ...validEnvironment, RCG_ENVIRONMENT: 'production' }),
