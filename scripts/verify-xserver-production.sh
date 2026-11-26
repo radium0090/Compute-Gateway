@@ -74,7 +74,7 @@ site_origin="https://${RCG_SITE_HOST}"
 api_origin="https://${RCG_API_HOST}"
 
 fetch product_site "${site_origin}/" 200
-require_body_text product_site 'One stable API.'
+require_body_text product_site 'id="failover-lab"'
 require_header product_site '^strict-transport-security:[[:space:]]*max-age=31536000'
 require_header product_site '^x-content-type-options:[[:space:]]*nosniff'
 require_header product_site '^content-security-policy:'

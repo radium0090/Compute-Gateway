@@ -6,6 +6,13 @@ toggle?.addEventListener('click', () => {
   links?.classList.toggle('open', !open);
 });
 
+links?.addEventListener('click', (event) => {
+  if (event.target instanceof Element && event.target.closest('a')) {
+    toggle?.setAttribute('aria-expanded', 'false');
+    links.classList.remove('open');
+  }
+});
+
 const form = document.querySelector('#contact-form');
 const status = document.querySelector('#contact-status');
 form?.addEventListener('submit', async (event) => {

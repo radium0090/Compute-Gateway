@@ -96,6 +96,10 @@ The application executes `lookup_order`, appends the assistant message and a
 request. Never execute a model-selected function without an allowlist, schema
 validation, authorization, timeout, and sandbox appropriate to that tool.
 
+Use the [agent failover checklist](agent-failover-evaluation.md#pilot-acceptance-checklist)
+to validate the same tool or structured output on your primary and backup
+providers before migrating live traffic.
+
 ## Key and model policy
 
 - Tool permission is deny-by-default per API key.
