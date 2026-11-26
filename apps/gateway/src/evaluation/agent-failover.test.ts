@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatAgentFailoverReport,
-  matchesDecision,
   runAgentFailoverReport,
 } from './agent-failover.js';
+import { matchesPilotDecision } from './agent-pilot-contract.js';
 
 describe('Gemini-primary OpenAI-backup acceptance report', () => {
   it('checks capability, route metadata, usage and stream commitment through the gateway', async () => {
@@ -70,7 +70,7 @@ describe('Gemini-primary OpenAI-backup acceptance report', () => {
       'Result: FAIL',
     );
     for (const content of [
-      'Classify the synthetic pilot case.',
+      'DEMO-1042',
       'record_decision',
       'fixture_call',
       'offline-openai-fixture',
@@ -82,17 +82,18 @@ describe('Gemini-primary OpenAI-backup acceptance report', () => {
   });
 
   it('does not accept text, malformed JSON, wrong values or extra fields as a valid contract', () => {
-    expect(matchesDecision('{"outcome":"review"}')).toBe(true);
+    expect(matchesPilotDecision('{"outcome":"review"}')).toBe(true);
     for (const value of [
       undefined,
       'review',
       '{"outcome":',
       '[]',
       '{"outcome":"approve"}',
+      '{"outcome":"routine"}',
       '{"outcome":"review","extra":true}',
       '{"outcome":4}',
     ]) {
-      expect(matchesDecision(value)).toBe(false);
+      expect(matchesPilotDecision(value)).toBe(false);
     }
   });
 });

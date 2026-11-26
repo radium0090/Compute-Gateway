@@ -38,6 +38,57 @@ arguments. The token counts are synthetic and are not cost or billing data.
 Keep real customer content, credentials, and customer-specific findings out
 of the public repository and public CI artifacts.
 
+## Synthetic acceptance request
+
+Use this fixed duplicate-charge example, not real order or customer data.
+Send it to `POST /v1/chat/completions` with a pilot key:
+
+```json
+{
+  "model": "rax/agent",
+  "messages": [{
+    "role": "user",
+    "content": "Order DEMO-1042 was charged twice. Label billing disputes as review and other cases as routine. Return only the JSON object."
+  }],
+  "max_tokens": 512,
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "decision",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": { "outcome": { "type": "string", "enum": ["review", "routine"] } },
+        "required": ["outcome"],
+        "additionalProperties": false
+      }
+    }
+  }
+}
+```
+
+Expected: HTTP `200`, `choices[0].finish_reason` is `stop`, and
+`choices[0].message.content` parses to exactly `{"outcome":"review"}`.
+The alias stays `rax/agent`. A healthy primary reports `rax.provider=gemini`
+and `rax.attempts=1`; a controlled pre-output 429 followed by an eligible
+backup reports `rax.provider=openai` and `rax.attempts=2`. The caller should
+also check the actual provider model and non-empty token usage.
+
+## Protected live integration check
+
+On GitHub Actions, dispatch **Live provider smoke** on `main` with
+`suite=agent-pilot`. The existing `live-provider-smoke` environment must
+approve the run. It uses the configured Gemini and OpenAI models and keys,
+not Anthropic, and sends at most one real request per provider. The second
+case injects a synthetic Gemini 429 before calling real OpenAI. It does not
+induce quota failures, call the production gateway, or touch customer data.
+The report prints only case names, gateway status, and pass/fail assertions
+if a check fails.
+
+An approval or upstream failure leaves live validation pending. A successful
+run validates these two real model responses, not XServer or a customer's
+own integration.
+
 ## Before accepting a real pilot
 
 For an isolated Compose rehearsal, the
@@ -58,10 +109,10 @@ If another stack is running, assign separate loopback ports in the test
 `.env` before starting. The override is opt-in and does not change the
 production profile. Example models are not guarantees of account access.
 
-1. Agree with the customer on one integration, a synthetic or scrubbed sample,
-   exact primary and backup model IDs, and how the client handles missing or
-   partial responses. If the integration does not use tools or JSON Schema,
-   define the actual response assertions instead of assuming these are needed.
+1. Run the synthetic request first. Before connecting a real customer
+   workflow, confirm the exact model IDs and how that client handles missing
+   or partial responses. Check the actual response contract without assuming
+   that the real integration uses tools or JSON Schema.
 2. On the isolated rehearsal deployment, create a verified, approved test
    tenant/key with the smallest request, concurrency, token and expiry limits
    needed. Don't use a public demo key. Configure only the providers approved

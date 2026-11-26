@@ -9,7 +9,7 @@
 | `container.yml` | PR, main | image build, scan, smoke test |
 | `kubernetes.yml` | PR, main | Helm and kind verification |
 | `nightly.yml` | schedule/manual | full deterministic and datastore integration suites |
-| `live-provider.yml` | manual | protected OpenAI/Anthropic/Gemini smoke through OpenAI SDK |
+| `live-provider.yml` | manual | protected three-provider SDK smoke, or Gemini-to-OpenAI agent pilot |
 | `aws-staging.yml` | manual | protected AWS OIDC, EC2, and SSM connectivity evidence |
 | `aws-staging-bootstrap.yml` | manual | approved, idempotent staging host prerequisite installation |
 | `aws-staging-deploy.yml` | manual | approved `main` deployment from source or an immutable release digest |

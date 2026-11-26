@@ -24,8 +24,18 @@ import {
 } from '@rax-digital/router';
 
 import { buildGateway } from '../app.js';
+import {
+  decode,
+  firstRecord,
+  matchesPilotDecision,
+  pilotAlias as alias,
+  pilotExpected as syntheticDecision,
+  pilotRequest as schemaRequest,
+  pilotSchema as decisionSchema,
+  record,
+  type JsonRecord,
+} from './agent-pilot-contract.js';
 
-const alias = 'rax/agent';
 const policySource = `
 version: 1
 providers:
@@ -84,18 +94,11 @@ const config = loadConfig({
   RCG_KEY_HASH_PEPPER: fixturePepper,
 });
 
-const decisionSchema = {
-  type: 'object',
-  properties: { outcome: { type: 'string', enum: ['review'] } },
-  required: ['outcome'],
-  additionalProperties: false,
-} as const;
 const testTool = 'record_decision';
-const syntheticDecision = { outcome: 'review' };
 
 const toolRequest: ChatCompletionRequest = {
   model: alias,
-  messages: [{ role: 'user', content: 'Classify the synthetic pilot case.' }],
+  messages: schemaRequest.messages,
   tools: [
     {
       type: 'function',
@@ -103,14 +106,6 @@ const toolRequest: ChatCompletionRequest = {
     },
   ],
   tool_choice: 'required',
-};
-const schemaRequest: ChatCompletionRequest = {
-  model: alias,
-  messages: toolRequest.messages,
-  response_format: {
-    type: 'json_schema',
-    json_schema: { name: 'decision', strict: true, schema: decisionSchema },
-  },
 };
 
 type FixtureProvider = 'gemini' | 'openai';
@@ -157,31 +152,12 @@ export interface AgentFailoverReport {
   readonly cases: readonly ReportCase[];
 }
 
-type JsonRecord = Readonly<Record<string, unknown>>;
 type Check = (name: string, passed: boolean) => void;
-
-function record(value: unknown): JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as JsonRecord)
-    : {};
-}
-
-function decode(value: unknown): unknown {
-  if (typeof value !== 'string') return undefined;
-  try {
-    return JSON.parse(value) as unknown;
-  } catch {
-    return undefined;
-  }
-}
-
-function firstRecord(value: unknown): JsonRecord {
-  return record(Array.isArray(value) ? value[0] : undefined);
-}
 
 function carriesDecisionSchema(value: unknown): boolean {
   const schema = record(value);
   const outcome = record(record(schema.properties).outcome);
+  const allowedOutcomes = outcome.enum;
   return (
     schema.type === 'object' &&
     schema.additionalProperties === false &&
@@ -190,16 +166,12 @@ function carriesDecisionSchema(value: unknown): boolean {
     schema.required[0] === 'outcome' &&
     Object.keys(record(schema.properties)).length === 1 &&
     outcome.type === 'string' &&
-    Array.isArray(outcome.enum) &&
-    outcome.enum.length === 1 &&
-    outcome.enum[0] === 'review'
+    Array.isArray(allowedOutcomes) &&
+    allowedOutcomes.length === decisionSchema.properties.outcome.enum.length &&
+    decisionSchema.properties.outcome.enum.every((value) =>
+      allowedOutcomes.includes(value),
+    )
   );
-}
-
-/** Verify the exact one-field contract; do not include the value in evidence. */
-export function matchesDecision(value: unknown): boolean {
-  const result = record(decode(value));
-  return Object.keys(result).length === 1 && result.outcome === 'review';
 }
 
 function matchingTool(choice: JsonRecord): boolean {
@@ -214,7 +186,7 @@ function matchingTool(choice: JsonRecord): boolean {
     typeof tool.id === 'string' &&
     tool.id.length > 0 &&
     fn.name === testTool &&
-    matchesDecision(fn.arguments)
+    matchesPilotDecision(fn.arguments)
   );
 }
 
@@ -421,7 +393,8 @@ function fixtureAdapters(
   ]);
 }
 
-async function fixtureGateway(
+/** An injected app with a short-lived, in-memory key for rehearsal only. */
+export async function buildEvaluationGateway(
   policy: PolicyConfig,
   adapters: ReadonlyMap<string, ProviderAdapter>,
 ) {
@@ -507,7 +480,7 @@ async function runCase(id: CaseId): Promise<ReportCase> {
   const check: Check = (name, passed) => {
     checks.push({ name, passed });
   };
-  const { app, credential } = await fixtureGateway(
+  const { app, credential } = await buildEvaluationGateway(
     policy,
     fixtureAdapters(id, calls, check),
   );
@@ -592,7 +565,7 @@ async function runCase(id: CaseId): Promise<ReportCase> {
           : 'Returned tool name and arguments match the fixture contract',
         structured
           ? choice.finish_reason === 'stop' &&
-              matchesDecision(record(choice.message).content)
+              matchesPilotDecision(record(choice.message).content)
           : matchingTool(choice),
       );
       check(
